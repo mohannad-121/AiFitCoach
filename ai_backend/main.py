@@ -68,6 +68,19 @@ training_pipeline = None
 training_pipeline_task = None
 
 
+def _training_pipeline_enabled() -> bool:
+    configured = os.getenv("TRAINING_PIPELINE_ENABLED")
+    if configured is not None:
+        return configured.lower() not in {"0", "false", "no", "off"}
+
+    # Render free instances are memory-constrained; keep the API responsive by
+    # skipping the heavy background training pipeline unless explicitly enabled.
+    if os.getenv("RENDER"):
+        return False
+
+    return True
+
+
 def _initialize_training_pipeline_sync() -> None:
     global training_pipeline
     try:
@@ -107,7 +120,7 @@ def _initialize_training_pipeline_sync() -> None:
 async def initialize_training_pipeline():
     """Initialize multi-dataset training system in the background on startup."""
     global training_pipeline, training_pipeline_task
-    if os.getenv("TRAINING_PIPELINE_ENABLED", "1").lower() in {"0", "false", "no", "off"}:
+    if not _training_pipeline_enabled():
         logger.info("Training pipeline disabled by TRAINING_PIPELINE_ENABLED")
         training_pipeline = None
         return
