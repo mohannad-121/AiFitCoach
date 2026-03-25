@@ -13,6 +13,15 @@ export function useAuth() {
   const [useMockAuth, setUseMockAuth] = useState(false);
   const isMountedRef = useRef(true);
 
+  const clearMockAuthStorage = () => {
+    try {
+      localStorage.removeItem('fitcoach_mock_user');
+    } catch {
+      // ignore storage cleanup failures
+    }
+    delete (globalThis as any).__fitcoach_mock_user;
+  };
+
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -81,6 +90,8 @@ export function useAuth() {
           const currentSession = (sessionResult as any)?.data?.session;
           
           if (currentSession && isMountedRef.current) {
+            clearMockAuthStorage();
+            setUseMockAuth(false);
             setSession(currentSession);
             setUser(currentSession.user);
             setLoading(false);
@@ -92,8 +103,10 @@ export function useAuth() {
 
         // If we get here, use mock auth
         if (isMountedRef.current) {
-          setUseMockAuth(true);
-          loadMockAuth();
+          setUseMockAuth(false);
+          setUser(null);
+          setSession(null);
+          setLoading(false);
         }
 
         // اسمع لتغييرات المصادقة
@@ -101,8 +114,13 @@ export function useAuth() {
           const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, supabaseSession) => {
               if (isMountedRef.current) {
+                if (supabaseSession?.user) {
+                  clearMockAuthStorage();
+                  setUseMockAuth(false);
+                }
                 setSession(supabaseSession);
                 setUser(supabaseSession?.user ?? null);
+                setLoading(false);
               }
             }
           );
@@ -112,7 +130,9 @@ export function useAuth() {
       } catch (error) {
         console.warn('Auth initialization error:', error);
         if (isMountedRef.current) {
-          setUseMockAuth(true);
+          setUseMockAuth(false);
+          setUser(null);
+          setSession(null);
           setLoading(false);
         }
       }
@@ -156,22 +176,19 @@ export function useAuth() {
       if (useMockAuth) {
         setUser(null);
         setSession(null);
-        localStorage.removeItem('fitcoach_mock_user');
-        delete (globalThis as any).__fitcoach_mock_user;
+        clearMockAuthStorage();
       } else {
         await supabase.auth.signOut();
         setUser(null);
         setSession(null);
-        localStorage.removeItem('fitcoach_mock_user');
-        delete (globalThis as any).__fitcoach_mock_user;
+        clearMockAuthStorage();
       }
     } catch (error) {
       console.error('Sign out error:', error);
       // Force logout on error
       setUser(null);
       setSession(null);
-      localStorage.removeItem('fitcoach_mock_user');
-      delete (globalThis as any).__fitcoach_mock_user;
+      clearMockAuthStorage();
     }
   };
 

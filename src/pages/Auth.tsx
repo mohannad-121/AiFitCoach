@@ -29,6 +29,15 @@ export function AuthPage() {
   const [hasSession, setHasSession] = useState(false);
   const forceAuth = new URLSearchParams(location.search).get('force') === '1';
 
+  const clearMockAuthStorage = () => {
+    try {
+      localStorage.removeItem('fitcoach_mock_user');
+    } catch {
+      // ignore storage cleanup failures
+    }
+    delete (globalThis as any).__fitcoach_mock_user;
+  };
+
   useEffect(() => {
     // ???????????? ???????????? ???? ???????????? ?????????????? (Supabase ???? Mock)
     let isMounted = true;
@@ -62,16 +71,13 @@ export function AuthPage() {
 
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
+            clearMockAuthStorage();
             markSession(true);
           } else {
-            // ???????? ???? mock auth
-            const storedUser = readMockUser();
-            markSession(Boolean(storedUser));
+            markSession(false);
           }
         }).catch(() => {
-          // ?????? ?????? Supabase?? ???????? ???? mock storage
-          const storedUser = readMockUser();
-          markSession(Boolean(storedUser));
+          markSession(false);
         });
 
         return () => {
@@ -158,6 +164,7 @@ export function AuthPage() {
             return;
           }
 
+          clearMockAuthStorage();
           toast({
             title: language === 'ar' ? 'نجاح!' : 'Success!',
             description: language === 'ar' ? 'تم تسجيل الدخول بنجاح' : 'Signed in successfully',
@@ -196,6 +203,7 @@ export function AuthPage() {
           return;
         }
 
+        clearMockAuthStorage();
         toast({
           title: language === 'ar' ? 'نجاح!' : 'Success!',
           description: language === 'ar' ? 'تم إنشاء الحساب بنجاح' : 'Account created successfully',

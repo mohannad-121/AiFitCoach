@@ -15,13 +15,18 @@ import { ProfilePage } from "./pages/Profile";
 import { SchedulePage } from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
 
+const hasConfiguredSupabase = Boolean(
+  import.meta.env.VITE_SUPABASE_URL &&
+  (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)
+);
+
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   
   // تحقق من localStorage مباشرة - هذا أسرع من الانتظار للـ user state
-  const storedMockUser = localStorage.getItem('fitcoach_mock_user');
+  const storedMockUser = hasConfiguredSupabase ? null : localStorage.getItem('fitcoach_mock_user');
   const hasAuth = !!user || !!storedMockUser;
   
   // إذا كان لدينا auth (user أو localStorage)، اسمح بالدخول
