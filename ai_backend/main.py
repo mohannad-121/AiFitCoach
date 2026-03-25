@@ -240,7 +240,18 @@ AI_ENGINE = AIEngine(Path(__file__).resolve().parent / "exercises.json")
 NUTRITION_KB = KnowledgeEngine(Path(__file__).resolve().parent / "knowledge" / "dataforproject.txt")
 RESPONSE_DATASET_DIR = _resolve_response_dataset_dir()
 RESPONSE_DATASETS = ResponseDatasets(RESPONSE_DATASET_DIR)
-CHAT_RESPONSE_MODE = os.getenv('CHAT_RESPONSE_MODE', 'dataset_only').strip().lower()
+
+
+def _resolve_chat_response_mode() -> str:
+    configured = os.getenv('CHAT_RESPONSE_MODE', 'auto').strip().lower()
+    if configured in {'dataset_only', 'hybrid', 'llm', 'smart'}:
+        return configured
+    if configured == 'auto':
+        return 'hybrid' if getattr(LLM, 'has_openai_key', False) else 'dataset_only'
+    return 'dataset_only'
+
+
+CHAT_RESPONSE_MODE = _resolve_chat_response_mode()
 VOICE_STT = WhisperSTT(model_name=os.getenv("WHISPER_MODEL", "openai/whisper-base"))
 VOICE_TTS = LocalTTS(output_dir=STATIC_AUDIO_DIR)
 VOICE_PIPELINE = VoicePipeline(stt_engine=VOICE_STT, tts_engine=VOICE_TTS, llm_client=LLM)
@@ -1178,6 +1189,62 @@ def _dataset_intent_response(tag: str, language: str, seed: str = "") -> Optiona
     return _repair_mojibake(response)
 
 
+def _smart_dataset_followup(user_input: str, language: str) -> str:
+    normalized = normalize_text(user_input)
+    workout_terms = {"workout", "exercise", "training", "routine", "تمرين", "تمارين", "تدريب"}
+    nutrition_terms = {"nutrition", "meal", "diet", "food", "protein", "calories", "تغذية", "وجبة", "وجبات", "سعرات"}
+    progress_terms = {"progress", "track", "adherence", "plateau", "tracking", "progression", "تقدم", "التزام", "متابعة"}
+
+    if any(term in normalized for term in workout_terms):
+        return _lang_reply(
+            language,
+            "Tell me your goal, training days, and available equipment, and I will tailor this into a sharper workout recommendation. 💪",
+            "أخبرني بهدفك وعدد أيام التمرين والمعدات المتاحة لديك، وسأحوّل هذا إلى توصية تدريبية أدق. 💪",
+            "احكيلي هدفك وكم يوم بتتمرن وشو المعدات عندك، وبرتبلك توصية تدريب أذكى. 💪",
+        )
+
+    if any(term in normalized for term in nutrition_terms):
+        return _lang_reply(
+            language,
+            "If you share your goal, weight, and food preferences, I can turn this into a smarter nutrition recommendation. 🥗",
+            "إذا شاركتني هدفك ووزنك وتفضيلاتك الغذائية، يمكنني تحويل هذا إلى توصية غذائية أذكى. 🥗",
+            "إذا بتحكيلي هدفك ووزنك وتفضيلات أكلك، بطلعلك توصية غذائية أذكى. 🥗",
+        )
+
+    if any(term in normalized for term in progress_terms):
+        return _lang_reply(
+            language,
+            "If you send your latest weight, adherence, and weekly activity, I can analyze your progress more intelligently. 📈",
+            "إذا أرسلت وزنك الأخير ونسبة الالتزام ونشاطك الأسبوعي، يمكنني تحليل تقدمك بشكل أذكى. 📈",
+            "إذا تبعثلي آخر وزن ونسبة التزامك ونشاطك بالأسبوع، بقدر أحلل تقدمك بشكل أذكى. 📈",
+        )
+
+    return _lang_reply(
+        language,
+        "Give me a bit more detail about your goal and situation, and I will make the answer smarter and more personalized. ✨",
+        "أعطني تفاصيل أكثر عن هدفك ووضعك، وسأجعل الإجابة أذكى وأكثر تخصيصًا. ✨",
+        "اعطيني تفاصيل أكثر عن هدفك ووضعك، وبخلي الجواب أذكى وأكثر تخصيص. ✨",
+    )
+
+
+def _smart_dataset_reply(reply: Optional[str], user_input: str, language: str) -> Optional[str]:
+    if not reply:
+        return reply
+
+    clean_reply = _repair_mojibake(reply).strip()
+    if not clean_reply:
+        return clean_reply
+
+    leading_emoji = "💪" if language == "en" else "✨"
+    if not any(symbol in clean_reply for symbol in ("💪", "🥗", "📈", "✨", "🔥", "✅")):
+        clean_reply = f"{leading_emoji} {clean_reply}"
+
+    if len(clean_reply) < 360:
+        clean_reply = f"{clean_reply}\n\n{_smart_dataset_followup(user_input, language)}"
+
+    return clean_reply
+
+
 def _dataset_conversation_reply(user_input: str, language: str) -> Optional[str]:
     # Priority order for conversational intents loaded from the provided dataset.
     ordered_tags: list[str] = [
@@ -1197,14 +1264,14 @@ def _dataset_conversation_reply(user_input: str, language: str) -> Optional[str]
         if tag not in known_tags:
             continue
         if _dataset_intent_matches(user_input, tag):
-            return _dataset_intent_response(tag, language, seed=user_input)
+            return _smart_dataset_reply(_dataset_intent_response(tag, language, seed=user_input), user_input, language)
 
     # Include any additional tags from dataset except fallback/sample buckets.
     for tag in RESPONSE_DATASETS.intents.keys():
         if tag in set(ordered_tags) or tag in {"out_of_scope", "short_conversations"}:
             continue
         if _dataset_intent_matches(user_input, tag):
-            return _dataset_intent_response(tag, language, seed=user_input)
+            return _smart_dataset_reply(_dataset_intent_response(tag, language, seed=user_input), user_input, language)
     return None
 
 
@@ -1212,7 +1279,7 @@ def _dataset_fallback_reply(language: str, seed: str = "") -> str:
     for tag in ("out_of_scope", "greeting", "gratitude", "goodbye"):
         response = _dataset_intent_response(tag, language, seed=seed)
         if response:
-            return response
+            return _smart_dataset_reply(response, seed or tag, language) or response
     return "Unable to respond."
 
 
@@ -4629,9 +4696,9 @@ def _general_llm_reply(
     recent_messages: Optional[list[dict[str, Any]]] = None,
 ) -> str:
     language_instructions = {
-        "en": "Reply in clear English.",
-        "ar_fusha": "رد باللغة العربية الفصحى.",
-        "ar_jordanian": "احكِ باللهجة الأردنية بشكل واضح.",
+        "en": "Reply in polished English. Use 0-2 relevant emojis naturally.",
+        "ar_fusha": "رد باللغة العربية الفصحى بشكل طبيعي. استخدم من 0 إلى 2 إيموجي مناسب فقط.",
+        "ar_jordanian": "احكِ باللهجة الأردنية بشكل واضح وطبيعي. استخدم من 0 إلى 2 إيموجي مناسب فقط.",
     }.get(language, "Reply in English.")
 
     display_name = _profile_display_name(profile)
@@ -4640,18 +4707,24 @@ def _general_llm_reply(
     nutrition_kb_context = _nutrition_kb_context(user_message, profile, top_k=3)
 
     system_prompt = (
-        "You are a professional AI fitness coach.\n"
+        "You are an elite AI fitness coach and nutrition advisor.\n"
         "You ONLY answer fitness, training, sports performance, and nutrition topics.\n"
         "If user asks outside this domain, politely refuse and redirect back to fitness.\n"
-        "Be warm and supportive, but practical.\n"
+        "Be warm, sharp, practical, and highly personalized.\n"
         "Personalize responses using user profile fields (name, goal, age, height, weight, health constraints).\n"
+        "Answer like a strong modern assistant: start with the direct answer, then give the most useful breakdown or steps.\n"
+        "When useful, structure the reply with short bullets, action steps, or a mini-plan.\n"
+        "Use up to 2 relevant emojis naturally, never spam them.\n"
+        "Sound confident and insightful, but never invent facts or pretend certainty when data is missing.\n"
         "For weekly/monthly performance questions, be analytical and numeric.\n"
         "Compare recent data against the goal, calculate the rate of progress, classify status (On track / Ahead / Behind), and estimate weeks remaining when data is sufficient.\n"
         "Never guess missing metrics; explicitly ask for the exact missing fields.\n"
         "When nutrition knowledge snippets are provided in context, prioritize them over generic advice.\n"
         "If progress is weak or user reports no body change, ask about sleep, hydration, meal adherence, and workout execution before giving final advice.\n"
         "When user asks about exercises, guide them and mention they can use /workouts for muscle-specific exercise explorer.\n"
-        "Keep responses concise but useful.\n"
+        "Ground your advice in the provided dataset context, nutrition snippets, and recent messages.\n"
+        "Keep responses concise but useful, usually 1 short intro plus 3-6 strong bullets when appropriate.\n"
+        "End with one clear next action, question, or recommendation when that improves the answer.\n"
         f"{language_instructions}\n"
     )
 
@@ -4676,7 +4749,7 @@ def _general_llm_reply(
     last_history_text = normalize_text(messages[-1]["content"]) if len(messages) > 1 else ""
     if last_history_text != normalize_text(user_message):
         messages.append({"role": "user", "content": user_message})
-    return LLM.chat_completion(messages, max_tokens=500)
+    return LLM.chat_completion(messages, max_tokens=700)
 
 
 @app.get("/health")

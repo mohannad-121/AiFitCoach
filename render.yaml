@@ -14,7 +14,9 @@ services:
       - key: API_PORT
         value: "8000"
       - key: CHAT_RESPONSE_MODE
-        value: dataset_only
+        value: auto
+      - key: LLM_PROVIDER
+        value: auto
       - key: TRAINING_PIPELINE_ENABLED
         value: "0"
       - key: OLLAMA_MODEL
