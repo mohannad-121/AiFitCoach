@@ -27,6 +27,14 @@ Backend:
 
 This repo includes `render.yaml`.
 
+Repo:
+
+- `https://github.com/mohannad-121/AiFitCoach`
+
+One-click blueprint URL:
+
+- `https://render.com/deploy?repo=https://github.com/mohannad-121/AiFitCoach`
+
 Steps:
 
 1. Push the repo to GitHub.
@@ -41,6 +49,12 @@ Backend health endpoint:
 ## Railway
 
 Railway is easiest with two services from the same repo.
+
+Repo:
+
+- `https://github.com/mohannad-121/AiFitCoach`
+
+This repo now also includes `railway.json` for Railway project defaults.
 
 Backend service:
 
@@ -67,7 +81,7 @@ This repo includes `.do/app.yaml`.
 Steps:
 
 1. Create a new app from GitHub.
-2. Point it at `mohannad-121/fit_coach_ai`.
+2. Point it at `mohannad-121/AiFitCoach`.
 3. Import `.do/app.yaml`.
 4. Fill in all secret environment variables before deploy.
 

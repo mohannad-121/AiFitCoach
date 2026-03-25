@@ -4,7 +4,7 @@ region: fra
 services:
   - name: backend
     github:
-      repo: mohannad-121/fit_coach_ai
+      repo: mohannad-121/AiFitCoach
       branch: main
     source_dir: ai_backend
     environment_slug: python
@@ -41,7 +41,7 @@ services:
 static_sites:
   - name: frontend
     github:
-      repo: mohannad-121/fit_coach_ai
+      repo: mohannad-121/AiFitCoach
       branch: main
     source_dir: /
     build_command: npm ci && npm run build
