@@ -1,0 +1,63 @@
+name: fit-coach-ai
+region: fra
+
+services:
+  - name: backend
+    github:
+      repo: mohannad-121/fit_coach_ai
+      branch: main
+    source_dir: ai_backend
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 8080
+    build_command: pip install -r requirements.txt
+    run_command: uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
+    health_check:
+      http_path: /health
+    envs:
+      - key: CHAT_RESPONSE_MODE
+        scope: RUN_AND_BUILD_TIME
+        value: dataset_only
+      - key: TRAINING_PIPELINE_ENABLED
+        scope: RUN_AND_BUILD_TIME
+        value: "1"
+      - key: OLLAMA_BASE_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: OLLAMA_MODEL
+        scope: RUN_AND_BUILD_TIME
+        value: llama3.2:3b
+      - key: OPENAI_API_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: VITE_SUPABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: VITE_SUPABASE_ANON_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+static_sites:
+  - name: frontend
+    github:
+      repo: mohannad-121/fit_coach_ai
+      branch: main
+    source_dir: /
+    build_command: npm ci && npm run build
+    output_dir: dist
+    routes:
+      - path: /
+    envs:
+      - key: VITE_AI_BACKEND_URL
+        scope: BUILD_TIME
+        type: SECRET
+      - key: VITE_SUPABASE_URL
+        scope: BUILD_TIME
+        type: SECRET
+      - key: VITE_SUPABASE_ANON_KEY
+        scope: BUILD_TIME
+        type: SECRET
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        scope: BUILD_TIME
+        type: SECRET

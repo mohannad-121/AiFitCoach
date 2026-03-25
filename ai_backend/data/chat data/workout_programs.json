@@ -1,0 +1,3897 @@
+[
+  {
+    "id": "WP-MB-GYM-M-21-35-2R",
+    "goal": "بناء عضلات / Muscle Building",
+    "location": "جيم / Gym",
+    "gender": "ذكر / Male",
+    "age_group": "21-35",
+    "age_label": "شاب / Young Adult",
+    "rest_days_per_week": 2,
+    "training_days_per_week": 5,
+    "level": "متوسط إلى متقدم / Intermediate to Advanced",
+    "program_name": "5 أيام تقسيم عضلي Push/Pull/Legs للجيم",
+    "program_duration_weeks": 12,
+    "description": "برنامج Push/Pull/Legs الكلاسيكي للتضخيم — الأفضل لبناء الحجم العضلي للشباب. / Classic PPL program for bulking — best for building muscle mass for young adults.",
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "Push (صدر + كتف + ترايسبس)"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "تمرين / Training",
+        "focus": "Pull (ظهر + بايسبس + عضلة خلفية كتف)"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "Legs (فخذ أمامي + خلفي + ساق)"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة أو تمدد خفيف"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Push (صدر + كتف + ترايسبس)"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "Pull (ظهر + بايسبس)"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "Push Day A — صدر + كتف + ترايسبس",
+        "day_type": "push",
+        "warm_up": "5 دقائق تدفئة عامة + دوران كتف + تمدد صدر / 5 min general warmup + shoulder rotations + chest stretch",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "بنش برس بالبار (مستوى)",
+            "name_en": "Barbell Bench Press (Flat)",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس، أمامي كتف",
+            "sets": 4,
+            "reps": "6-8",
+            "rest_seconds": 120,
+            "rpe": "8-9",
+            "notes": "تمرين رئيسي — ركز على التوقف في الأسفل لثانية / Main lift — pause at bottom for 1 second"
+          },
+          {
+            "order": 2,
+            "name_ar": "بنش برس بالبار (مائل لأعلى)",
+            "name_en": "Incline Barbell Bench Press",
+            "muscle_primary": "صدر علوي / Upper Chest",
+            "muscle_secondary": "أمامي كتف",
+            "sets": 4,
+            "reps": "8-10",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "زاوية 30-45 درجة / 30-45 degree angle"
+          },
+          {
+            "order": 3,
+            "name_ar": "دمبل فلاي مائل",
+            "name_en": "Incline Dumbbell Fly",
+            "muscle_primary": "صدر علوي / Upper Chest",
+            "muscle_secondary": "أمامي كتف",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7-8",
+            "notes": "تمدد ممتاز في القمة / Great stretch at top"
+          },
+          {
+            "order": 4,
+            "name_ar": "أوفرهيد برس بالبار",
+            "name_en": "Barbell Overhead Press",
+            "muscle_primary": "كتف أمامي وجانبي / Front & Lateral Deltoid",
+            "muscle_secondary": "ترايسبس، علوي صدر",
+            "sets": 4,
+            "reps": "8-10",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "لا تقوس الظهر — الجوهر المتوسط / Don't arch back — core tight"
+          },
+          {
+            "order": 5,
+            "name_ar": "رفع جانبي بالدمبل",
+            "name_en": "Dumbbell Lateral Raise",
+            "muscle_primary": "كتف جانبي / Lateral Deltoid",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "12-15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "حافظ على كوع خفيف الانثناء / Keep slight elbow bend"
+          },
+          {
+            "order": 6,
+            "name_ar": "ترايسبس دفع بالكابل",
+            "name_en": "Cable Triceps Pushdown",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "قفل الكوع في الأسفل / Lock out at bottom"
+          },
+          {
+            "order": 7,
+            "name_ar": "ترايسبس أوفرهيد بالدمبل",
+            "name_en": "Overhead Triceps Extension",
+            "muscle_primary": "ترايسبس طويل / Long Head Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "مهم لتطوير رأس الترايسبس الطويل / Important for long head development"
+          }
+        ],
+        "cool_down": "تمدد صدر + تمدد ترايسبس + تمدد كتف 5 دقائق / Chest + triceps + shoulder stretch 5 min"
+      },
+      {
+        "day_name": "Pull Day A — ظهر + بايسبس + خلفي كتف",
+        "day_type": "pull",
+        "warm_up": "5 دقائق + دوران كتف + تمدد كتف خلفي / 5 min + shoulder rotations + rear delt stretch",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ديدليفت",
+            "name_en": "Deadlift",
+            "muscle_primary": "أسفل ظهر، فخذ خلفي / Lower Back, Hamstrings",
+            "muscle_secondary": "كامل الجسم",
+            "sets": 4,
+            "reps": "5-6",
+            "rest_seconds": 180,
+            "rpe": "9",
+            "notes": "تمرين الملك — حافظ على الظهر مستقيماً / King of exercises — keep back straight"
+          },
+          {
+            "order": 2,
+            "name_ar": "بار رو مائل",
+            "name_en": "Bent-Over Barbell Row",
+            "muscle_primary": "ظهر أوسط وعلوي / Mid & Upper Back",
+            "muscle_secondary": "بايسبس، خلفي كتف",
+            "sets": 4,
+            "reps": "8-10",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "ظهر مائل 45 درجة — اسحب للسرة / 45 degree back — pull to navel"
+          },
+          {
+            "order": 3,
+            "name_ar": "لات بولداون (قبضة واسعة)",
+            "name_en": "Wide Grip Lat Pulldown",
+            "muscle_primary": "لاتيسيموس / Lats",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "اسحب الكوع للأسفل — تخيل أنك تكسر البار / Pull elbows down — imagine breaking the bar"
+          },
+          {
+            "order": 4,
+            "name_ar": "سياتد كابل رو",
+            "name_en": "Seated Cable Row",
+            "muscle_primary": "ظهر أوسط / Mid Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": "ضم لوحي الكتف في نهاية الحركة / Squeeze shoulder blades at end"
+          },
+          {
+            "order": 5,
+            "name_ar": "رفع خلفي للدمبل (Rear Delt Fly)",
+            "name_en": "Rear Delt Fly",
+            "muscle_primary": "خلفي كتف / Rear Deltoid",
+            "muscle_secondary": "عضلات الظهر العلوي",
+            "sets": 3,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": "وزن خفيف مع التركيز على العزل / Light weight focusing on isolation"
+          },
+          {
+            "order": 6,
+            "name_ar": "بايسبس كيرل بالبار",
+            "name_en": "Barbell Bicep Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "برايكياليس",
+            "sets": 3,
+            "reps": "10-12",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": "لا تهز الجسم — عزل كامل / No swinging — full isolation"
+          },
+          {
+            "order": 7,
+            "name_ar": "هامر كيرل بالدمبل",
+            "name_en": "Hammer Curl",
+            "muscle_primary": "برايكياليس، بايسبس / Brachialis, Biceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "يعطي سمكاً للبايسبس / Adds thickness to biceps"
+          }
+        ],
+        "cool_down": "تمدد ظهر + تمدد بايسبس + Cat-Cow 5 دقائق / Back + biceps + Cat-Cow 5 min"
+      },
+      {
+        "day_name": "Legs Day — فخذ أمامي + خلفي + ساق",
+        "day_type": "legs",
+        "warm_up": "5 دقائق دراجة ثابتة + تدوير ركبة + حركة مفصل الورك / 5 min bike + knee circles + hip mobility",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بالبار (خلفي)",
+            "name_en": "Back Squat",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة، فخذ خلفي، ساق",
+            "sets": 4,
+            "reps": "6-8",
+            "rest_seconds": 180,
+            "rpe": "8-9",
+            "notes": "ورك تحت الركبة — ملكة تمارين الأرجل / Hips below knees — queen of leg exercises"
+          },
+          {
+            "order": 2,
+            "name_ar": "ليغ برس",
+            "name_en": "Leg Press",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة، فخذ خلفي",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 120,
+            "rpe": "8",
+            "notes": "لا تقفل الركبة في الأعلى / Don't lock knees at top"
+          },
+          {
+            "order": 3,
+            "name_ar": "ليغ إكستنشن",
+            "name_en": "Leg Extension",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15-20",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": "عزل ممتاز للفخذ الأمامي / Excellent quad isolation"
+          },
+          {
+            "order": 4,
+            "name_ar": "رومانيان ديدليفت بالدمبل",
+            "name_en": "Romanian Deadlift (DB)",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "مؤخرة، أسفل ظهر",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "ابقَ على خط مستقيم من الرأس للعقب / Keep straight line from head to heel"
+          },
+          {
+            "order": 5,
+            "name_ar": "ليغ كيرل (جهاز)",
+            "name_en": "Lying Leg Curl",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": "تحكم في الحركة النازلة / Control the negative movement"
+          },
+          {
+            "order": 6,
+            "name_ar": "كاف رايز على آلة",
+            "name_en": "Standing Calf Raise",
+            "muscle_primary": "عضلة ساق / Gastrocnemius",
+            "muscle_secondary": "سولياس",
+            "sets": 4,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "8",
+            "notes": "توقف ثانية في القمة وثانية في الأسفل / Pause 1 sec at top and bottom"
+          },
+          {
+            "order": 7,
+            "name_ar": "هيب ثراست بالبار",
+            "name_en": "Barbell Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "فخذ خلفي",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "ضم المؤخرة في القمة لثانيتين / Squeeze glutes at top for 2 seconds"
+          }
+        ],
+        "cool_down": "تمدد فخذ أمامي + تمدد فخذ خلفي + pigeon stretch 5 دقائق"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة الوزن أو الرابات كل أسبوع إلى أسبوعين / Add weight or reps every 1-2 weeks",
+      "rule": "إذا أكملت الرابات العليا في كل السيتات، زد الوزن 2.5-5kg / If you complete upper rep range in all sets, add 2.5-5kg",
+      "deload_week": "أسبوع تخفيف كل 4-6 أسابيع — 50-60% من الأوزان المعتادة / Deload week every 4-6 weeks — 50-60% of usual weights"
+    },
+    "tips": [
+      "نم 7-9 ساعات يومياً — أهم من التمرين نفسه. / Sleep 7-9 hours daily — more important than the workout itself.",
+      "لا تتخطى يوم الأرجل — العضلات الكبيرة تطلق أكثر هرمونات البناء. / Never skip leg day — big muscles release the most anabolic hormones.",
+      "سجّل أوزانك في كل جلسة لضمان التقدم. / Record your weights every session to ensure progress.",
+      "التغذية بعد التمرين خلال 30-60 دقيقة. / Post-workout nutrition within 30-60 minutes."
+    ]
+  },
+  {
+    "id": "WP-MB-GYM-M-21-35-3R",
+    "goal": "بناء عضلات / Muscle Building",
+    "location": "جيم / Gym",
+    "gender": "ذكر / Male",
+    "age_group": "21-35",
+    "age_label": "شاب / Young Adult",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ إلى متوسط / Beginner to Intermediate",
+    "program_name": "4 أيام Upper/Lower تقسيم للجيم",
+    "program_duration_weeks": 12,
+    "description": "برنامج Upper/Lower المثالي لبناء العضلات مع راحة كافية — مناسب للمبتدئين والمتوسطين. / Ideal Upper/Lower program for muscle building with adequate recovery.",
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "Upper A (صدر + ظهر + كتف)"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "Lower A (فخذ + ساق + مؤخرة)"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Upper B (صدر + ظهر + أذرع)"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "Lower B (فخذ + ساق + ركز على خلفي)"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "Upper A — صدر + ظهر + كتف (قوة)",
+        "day_type": "upper_strength",
+        "warm_up": "5 دقائق + تمرين تفعيل كتف وصدر / 5 min + shoulder and chest activation",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "بنش برس مسطح بالبار",
+            "name_en": "Flat Barbell Bench Press",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس، كتف",
+            "sets": 4,
+            "reps": "5",
+            "rest_seconds": 180,
+            "rpe": "8-9",
+            "notes": "وزن ثقيل — هدف القوة / Heavy weight — strength focus"
+          },
+          {
+            "order": 2,
+            "name_ar": "بار رو مائل",
+            "name_en": "Bent-Over Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "5",
+            "rest_seconds": 180,
+            "rpe": "8-9",
+            "notes": "تعادل وزن البنش برس / Should match bench press weight"
+          },
+          {
+            "order": 3,
+            "name_ar": "أوفرهيد برس بالبار",
+            "name_en": "Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "ترايسبس",
+            "sets": 3,
+            "reps": "8",
+            "rest_seconds": 120,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "لات بولداون",
+            "name_en": "Lat Pulldown",
+            "muscle_primary": "لاتيسيموس / Lats",
+            "muscle_secondary": "بايسبس",
+            "sets": 3,
+            "reps": "10",
+            "rest_seconds": 90,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "رفع جانبي دمبل",
+            "name_en": "Lateral Raise",
+            "muscle_primary": "كتف جانبي / Lateral Deltoid",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد صدر وظهر 5 دقائق"
+      },
+      {
+        "day_name": "Lower A — فخذ أمامي + مؤخرة + ساق (قوة)",
+        "day_type": "lower_strength",
+        "warm_up": "5 دقائق دراجة + حركة ورك + سكوات جوي / 5 min bike + hip mobility + bodyweight squat",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بالبار",
+            "name_en": "Back Squat",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة، فخذ خلفي",
+            "sets": 4,
+            "reps": "5",
+            "rest_seconds": 180,
+            "rpe": "9",
+            "notes": "تمرين رئيسي — تقدم الوزن كل أسبوع / Main lift — add weight weekly"
+          },
+          {
+            "order": 2,
+            "name_ar": "رومانيان ديدليفت",
+            "name_en": "Romanian Deadlift",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "مؤخرة، أسفل ظهر",
+            "sets": 3,
+            "reps": "8",
+            "rest_seconds": 120,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "ليغ برس",
+            "name_en": "Leg Press",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "هيب ثراست",
+            "name_en": "Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز واقف",
+            "name_en": "Standing Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد فخذ وساق 5 دقائق"
+      },
+      {
+        "day_name": "Upper B — صدر + ظهر + أذرع (حجم)",
+        "day_type": "upper_hypertrophy",
+        "warm_up": "5 دقائق + تفعيل عضلات الأذرع / 5 min + arm activation",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "بنش برس مائل بالدمبل",
+            "name_en": "Incline DB Bench Press",
+            "muscle_primary": "صدر علوي / Upper Chest",
+            "muscle_secondary": "كتف، ترايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "ذراع عكسية (Chest Supported Row)",
+            "name_en": "Chest Supported Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "يقلل استخدام الظهر الأسفل / Reduces lower back involvement"
+          },
+          {
+            "order": 3,
+            "name_ar": "دمبل فلاي مسطح",
+            "name_en": "Flat DB Fly",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "كيبل رو واقف",
+            "name_en": "Cable Face Pull",
+            "muscle_primary": "خلفي كتف / Rear Deltoid",
+            "muscle_secondary": "عضلات دوران خارجي",
+            "sets": 3,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "مهم جداً لصحة الكتف / Very important for shoulder health"
+          },
+          {
+            "order": 5,
+            "name_ar": "بايسبس كيرل بالدمبل",
+            "name_en": "Dumbbell Bicep Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "ترايسبس ديبس (جهاز)",
+            "name_en": "Triceps Dips (Assisted)",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد أذرع وصدر 5 دقائق"
+      },
+      {
+        "day_name": "Lower B — فخذ خلفي + مؤخرة + ساق (حجم)",
+        "day_type": "lower_hypertrophy",
+        "warm_up": "5 دقائق + تفعيل مؤخرة / 5 min + glute activation",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ديدليفت سوماتوري",
+            "name_en": "Sumo Deadlift",
+            "muscle_primary": "فخذ خلفي + مؤخرة / Hamstrings + Glutes",
+            "muscle_secondary": "ظهر، فخذ أمامي",
+            "sets": 4,
+            "reps": "8",
+            "rest_seconds": 150,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "ليغ كيرل جالس",
+            "name_en": "Seated Leg Curl",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "لانج (Lunges) بالدمبل",
+            "name_en": "Dumbbell Lunges",
+            "muscle_primary": "فخذ أمامي + مؤخرة / Quads + Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12 per leg",
+            "rest_seconds": 90,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "كابل كيك باك للمؤخرة",
+            "name_en": "Cable Kickback",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15 per side",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز جالس",
+            "name_en": "Seated Calf Raise",
+            "muscle_primary": "سولياس / Soleus",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد فخذ خلفي + pigeon + تمدد ساق 5 دقائق"
+      }
+    ],
+    "progressive_overload": {
+      "method": "Linear Progression — زيادة 2.5-5kg كل أسبوع في التمارين الرئيسية",
+      "rule": "الهدف: إكمال كل السيتات بالرابات المحددة ثم زيادة الوزن",
+      "deload_week": "أسبوع تخفيف كل 8 أسابيع"
+    },
+    "tips": [
+      "Upper/Lower مثالي — كل عضلة تُدرَّب مرتين أسبوعياً. / Upper/Lower is ideal — each muscle trained twice weekly.",
+      "الثلاثاء والخميس راحة كاملة — لا تمارين إضافية. / Tuesday and Thursday are full rest — no extra exercise.",
+      "الفرق بين A وB: A للقوة، B للحجم. / Difference between A and B: A for strength, B for hypertrophy.",
+      "مثالي للمبتدئين الذين يريدون هيكلاً واضحاً. / Perfect for beginners who want a clear structure."
+    ]
+  },
+  {
+    "id": "WP-MB-GYM-M-36-50-3R",
+    "goal": "بناء عضلات / Muscle Building",
+    "location": "جيم / Gym",
+    "gender": "ذكر / Male",
+    "age_group": "36-50",
+    "age_label": "متوسط العمر / Middle Age",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "متوسط / Intermediate",
+    "program_name": "4 أيام تضخيم للأعمار 36-50 مع اعتبارات صحية",
+    "program_duration_weeks": 12,
+    "description": "برنامج تضخيم مُعدَّل للأعمار 36-50 — يراعي تعافياً أبطأ وصحة المفاصل والمرونة. / Modified bulking program for ages 36-50 — considers slower recovery and joint health.",
+    "age_specific_notes": [
+      "التستوستيرون يبدأ بالانخفاض — التدريب يعوّض ذلك. / Testosterone begins declining — training compensates.",
+      "التعافي أبطأ — 48-72 ساعة بين تدريب نفس العضلة. / Recovery is slower — 48-72 hours between same muscle training.",
+      "التدفئة والتبريد أكثر أهمية من أي عمر آخر. / Warm-up and cool-down more important than any other age.",
+      "تجنب أوزان رهيبة القصوى — استهدف 70-80% من الحد الأقصى. / Avoid extreme max weights — target 70-80% of max."
+    ],
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "Upper A — صدر + ظهر"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "راحة + تمدد خفيف"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "Lower — أرجل كاملة"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Upper B — كتف + أذرع + صدر علوي"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "Full Body خفيف + كارديو"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "Upper A — صدر + ظهر",
+        "day_type": "upper_A",
+        "warm_up": "10 دقائق تدفئة + تمدد ديناميكي كامل / 10 min warmup + full dynamic stretch",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "بنش برس بالدمبل (مستوى)",
+            "name_en": "Flat DB Bench Press",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس، كتف",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 120,
+            "rpe": "7-8",
+            "notes": "دمبل أفضل من بار لصحة الرسغ والكتف في هذا العمر / Dumbbells better than barbell for wrist/shoulder health at this age"
+          },
+          {
+            "order": 2,
+            "name_ar": "لات بولداون (قبضة متوسطة)",
+            "name_en": "Neutral Grip Lat Pulldown",
+            "muscle_primary": "لاتيسيموس / Lats",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "7-8",
+            "notes": "القبضة المتوسطة أكثر أماناً للكتف / Neutral grip safer for shoulder"
+          },
+          {
+            "order": 3,
+            "name_ar": "بنش برس مائل بالدمبل",
+            "name_en": "Incline DB Press",
+            "muscle_primary": "صدر علوي / Upper Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 90,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "كابل رو جالس",
+            "name_en": "Seated Cable Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كيبل فلاي للصدر",
+            "name_en": "Cable Chest Fly",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": "أكثر أماناً للمفاصل من الدمبل / Safer for joints than dumbbells"
+          }
+        ],
+        "cool_down": "10 دقائق تمدد ثابت + تمدد عنق + cat-cow"
+      },
+      {
+        "day_name": "Lower — أرجل كاملة مع اهتمام بالمفاصل",
+        "day_type": "lower",
+        "warm_up": "10 دقائق دراجة + تمدد ورك + squat بدون وزن x 20 / 10 min bike + hip stretch + 20 bodyweight squats",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ليغ برس (بدل سكوات بالبار)",
+            "name_en": "Leg Press",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة، فخذ خلفي",
+            "sets": 4,
+            "reps": "12-15",
+            "rest_seconds": 120,
+            "rpe": "7-8",
+            "notes": "أكثر أماناً للركبة والظهر الأسفل من السكوات الثقيل / Safer for knees and lower back than heavy squats"
+          },
+          {
+            "order": 2,
+            "name_ar": "رومانيان ديدليفت بالدمبل",
+            "name_en": "DB Romanian Deadlift",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "مؤخرة",
+            "sets": 4,
+            "reps": "12",
+            "rest_seconds": 90,
+            "rpe": "7",
+            "notes": "دمبل بدل بار — أكثر راحة للظهر الأسفل / Dumbbells instead of bar — more comfortable for lower back"
+          },
+          {
+            "order": 3,
+            "name_ar": "بولغاريان سبليت سكوات",
+            "name_en": "Bulgarian Split Squat",
+            "muscle_primary": "فخذ أمامي + مؤخرة / Quads + Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "10 per leg",
+            "rest_seconds": 90,
+            "rpe": "7",
+            "notes": "يُحسن التوازن والتناسق / Improves balance and coordination"
+          },
+          {
+            "order": 4,
+            "name_ar": "هيب ثراست بالدمبل",
+            "name_en": "DB Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز واقف",
+            "name_en": "Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "10 دقائق تمدد عميق فخذ + pigeon + hip flexor stretch"
+      },
+      {
+        "day_name": "Upper B — كتف + أذرع + صدر علوي",
+        "day_type": "upper_B",
+        "warm_up": "10 دقائق + دوران كتف خفيف / 10 min + light shoulder rotations",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "أوفرهيد برس بالدمبل جالس",
+            "name_en": "Seated DB Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "ترايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "7",
+            "notes": "جالس أقل ضغطاً على الظهر الأسفل / Seated puts less strain on lower back"
+          },
+          {
+            "order": 2,
+            "name_ar": "رفع جانبي كيبل",
+            "name_en": "Cable Lateral Raise",
+            "muscle_primary": "كتف جانبي / Lateral Deltoid",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "بايسبس كيرل بالكيبل",
+            "name_en": "Cable Bicep Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": "كيبل أفضل للمفاصل من البار / Cable better for joints than bar"
+          },
+          {
+            "order": 4,
+            "name_ar": "ترايسبس بوشداون بكيبل",
+            "name_en": "Cable Triceps Pushdown",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "فيس بول للكتف الخلفي",
+            "name_en": "Face Pull",
+            "muscle_primary": "خلفي كتف / Rear Delt",
+            "muscle_secondary": "عضلات دوران",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "6",
+            "notes": "ضروري لصحة الكتف في هذا العمر / Essential for shoulder health at this age"
+          }
+        ],
+        "cool_down": "10 دقائق تمدد كامل عضلي"
+      },
+      {
+        "day_name": "Full Body خفيف + كارديو",
+        "day_type": "full_body_cardio",
+        "warm_up": "10 دقائق تدفئة",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بوزن الجسم أو خفيف",
+            "name_en": "Bodyweight Squat",
+            "muscle_primary": "فخذ / Quads",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 45,
+            "rpe": "5",
+            "notes": "نشاط خفيف — ليس للإرهاق / Light activity — not for fatigue"
+          },
+          {
+            "order": 2,
+            "name_ar": "ضغط (Push-up)",
+            "name_en": "Push-up",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 45,
+            "rpe": "5",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "سحب أو TRX Row",
+            "name_en": "TRX Row or Band Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 45,
+            "rpe": "5",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "كارديو خفيف",
+            "name_en": "Light Cardio",
+            "muscle_primary": "قلب وأوعية / Cardiovascular",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "20-30 دقيقة / 20-30 min",
+            "rest_seconds": 0,
+            "rpe": "5-6",
+            "notes": "مشي سريع أو دراجة — ليس عدو / Fast walk or bike — not running"
+          }
+        ],
+        "cool_down": "10 دقائق تمدد عميق + تأمل"
+      }
+    ],
+    "progressive_overload": {
+      "method": "Double Progression — زيادة الرابات أولاً ثم الوزن / Add reps first then weight",
+      "rule": "ابدأ من أسفل نطاق الرابات (مثلاً 10) حتى تصل للأعلى (12) في كل السيتات قبل زيادة الوزن",
+      "deload_week": "أسبوع تخفيف كل 4 أسابيع في هذا العمر"
+    },
+    "tips": [
+      "التدفئة 10 دقائق إلزامية — لا تتجاوزها أبداً في هذا العمر. / 10 min warm-up is mandatory — never skip at this age.",
+      "يوم الجمعة الخفيف يساعد التعافي دون إرهاق. / Light Saturday helps recovery without fatigue.",
+      "المرونة والتمدد مهمتان بقدر القوة في هذا العمر. / Flexibility and stretching are as important as strength at this age.",
+      "استشر طبيباً قبل بدء أي برنامج في هذا العمر. / Consult a doctor before starting any program at this age."
+    ]
+  },
+  {
+    "id": "WP-MB-GYM-M-51P-4R",
+    "goal": "بناء عضلات / Muscle Building",
+    "location": "جيم / Gym",
+    "gender": "ذكر / Male",
+    "age_group": "51+",
+    "age_label": "كبار السن / Senior",
+    "rest_days_per_week": 4,
+    "training_days_per_week": 3,
+    "level": "مبتدئ إلى متوسط / Beginner to Intermediate",
+    "program_name": "3 أيام Full Body لكبار السن في الجيم",
+    "program_duration_weeks": 16,
+    "description": "برنامج 3 أيام Full Body للحفاظ على الكتلة العضلية وقوة العظام مع التعافي الكافي. / 3-day Full Body program to maintain muscle mass and bone strength with adequate recovery.",
+    "age_specific_notes": [
+      "الهدف الأول هو الحفاظ وليس التضخيم الكبير. / Primary goal is maintenance not extreme bulking.",
+      "صحة القلب والأوعية لها الأولوية. / Heart and cardiovascular health is the priority.",
+      "تمارين التوازن ضرورية لمنع السقوط. / Balance exercises are necessary to prevent falls.",
+      "التشاور مع الطبيب قبل البدء إلزامي. / Consulting a doctor before starting is mandatory.",
+      "التعافي يحتاج 72 ساعة بين جلسات نفس العضلة. / Recovery needs 72 hours between same muscle sessions."
+    ],
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "Full Body A"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "مشي خفيف 20-30 دقيقة"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "راحة / Rest",
+        "focus": "يوجا أو تمدد خفيف"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "تمرين / Training",
+        "focus": "Full Body B"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "راحة / Rest",
+        "focus": "مشي خفيف 20-30 دقيقة"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "Full Body C"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "Full Body A — قوة محورية وأرجل",
+        "day_type": "full_body_A",
+        "warm_up": "10-15 دقائق مشي على مشاية + تمدد ديناميكي كامل",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ليغ برس (بدل سكوات)",
+            "name_en": "Leg Press",
+            "muscle_primary": "فخذ / Quads",
+            "muscle_secondary": "مؤخرة",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 120,
+            "rpe": "6-7",
+            "notes": "أكثر أماناً من السكوات — ركبة ومفاصل / Safer than squats for knees and joints"
+          },
+          {
+            "order": 2,
+            "name_ar": "بنش برس بالدمبل مسطح",
+            "name_en": "Flat DB Bench Press",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 90,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "لات بولداون بقبضة متوسطة",
+            "name_en": "Neutral Grip Lat Pulldown",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 90,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "أوفرهيد برس بالدمبل جالس",
+            "name_en": "Seated DB Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 90,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "تمرين توازن على ساق واحدة",
+            "name_en": "Single Leg Balance",
+            "muscle_primary": "توازن / Balance",
+            "muscle_secondary": "ساق، ورك",
+            "sets": 3,
+            "reps": "30 ثانية per side",
+            "rest_seconds": 30,
+            "rpe": "4",
+            "notes": "مهم جداً لمنع السقوط / Very important for fall prevention"
+          }
+        ],
+        "cool_down": "15 دقائق تمدد عميق + تنفس عميق"
+      },
+      {
+        "day_name": "Full Body B — قوة وأيض",
+        "day_type": "full_body_B",
+        "warm_up": "10-15 دقائق دراجة ثابتة",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "رومانيان ديدليفت بالدمبل",
+            "name_en": "DB Romanian Deadlift",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "ظهر، مؤخرة",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 120,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "كابل رو جالس",
+            "name_en": "Seated Cable Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 90,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "بنش مائل بالدمبل",
+            "name_en": "Incline DB Press",
+            "muscle_primary": "صدر علوي / Upper Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 90,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "هيب ثراست",
+            "name_en": "Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "6-7",
+            "notes": "ممتاز لصحة الورك والعظام / Excellent for hip and bone health"
+          },
+          {
+            "order": 5,
+            "name_ar": "كارديو خفيف",
+            "name_en": "Light Cardio",
+            "muscle_primary": "قلب / Heart",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "15-20 دقيقة",
+            "rest_seconds": 0,
+            "rpe": "5",
+            "notes": "دراجة أو مشي / Bike or walking"
+          }
+        ],
+        "cool_down": "15 دقائق تمدد + تنفس عميق"
+      },
+      {
+        "day_name": "Full Body C — مرونة وتحمل عضلي",
+        "day_type": "full_body_C",
+        "warm_up": "10 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ليغ إكستنشن خفيف",
+            "name_en": "Light Leg Extension",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "5-6",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "ليغ كيرل خفيف",
+            "name_en": "Light Leg Curl",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "5-6",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "كيبل فلاي للصدر",
+            "name_en": "Cable Chest Fly",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "5-6",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "فيس بول (صحة كتف)",
+            "name_en": "Face Pull",
+            "muscle_primary": "خلفي كتف / Rear Delt",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "5",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "تمارين توازن ومرونة",
+            "name_en": "Balance & Flexibility",
+            "muscle_primary": "كامل الجسم / Full Body",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "15 دقيقة تمدد + توازن",
+            "rest_seconds": 0,
+            "rpe": "3-4",
+            "notes": "يوجا أو تاي تشي إذا متوفر / Yoga or Tai Chi if available"
+          }
+        ],
+        "cool_down": "15 دقائق تمدد عميق إلزامي"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة بطيئة جداً — رابة واحدة إضافية في الأسبوع / Very slow increase — one extra rep per week",
+      "rule": "لا تتسرع — الاستمرارية أهم من الثقل / Don't rush — consistency more important than weight",
+      "deload_week": "أسبوع تخفيف كل 3 أسابيع في هذا العمر"
+    },
+    "tips": [
+      "3 أيام كافية تماماً للحفاظ على العضلات في هذا العمر. / 3 days is completely sufficient for muscle maintenance at this age.",
+      "مشي الثلاثاء والخميس والجمعة يحسن القلب والأوعية. / Tuesday, Thursday, Friday walking improves cardiovascular health.",
+      "الأهم من الوزن هو الشكل الصحيح للتمرين دائماً. / Proper form is always more important than weight.",
+      "استشر طبيبك دورياً وأجرِ فحص قلب سنوياً. / Consult your doctor regularly and get annual heart checkup."
+    ]
+  },
+  {
+    "id": "WP-MB-GYM-F-21-35-3R",
+    "goal": "بناء عضلات / Muscle Building",
+    "location": "جيم / Gym",
+    "gender": "أنثى / Female",
+    "age_group": "21-35",
+    "age_label": "شابة / Young Adult Female",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ إلى متوسط / Beginner to Intermediate",
+    "program_name": "4 أيام Glute-Focused Upper/Lower للإناث في الجيم",
+    "program_duration_weeks": 12,
+    "description": "برنامج مُصمَّم خصيصاً للإناث — يركز على المؤخرة والفخذ مع بناء الجزء العلوي بتوازن. / Program specifically designed for females — focuses on glutes and thighs with balanced upper body.",
+    "female_specific_notes": [
+      "الإناث يبنين العضلات بنفس كفاءة الذكور لكن بوتيرة مختلفة. / Females build muscle just as efficiently as males but at a different rate.",
+      "التركيز على المؤخرة والفخذ والكتف لتحقيق الشكل المثالي. / Focus on glutes, thighs and shoulders for ideal shape.",
+      "خلال الدورة الشهرية — قللي الشدة في الأيام الصعبة. / During period — reduce intensity on difficult days.",
+      "الإناث يتعافين أسرع من الذكور — يمكن التدريب أكثر. / Females recover faster than males — can train more."
+    ],
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "Lower A — مؤخرة + فخذ خلفي (تركيز مؤخرة)"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "تمرين / Training",
+        "focus": "Upper A — كتف + ظهر + صدر خفيف"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "راحة / Rest",
+        "focus": "يوجا أو مشي خفيف"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "تمرين / Training",
+        "focus": "Lower B — فخذ أمامي + مؤخرة + ساق"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Upper B — صدر + أذرع + خلفي كتف"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة أو نشاط خفيف"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "Lower A — مؤخرة + فخذ خلفي (تركيز المؤخرة)",
+        "day_type": "lower_glute_focus",
+        "warm_up": "5 دقائق دراجة + تفعيل مؤخرة (clamshells + glute bridge x20) / 5 min bike + glute activation",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "هيب ثراست بالبار",
+            "name_en": "Barbell Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "فخذ خلفي، فخذ أمامي",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8-9",
+            "notes": "أفضل تمرين لتطوير المؤخرة — ضمي في القمة لثانيتين / Best glute development exercise — squeeze at top for 2 seconds"
+          },
+          {
+            "order": 2,
+            "name_ar": "رومانيان ديدليفت بالبار أو دمبل",
+            "name_en": "Romanian Deadlift",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "مؤخرة، أسفل ظهر",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "تمدد عميق في القمة / Deep stretch at top"
+          },
+          {
+            "order": 3,
+            "name_ar": "سكوات سوماتوري (Sumo Squat)",
+            "name_en": "Sumo Squat",
+            "muscle_primary": "مؤخرة + فخذ داخلي / Glutes + Inner Thigh",
+            "muscle_secondary": "فخذ أمامي",
+            "sets": 4,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7-8",
+            "notes": "قدم واسعة للتركيز على المؤخرة والداخلي / Wide stance for glute and inner thigh focus"
+          },
+          {
+            "order": 4,
+            "name_ar": "كابل كيك باك للمؤخرة",
+            "name_en": "Cable Kickback",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15-20 per side",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "عزل ممتاز للمؤخرة / Excellent glute isolation"
+          },
+          {
+            "order": 5,
+            "name_ar": "ليغ كيرل جالس",
+            "name_en": "Seated Leg Curl",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "Abductor (جهاز فتح الأرجل)",
+            "name_en": "Hip Abduction Machine",
+            "muscle_primary": "فخذ خارجي / Outer Thigh (Abductors)",
+            "muscle_secondary": "مؤخرة",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "مهم لعرض المؤخرة / Important for glute width"
+          }
+        ],
+        "cool_down": "تمدد مؤخرة + pigeon pose + فخذ خلفي 10 دقائق"
+      },
+      {
+        "day_name": "Upper A — كتف + ظهر + صدر خفيف",
+        "day_type": "upper_A",
+        "warm_up": "5 دقائق + دوران كتف خفيف",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "لات بولداون (قبضة واسعة)",
+            "name_en": "Wide Grip Lat Pulldown",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "7-8",
+            "notes": "يعطي شكل V للجسم — مهم للإناث / Gives V-shape — important for females"
+          },
+          {
+            "order": 2,
+            "name_ar": "أوفرهيد برس بالدمبل",
+            "name_en": "DB Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "ترايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "7-8",
+            "notes": "يوسع الكتف لخلق تناسب مع الورك / Widens shoulders for waist-hip ratio"
+          },
+          {
+            "order": 3,
+            "name_ar": "كابل رو جالس",
+            "name_en": "Seated Cable Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "رفع جانبي دمبل",
+            "name_en": "Lateral Raise",
+            "muscle_primary": "كتف جانبي / Lateral Deltoid",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "3-4 سيتات — مهم جداً لعرض الكتف / 3-4 sets — very important for shoulder width"
+          },
+          {
+            "order": 5,
+            "name_ar": "بنش مائل بالدمبل (خفيف)",
+            "name_en": "Light Incline DB Press",
+            "muscle_primary": "صدر علوي / Upper Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 75,
+            "rpe": "6-7",
+            "notes": "الهدف الشكل وليس الضخامة / Goal is shape not bulk"
+          },
+          {
+            "order": 6,
+            "name_ar": "فيس بول للكتف الخلفي",
+            "name_en": "Face Pull",
+            "muscle_primary": "خلفي كتف / Rear Delt",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد كتف + ظهر 5 دقائق"
+      },
+      {
+        "day_name": "Lower B — فخذ أمامي + مؤخرة + ساق",
+        "day_type": "lower_quad_focus",
+        "warm_up": "5 دقائق دراجة + تفعيل مؤخرة",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بالبار أو دمبل",
+            "name_en": "Barbell or DB Squat",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة، فخذ خلفي",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "أعمق من 90 درجة للمؤخرة / Below 90 degrees for glutes"
+          },
+          {
+            "order": 2,
+            "name_ar": "ليغ برس",
+            "name_en": "Leg Press",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة",
+            "sets": 4,
+            "reps": "12-15",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "وضع القدم عالٍ للتركيز على المؤخرة / High foot placement for glute focus"
+          },
+          {
+            "order": 3,
+            "name_ar": "بولغاريان سبليت سكوات",
+            "name_en": "Bulgarian Split Squat",
+            "muscle_primary": "فخذ أمامي + مؤخرة / Quads + Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12 per leg",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "من أفضل التمارين لشكل الفخذ والمؤخرة / One of the best for thigh and glute shape"
+          },
+          {
+            "order": 4,
+            "name_ar": "Adductor (جهاز إغلاق الأرجل)",
+            "name_en": "Hip Adduction Machine",
+            "muscle_primary": "فخذ داخلي / Inner Thigh",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "مهم للشكل الداخلي للفخذ / Important for inner thigh shape"
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز واقف",
+            "name_en": "Standing Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد عميق فخذ + ساق 10 دقائق"
+      },
+      {
+        "day_name": "Upper B — صدر + أذرع + خلفي كتف",
+        "day_type": "upper_B",
+        "warm_up": "5 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "بنش برس مسطح بالدمبل",
+            "name_en": "Flat DB Bench Press",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس",
+            "sets": 4,
+            "reps": "10-12",
+            "rest_seconds": 90,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "كيبل فلاي للصدر",
+            "name_en": "Cable Chest Fly",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "بايسبس كيرل بالدمبل",
+            "name_en": "DB Bicep Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "ترايسبس بوشداون بكيبل",
+            "name_en": "Cable Triceps Pushdown",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "يحدد الجزء الخلفي من الذراع / Defines the back of the arm"
+          },
+          {
+            "order": 5,
+            "name_ar": "Rear Delt Fly على جهاز",
+            "name_en": "Rear Delt Machine Fly",
+            "muscle_primary": "خلفي كتف / Rear Delt",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد صدر وأذرع 5 دقائق"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة وزن أو رابات كل 1-2 أسبوع / Increase weight or reps every 1-2 weeks",
+      "rule": "لا تخافي من الأوزان الثقيلة — لن تصبحي ضخمة، بل مشدودة / Don't fear heavy weights — you won't get bulky, you'll get toned",
+      "deload_week": "أسبوع تخفيف كل 6 أسابيع"
+    },
+    "tips": [
+      "الإناث لا يصبحن ضخمات من الأوزان — الهرمونات تمنع ذلك. / Females don't get bulky from weights — hormones prevent that.",
+      "يوم الاثنين (Lower A) هو الأهم — المؤخرة تحتاج أكثر تدريب. / Monday (Lower A) is most important — glutes need most training.",
+      "قللي كمية الكارديو وركزي على الأوزان للشكل المثالي. / Reduce cardio and focus on weights for ideal shape.",
+      "خلال الدورة الشهرية — يوم 1-3 تمارين خفيفة مسموح. / During period — days 1-3 light exercises are fine."
+    ]
+  },
+  {
+    "id": "WP-WL-GYM-F-21-35-3R",
+    "goal": "خسارة وزن / Weight Loss",
+    "location": "جيم / Gym",
+    "gender": "أنثى / Female",
+    "age_group": "21-35",
+    "age_label": "شابة / Young Adult Female",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ / Beginner",
+    "program_name": "4 أيام حرق دهون وتنشيف للإناث في الجيم",
+    "program_duration_weeks": 12,
+    "description": "برنامج مزج بين تمارين القوة والكارديو لحرق الدهون مع الحفاظ على العضلات. / Program combining strength and cardio for fat burning while preserving muscle.",
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "قوة + كارديو متوسط — أرجل وبطن"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "مشي 30 دقيقة"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "HIIT + قوة علوي"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "قوة كامل + كارديو"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "كارديو + مؤخرة وفخذ"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "يوم 1 — قوة أرجل + كارديو ثابت",
+        "day_type": "lower_strength_cardio",
+        "warm_up": "5 دقائق مشاية + تمدد ديناميكي",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بوزن الجسم → ثم بالدمبل",
+            "name_en": "Squat Progression",
+            "muscle_primary": "فخذ / Quads",
+            "muscle_secondary": "مؤخرة",
+            "sets": 4,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "رابات أعلى + راحة أقل = حرق أكثر / Higher reps + less rest = more burn"
+          },
+          {
+            "order": 2,
+            "name_ar": "هيب ثراست بوزن خفيف",
+            "name_en": "Hip Thrust (Light)",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "لانج أمامي + خلفي متناوب",
+            "name_en": "Alternating Lunges",
+            "muscle_primary": "فخذ + مؤخرة / Quads + Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "16 (8 per side)",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "كاف رايز",
+            "name_en": "Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "بلانك",
+            "name_en": "Plank",
+            "muscle_primary": "بطن / Core",
+            "muscle_secondary": "كامل الجسم",
+            "sets": 3,
+            "reps": "45 ثانية",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "كارديو ثابت — دراجة أو مشاية",
+            "name_en": "Steady State Cardio",
+            "muscle_primary": "قلب / Cardiovascular",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "25-30 دقيقة منطقة الحرق الدهني (60-70% نبضات القلب)",
+            "rest_seconds": 0,
+            "rpe": "5-6",
+            "notes": "تحرق الدهون بشكل مباشر في هذه المنطقة / Burns fat directly in this zone"
+          }
+        ],
+        "cool_down": "تمدد 5 دقائق"
+      },
+      {
+        "day_name": "يوم 2 — HIIT + قوة علوي",
+        "day_type": "hiit_upper",
+        "warm_up": "5 دقائق + 10 jumping jacks",
+        "hiit_circuit": {
+          "rounds": 4,
+          "rest_between_rounds": 90,
+          "exercises": [
+            {
+              "name_ar": "بيربي (Burpee)",
+              "name_en": "Burpee",
+              "duration_seconds": 30,
+              "rest_seconds": 15
+            },
+            {
+              "name_ar": "ضغط (Push-up)",
+              "name_en": "Push-up",
+              "duration_seconds": 30,
+              "rest_seconds": 15
+            },
+            {
+              "name_ar": "جامبينج سكوات",
+              "name_en": "Jump Squat",
+              "duration_seconds": 30,
+              "rest_seconds": 15
+            },
+            {
+              "name_ar": "Mountain Climbers",
+              "name_en": "Mountain Climbers",
+              "duration_seconds": 30,
+              "rest_seconds": 15
+            }
+          ]
+        },
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "لات بولداون",
+            "name_en": "Lat Pulldown",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "أوفرهيد برس دمبل",
+            "name_en": "DB Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "ترايسبس ديبس",
+            "name_en": "Triceps Dips",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "بايسبس كيرل",
+            "name_en": "Bicep Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد 5 دقائق"
+      },
+      {
+        "day_name": "يوم 3 — Full Body قوة + كارديو",
+        "day_type": "full_body_cardio",
+        "warm_up": "5 دقائق",
+        "circuit_training": {
+          "description": "دوائر تدريبية — أقل راحة لحرق أكثر / Circuit training — less rest for more burn",
+          "rounds": 3,
+          "rest_between_rounds": 120,
+          "exercises": [
+            {
+              "name_ar": "سكوات دمبل",
+              "name_en": "DB Squat",
+              "reps": 15,
+              "rest_seconds": 30
+            },
+            {
+              "name_ar": "بنش دمبل",
+              "name_en": "DB Bench Press",
+              "reps": 12,
+              "rest_seconds": 30
+            },
+            {
+              "name_ar": "كابل رو",
+              "name_en": "Cable Row",
+              "reps": 15,
+              "rest_seconds": 30
+            },
+            {
+              "name_ar": "رفع جانبي",
+              "name_en": "Lateral Raise",
+              "reps": 15,
+              "rest_seconds": 30
+            },
+            {
+              "name_ar": "هيب ثراست",
+              "name_en": "Hip Thrust",
+              "reps": 20,
+              "rest_seconds": 30
+            }
+          ]
+        },
+        "cardio_finisher": {
+          "type": "دراجة ثابتة سرعة عالية / High speed bike",
+          "duration_minutes": 15,
+          "intensity": "عالية / High (HIIT: 20 ثانية عالية + 10 راحة x 10)"
+        },
+        "cool_down": "تمدد 10 دقائق"
+      },
+      {
+        "day_name": "يوم 4 — كارديو + مؤخرة وفخذ",
+        "day_type": "cardio_lower",
+        "warm_up": "10 دقائق مشاية",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "كارديو تحمل — مشاية أو رياضة",
+            "name_en": "Endurance Cardio",
+            "muscle_primary": "قلب / Cardiovascular",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "30-40 دقيقة منطقة دهنية / 30-40 min fat zone",
+            "rest_seconds": 0,
+            "rpe": "5-6",
+            "notes": "هذا اليوم مخصص للحرق — ليس القوة / This day is for burning — not strength"
+          },
+          {
+            "order": 2,
+            "name_ar": "Abductor + Adductor جهاز",
+            "name_en": "Hip Abduction + Adduction",
+            "muscle_primary": "فخذ جانبي / Outer + Inner Thigh",
+            "muscle_secondary": "مؤخرة",
+            "sets": 3,
+            "reps": "25 each",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "كيك باك كيبل",
+            "name_en": "Cable Kickback",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20 per side",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "بطن كامل — crunch + leg raise + russian twist",
+            "name_en": "Abs Circuit",
+            "muscle_primary": "بطن / Abs",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15 each",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد 10 دقائق"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة الشدة تدريجياً — سواء وزن أو رابات أو تقليل راحة / Gradually increase intensity — weight, reps or less rest",
+      "rule": "كل أسبوعين: إما زيادة وزن أو تقليل راحة بـ 15 ثانية / Every 2 weeks: either add weight or reduce rest by 15 seconds",
+      "deload_week": "أسبوع تخفيف كل 6 أسابيع"
+    },
+    "tips": [
+      "الجمع بين القوة والكارديو هو الأفضل لخسارة الوزن. / Combining strength and cardio is best for weight loss.",
+      "لا تعتمدي فقط على الكارديو — ستفقدين عضلات. / Don't rely only on cardio — you'll lose muscle.",
+      "قيسي الجسم بالسنتيمتر وليس فقط الوزن. / Measure body in centimeters not just weight.",
+      "وجبة بروتين بعد التمرين مباشرة لمنع فقدان العضلات. / Protein meal immediately after training to prevent muscle loss."
+    ]
+  },
+  {
+    "id": "WP-MB-HOME-M-21-35-3R",
+    "goal": "بناء عضلات / Muscle Building",
+    "location": "منزل / Home",
+    "gender": "ذكر / Male",
+    "age_group": "21-35",
+    "age_label": "شاب / Young Adult Male",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ إلى متوسط / Beginner to Intermediate",
+    "program_name": "4 أيام تضخيم بالمنزل بدون أجهزة",
+    "equipment_needed": [
+      "دمبل ثقيل (20-40kg) / Heavy dumbbell (20-40kg)",
+      "شريط مقاومة / Resistance band",
+      "بار سحب (اختياري) / Pull-up bar (optional)",
+      "كرسي أو أريكة / Chair or couch",
+      "حصيرة / Mat"
+    ],
+    "program_duration_weeks": 12,
+    "description": "برنامج تضخيم بالمنزل يعتمد على الدمبل وشريط المقاومة وثقل الجسم. / Home bulking program using dumbbells, resistance bands and bodyweight.",
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "صدر + ترايسبس + كتف أمامي"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "راحة + تمدد"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "ظهر + بايسبس + خلفي كتف"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "أرجل كاملة + مؤخرة"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "كتف + أذرع كاملة"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "صدر + ترايسبس + كتف أمامي",
+        "day_type": "chest_triceps",
+        "warm_up": "5 دقائق تمدد ديناميكي + arm circles + 20 ضغط خفيف",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ضغط بالحجرين (Push-up with Elevation) أو عادي",
+            "name_en": "Push-up Variations",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس، كتف",
+            "sets": 4,
+            "reps": "15-20",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": "مستويات: عادي → مرفوع القدم → مع شريط مقاومة / Levels: regular → feet elevated → with resistance band"
+          },
+          {
+            "order": 2,
+            "name_ar": "بنش برس بالدمبل على أرضية",
+            "name_en": "Floor DB Bench Press",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس",
+            "sets": 4,
+            "reps": "12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "على الأرضية بدلاً من المقعد / On floor instead of bench"
+          },
+          {
+            "order": 3,
+            "name_ar": "ضغط مائل للأعلى (على كرسي)",
+            "name_en": "Incline Push-up (Chair)",
+            "muscle_primary": "صدر علوي / Upper Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": "ارفع القدمين على كرسي / Feet elevated on chair"
+          },
+          {
+            "order": 4,
+            "name_ar": "ترايسبس ديبس على الكرسي",
+            "name_en": "Chair Triceps Dips",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": "يدان على حافة الكرسي — جسم منخفض / Hands on chair edge — body lowers"
+          },
+          {
+            "order": 5,
+            "name_ar": "ترايسبس أوفرهيد بالدمبل",
+            "name_en": "DB Overhead Triceps Extension",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "دمبل فرونت رايز",
+            "name_en": "DB Front Raise",
+            "muscle_primary": "كتف أمامي / Front Deltoid",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد صدر وترايسبس 5 دقائق"
+      },
+      {
+        "day_name": "ظهر + بايسبس + خلفي كتف",
+        "day_type": "back_biceps",
+        "warm_up": "5 دقائق + band pull-apart x 20",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سحب للأعلى (Pull-up) أو مساعد بشريط",
+            "name_en": "Pull-up or Assisted Pull-up",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "حتى الفشل / to failure",
+            "rest_seconds": 120,
+            "rpe": "9",
+            "notes": "أفضل تمرين ظهر في المنزل / Best home back exercise"
+          },
+          {
+            "order": 2,
+            "name_ar": "بنت أوفر رو بالدمبل",
+            "name_en": "Single Arm DB Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "12 per side",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": "ركبة وإيد على الكرسي للدعم / Knee and hand on chair for support"
+          },
+          {
+            "order": 3,
+            "name_ar": "ديدليفت بالدمبل",
+            "name_en": "DB Deadlift",
+            "muscle_primary": "ظهر سفلي + فخذ خلفي / Lower Back + Hamstrings",
+            "muscle_secondary": "كامل الجسم",
+            "sets": 4,
+            "reps": "12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "شريط مقاومة رو",
+            "name_en": "Resistance Band Row",
+            "muscle_primary": "ظهر أوسط / Mid Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "بايسبس كيرل بالدمبل",
+            "name_en": "DB Bicep Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "ريرز رايز بالدمبل",
+            "name_en": "Rear Delt DB Raise",
+            "muscle_primary": "خلفي كتف / Rear Delt",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد ظهر + بايسبس 5 دقائق"
+      },
+      {
+        "day_name": "أرجل كاملة + مؤخرة",
+        "day_type": "legs",
+        "warm_up": "5 دقائق مشي سريع + تمدد ورك + 20 سكوات جوي",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بالدمبل",
+            "name_en": "DB Goblet Squat",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة، فخذ خلفي",
+            "sets": 4,
+            "reps": "15",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "هيب ثراست بوزن الجسم أو بالدمبل",
+            "name_en": "Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "20",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": "ظهر على الأريكة — دمبل على الفخذ / Back on couch — dumbbell on hip"
+          },
+          {
+            "order": 3,
+            "name_ar": "بولغاريان سبليت سكوات",
+            "name_en": "Bulgarian Split Squat",
+            "muscle_primary": "فخذ أمامي + مؤخرة / Quads + Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12 per leg",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": "قدم خلفية على الكرسي / Rear foot on chair"
+          },
+          {
+            "order": 4,
+            "name_ar": "رومانيان ديدليفت بالدمبل",
+            "name_en": "DB Romanian Deadlift",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز على درجة",
+            "name_en": "Step Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "على درجة للتمدد الكامل / On step for full stretch"
+          },
+          {
+            "order": 6,
+            "name_ar": "جامبينج سكوات (تشطيب)",
+            "name_en": "Jump Squat Finisher",
+            "muscle_primary": "فخذ / Quads",
+            "muscle_secondary": "قلب وأوعية",
+            "sets": 3,
+            "reps": "10",
+            "rest_seconds": 60,
+            "rpe": "8",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد عميق فخذ وساق 10 دقائق"
+      },
+      {
+        "day_name": "كتف + أذرع كاملة",
+        "day_type": "shoulders_arms",
+        "warm_up": "5 دقائق + دوران كتف",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "أوفرهيد برس بالدمبل واقف",
+            "name_en": "Standing DB Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "ترايسبس",
+            "sets": 4,
+            "reps": "12",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "رفع جانبي بالدمبل",
+            "name_en": "Lateral Raise",
+            "muscle_primary": "كتف جانبي / Lateral Deltoid",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "رفع أمامي بالدمبل",
+            "name_en": "Front Raise",
+            "muscle_primary": "كتف أمامي / Front Deltoid",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "بايسبس كيرل بالشريط أو دمبل",
+            "name_en": "Band or DB Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "هامر كيرل",
+            "name_en": "Hammer Curl",
+            "muscle_primary": "برايكياليس / Brachialis",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "ترايسبس ديبس على الكرسي",
+            "name_en": "Chair Triceps Dips",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد كتف وأذرع 5 دقائق"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة الرابات أو إضافة دمبل أثقل / Increase reps or use heavier dumbbell",
+      "rule": "كل أسبوعين: إما رابة إضافية أو دمبل أثقل بـ 2-4kg",
+      "deload_week": "أسبوع تخفيف كل 6 أسابيع"
+    },
+    "tips": [
+      "الدمبل الثقيل استثمار ضروري للتضخيم في البيت. / Heavy dumbbells are a necessary investment for home bulking.",
+      "Pull-up bar أفضل استثمار لتدريب الظهر في البيت. / Pull-up bar is best investment for home back training.",
+      "Progressive Overload ممكن في البيت — زيادة رابات أو صعوبة التمرين. / Progressive overload is possible at home — increase reps or exercise difficulty.",
+      "الثبات في التوقيت يساعد على الالتزام أكثر من الجيم. / Timing consistency helps adherence more than gym."
+    ]
+  },
+  {
+    "id": "WP-WL-HOME-F-21-35-3R",
+    "goal": "خسارة وزن / Weight Loss",
+    "location": "منزل / Home",
+    "gender": "أنثى / Female",
+    "age_group": "21-35",
+    "age_label": "شابة / Young Adult Female",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ / Beginner",
+    "program_name": "4 أيام حرق دهون للمرأة في المنزل",
+    "equipment_needed": [
+      "حصيرة / Mat",
+      "دمبل خفيف 5-15kg / Light dumbbell 5-15kg",
+      "شريط مقاومة / Resistance band",
+      "كرسي / Chair"
+    ],
+    "program_duration_weeks": 10,
+    "description": "برنامج حرق دهون منزلي للمرأة يجمع HIIT والقوة بدون معدات كبيرة. / Female home fat loss program combining HIIT and strength without heavy equipment.",
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "HIIT أرجل + بطن"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "يوجا أو مشي 30 دقيقة"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "قوة علوي + مؤخرة"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Full Body HIIT"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "كارديو + مؤخرة وفخذ"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "HIIT أرجل + بطن",
+        "day_type": "hiit_legs_abs",
+        "warm_up": "5 دقائق مشي سريع + jumping jacks + arm circles",
+        "hiit_circuit": {
+          "rounds": 4,
+          "rest_between_rounds": 90,
+          "exercises": [
+            {
+              "name_ar": "سكوات جامب",
+              "name_en": "Jump Squat",
+              "duration_seconds": 40,
+              "rest_seconds": 20
+            },
+            {
+              "name_ar": "لانج متناوب",
+              "name_en": "Alternating Lunges",
+              "duration_seconds": 40,
+              "rest_seconds": 20
+            },
+            {
+              "name_ar": "هيب ثراست سريع",
+              "name_en": "Fast Hip Thrust",
+              "duration_seconds": 40,
+              "rest_seconds": 20
+            },
+            {
+              "name_ar": "Mountain Climbers",
+              "name_en": "Mountain Climbers",
+              "duration_seconds": 40,
+              "rest_seconds": 20
+            }
+          ]
+        },
+        "abs_circuit": {
+          "rounds": 3,
+          "exercises": [
+            {
+              "name_ar": "كرنش",
+              "name_en": "Crunch",
+              "reps": 20
+            },
+            {
+              "name_ar": "Leg Raise",
+              "name_en": "Leg Raise",
+              "reps": 15
+            },
+            {
+              "name_ar": "Russian Twist",
+              "name_en": "Russian Twist",
+              "reps": 20
+            },
+            {
+              "name_ar": "بلانك",
+              "name_en": "Plank",
+              "duration_seconds": 45
+            }
+          ]
+        },
+        "cool_down": "تمدد 10 دقائق"
+      },
+      {
+        "day_name": "قوة علوي + مؤخرة",
+        "day_type": "upper_glutes",
+        "warm_up": "5 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ضغط عادي أو على الركب",
+            "name_en": "Push-up or Knee Push-up",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "بنت أوفر رو بالدمبل",
+            "name_en": "DB Bent Over Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "أوفرهيد برس خفيف",
+            "name_en": "Light DB Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "هيب ثراست بوزن الجسم أو بالدمبل",
+            "name_en": "Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "25",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "شريط مقاومة Clamshell",
+            "name_en": "Resistance Band Clamshell",
+            "muscle_primary": "مؤخرة + فخذ خارجي / Glutes + Outer Thigh",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20 per side",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "شريط مقاومة كيك باك",
+            "name_en": "Band Kickback",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20 per side",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد 10 دقائق"
+      },
+      {
+        "day_name": "Full Body HIIT",
+        "day_type": "full_body_hiit",
+        "warm_up": "5 دقائق",
+        "hiit_circuit": {
+          "rounds": 5,
+          "rest_between_rounds": 60,
+          "exercises": [
+            {
+              "name_ar": "بيربي",
+              "name_en": "Burpee",
+              "duration_seconds": 30,
+              "rest_seconds": 10
+            },
+            {
+              "name_ar": "ضغط",
+              "name_en": "Push-up",
+              "duration_seconds": 30,
+              "rest_seconds": 10
+            },
+            {
+              "name_ar": "سكوات",
+              "name_en": "Squat",
+              "duration_seconds": 30,
+              "rest_seconds": 10
+            },
+            {
+              "name_ar": "هيب ثراست سريع",
+              "name_en": "Fast Hip Thrust",
+              "duration_seconds": 30,
+              "rest_seconds": 10
+            },
+            {
+              "name_ar": "High Knees",
+              "name_en": "High Knees",
+              "duration_seconds": 30,
+              "rest_seconds": 10
+            }
+          ]
+        },
+        "cool_down": "10 دقائق تمدد"
+      },
+      {
+        "day_name": "كارديو خفيف + مؤخرة وفخذ",
+        "day_type": "cardio_lower",
+        "warm_up": "5 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "مشي سريع أو جري خفيف في المكان",
+            "name_en": "Marching or Light Jog in Place",
+            "muscle_primary": "قلب / Cardiovascular",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "20 دقيقة / 20 min",
+            "rest_seconds": 0,
+            "rpe": "5",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "سكوات سوماتوري بالشريط",
+            "name_en": "Band Sumo Squat",
+            "muscle_primary": "مؤخرة + فخذ داخلي / Glutes + Inner Thigh",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "20",
+            "rest_seconds": 45,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "Donkey Kick بالشريط",
+            "name_en": "Band Donkey Kick",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20 per side",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "Side Lying Leg Raise بالشريط",
+            "name_en": "Band Side Leg Raise",
+            "muscle_primary": "فخذ خارجي / Outer Thigh",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20 per side",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "بطن — crunch + plank",
+            "name_en": "Abs Finisher",
+            "muscle_primary": "بطن / Abs",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15 + 30ثانية بلانك",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد 10 دقائق"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة عدد الجولات أو تقليل الراحة / Increase rounds or reduce rest",
+      "rule": "كل أسبوعين: إضافة جولة أو تقليل راحة 15 ثانية",
+      "deload_week": "أسبوع خفيف كل 5 أسابيع"
+    },
+    "tips": [
+      "لا تحتاجين معدات كثيرة — شريط المقاومة يكفي للمبتدئة. / No need for much equipment — resistance band is enough for beginners.",
+      "ثبات في الوقت (مثلاً كل يوم 7 صباحاً) يسهل الالتزام. / Consistent timing (e.g., 7am daily) makes adherence easier.",
+      "HIIT 20-30 دقيقة أفضل من كارديو 60 دقيقة لحرق الدهون. / 20-30 min HIIT is better than 60 min cardio for fat burning.",
+      "قياس الجسم بالسنتيمتر أصدق من الميزان لمتابعة التقدم. / Body measurements in cm are more accurate than scale for tracking."
+    ]
+  },
+  {
+    "id": "WP-WL-GYM-M-21-35-3R",
+    "goal": "خسارة وزن / Weight Loss",
+    "location": "جيم / Gym",
+    "gender": "ذكر / Male",
+    "age_group": "21-35",
+    "age_label": "شاب / Young Adult Male",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ / Beginner",
+    "program_name": "4 أيام حرق دهون وتنشيف للذكور في الجيم",
+    "program_duration_weeks": 12,
+    "description": "برنامج تنشيف يجمع القوة بالكارديو لحرق الدهون مع الحفاظ على الكتلة العضلية. / Cutting program combining strength and cardio for fat burning while preserving muscle mass.",
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "Upper قوة + 20 دقيقة كارديو"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "مشي 30-40 دقيقة"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "Lower قوة + 20 دقيقة كارديو"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Full Body HIIT + قوة"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "كارديو + Core"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "Upper قوة — صدر + ظهر + كتف",
+        "day_type": "upper_strength",
+        "warm_up": "5 دقائق مشاية + تمدد ديناميكي",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "بنش برس بالدمبل",
+            "name_en": "DB Bench Press",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس، كتف",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7-8",
+            "notes": "راحة أقل من برامج التضخيم / Less rest than bulking programs"
+          },
+          {
+            "order": 2,
+            "name_ar": "لات بولداون",
+            "name_en": "Lat Pulldown",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "أوفرهيد برس دمبل",
+            "name_en": "DB Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "كابل رو",
+            "name_en": "Cable Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "سوبرسيت: بايسبس + ترايسبس",
+            "name_en": "Superset: Biceps + Triceps",
+            "muscle_primary": "أذرع / Arms",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12+12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": "بدون راحة بين بايسبس وترايسبس / No rest between biceps and triceps"
+          }
+        ],
+        "cardio_post_workout": {
+          "type": "دراجة ثابتة / Stationary Bike",
+          "duration_minutes": 20,
+          "intensity": "متوسطة إلى عالية / Medium to High (140-160 نبضة / 140-160 bpm)"
+        },
+        "cool_down": "تمدد 5 دقائق"
+      },
+      {
+        "day_name": "Lower قوة — أرجل + مؤخرة",
+        "day_type": "lower_strength",
+        "warm_up": "5 دقائق دراجة + سكوات جوي x 20",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بالدمبل أو ليغ برس",
+            "name_en": "DB Squat or Leg Press",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "لانج متناوب بالدمبل",
+            "name_en": "DB Alternating Lunges",
+            "muscle_primary": "فخذ + مؤخرة / Quads + Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12 per leg",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "رومانيان ديدليفت",
+            "name_en": "Romanian Deadlift",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "هيب ثراست",
+            "name_en": "Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "بطن سوبرسيت",
+            "name_en": "Core Superset",
+            "muscle_primary": "بطن / Core",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "بلانك 45ث + كرنش 20 + leg raise 15",
+            "rest_seconds": 60,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cardio_post_workout": {
+          "type": "مشاية بزاوية (Incline Walk) / Incline Treadmill Walk",
+          "duration_minutes": 20,
+          "intensity": "بطيء مع ميل عالٍ — يحرق دهون بدون فقدان عضلات / Slow with high incline — burns fat without muscle loss"
+        },
+        "cool_down": "تمدد 5 دقائق"
+      },
+      {
+        "day_name": "Full Body HIIT + قوة",
+        "day_type": "hiit_strength",
+        "warm_up": "5 دقائق",
+        "hiit_block": {
+          "duration_minutes": 20,
+          "format": "Tabata: 20 ثانية عمل + 10 ثانية راحة x 8 = 4 دقائق لكل تمرين",
+          "exercises": [
+            "Burpee",
+            "Box Jump or Jump Squat",
+            "Mountain Climbers",
+            "Kettlebell Swing or DB Swing",
+            "Battle Rope or Jumping Jacks"
+          ]
+        },
+        "strength_block": {
+          "description": "15 دقيقة قوة بعد الـ HIIT",
+          "exercises": [
+            {
+              "name_ar": "بنش برس",
+              "name_en": "Bench Press",
+              "sets": 2,
+              "reps": "12",
+              "rest_seconds": 60
+            },
+            {
+              "name_ar": "سكوات",
+              "name_en": "Squat",
+              "sets": 2,
+              "reps": "12",
+              "rest_seconds": 60
+            },
+            {
+              "name_ar": "رو",
+              "name_en": "Row",
+              "sets": 2,
+              "reps": "12",
+              "rest_seconds": 60
+            }
+          ]
+        },
+        "cool_down": "10 دقائق تمدد"
+      },
+      {
+        "day_name": "كارديو تحمل + Core",
+        "day_type": "cardio_core",
+        "warm_up": "5 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "كارديو ثابت الدهون — 35 دقيقة دراجة أو مشاية",
+            "name_en": "Fat Zone Cardio",
+            "muscle_primary": "قلب / Heart",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "35 دقيقة 130-140 نبضة / 35 min 130-140 bpm",
+            "rest_seconds": 0,
+            "rpe": "5-6",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "Core Circuit",
+            "name_en": "Core Circuit",
+            "muscle_primary": "بطن وكور / Core",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "بلانك 60ث + side plank 30ث each + hollow hold 30ث",
+            "rest_seconds": 45,
+            "rpe": "6-7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "10 دقائق"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة مدة الكارديو أو شدته أسبوعياً / Increase cardio duration or intensity weekly",
+      "rule": "كل أسبوعين: + 5 دقيقة كارديو أو رفع نسبة الشدة",
+      "deload_week": "أسبوع خفيف كل 6 أسابيع"
+    },
+    "tips": [
+      "عجز السعرات من الطعام أهم من الكارديو لفقدان الوزن. / Calorie deficit from food is more important than cardio for weight loss.",
+      "Incline Walk ممتاز لحرق دهون دون فقدان عضلات. / Incline walk is excellent for fat burning without muscle loss.",
+      "لا تبالغ في الكارديو — يعيق بناء العضلات. / Don't overdo cardio — it hinders muscle building.",
+      "تتبع الوزن أسبوعياً في نفس الوقت وبنفس الملابس. / Track weight weekly at same time and same clothes."
+    ]
+  },
+  {
+    "id": "WP-GF-GYM-M-21-35-2R",
+    "goal": "لياقة عامة / General Fitness",
+    "location": "جيم / Gym",
+    "gender": "ذكر / Male",
+    "age_group": "21-35",
+    "age_label": "شاب / Young Adult Male",
+    "rest_days_per_week": 2,
+    "training_days_per_week": 5,
+    "level": "متوسط / Intermediate",
+    "program_name": "5 أيام لياقة شاملة في الجيم",
+    "program_duration_weeks": 12,
+    "description": "برنامج لياقة متكاملة يجمع القوة والمرونة والكارديو للصحة الشاملة. / Comprehensive fitness program combining strength, flexibility and cardio for overall health.",
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "قوة علوي"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "تمرين / Training",
+        "focus": "كارديو + Core"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "قوة سفلي"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "مشي أو يوجا"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Full Body متوسط"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "رياضة + مرونة"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "قوة علوي — صدر + ظهر + كتف + أذرع",
+        "day_type": "upper_strength",
+        "warm_up": "5 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "بنش برس",
+            "name_en": "Bench Press",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "10",
+            "rest_seconds": 90,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "بار رو",
+            "name_en": "Barbell Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "10",
+            "rest_seconds": 90,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "أوفرهيد برس",
+            "name_en": "Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "10",
+            "rest_seconds": 90,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "لات بولداون",
+            "name_en": "Lat Pulldown",
+            "muscle_primary": "لاتيسيموس / Lats",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "سوبرسيت أذرع",
+            "name_en": "Arms Superset",
+            "muscle_primary": "بايسبس + ترايسبس / Biceps + Triceps",
+            "muscle_secondary": "",
+            "sets": 2,
+            "reps": "12+12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "5 دقائق تمدد"
+      },
+      {
+        "day_name": "كارديو متنوع + Core",
+        "day_type": "cardio_core",
+        "warm_up": "5 دقائق",
+        "cardio": {
+          "format": "25 دقيقة دراجة أو مشاية أو سباحة / 25 min bike, treadmill or swimming",
+          "intensity": "متوسطة / Moderate"
+        },
+        "core_exercises": [
+          {
+            "name_ar": "بلانك + تنويعاته",
+            "name_en": "Plank Variations",
+            "sets": 3,
+            "duration": "45 ثانية كل تنويع"
+          },
+          {
+            "name_ar": "Dead Bug",
+            "name_en": "Dead Bug",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name_ar": "Russian Twist",
+            "name_en": "Russian Twist",
+            "sets": 3,
+            "reps": 20
+          },
+          {
+            "name_ar": "Hollow Body Hold",
+            "name_en": "Hollow Body Hold",
+            "sets": 3,
+            "duration": "30 ثانية"
+          }
+        ],
+        "cool_down": "5 دقائق"
+      },
+      {
+        "day_name": "قوة سفلي — أرجل كاملة",
+        "day_type": "lower_strength",
+        "warm_up": "10 دقائق دراجة",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بالبار",
+            "name_en": "Back Squat",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة",
+            "sets": 3,
+            "reps": "10",
+            "rest_seconds": 120,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "ديدليفت خفيف إلى متوسط",
+            "name_en": "Moderate Deadlift",
+            "muscle_primary": "ظهر + فخذ / Back + Hamstrings",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "8",
+            "rest_seconds": 120,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "ليغ برس",
+            "name_en": "Leg Press",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 90,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "هيب ثراست",
+            "name_en": "Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز",
+            "name_en": "Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "10 دقائق تمدد"
+      },
+      {
+        "day_name": "Full Body متوسط الشدة",
+        "day_type": "full_body_moderate",
+        "warm_up": "5 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ديدليفت رومانيان",
+            "name_en": "Romanian Deadlift",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "بنش دمبل",
+            "name_en": "DB Bench Press",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "لانج",
+            "name_en": "Lunges",
+            "sets": 3,
+            "reps": "12 per side",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "كابل رو",
+            "name_en": "Cable Row",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 75,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "رفع جانبي",
+            "name_en": "Lateral Raise",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "5 دقائق"
+      },
+      {
+        "day_name": "نشاط رياضي + مرونة",
+        "day_type": "sport_flexibility",
+        "description": "يوم مفتوح — أي رياضة تحبها / Open day — any sport you enjoy",
+        "options": [
+          "سباحة 45 دقيقة / Swimming 45 min",
+          "ملاكمة / Boxing",
+          "كرة سلة / Basketball",
+          "تنس / Tennis",
+          "ركوب دراجة خارجية / Outdoor cycling",
+          "يوجا 45 دقيقة / Yoga 45 min"
+        ],
+        "flexibility_routine": {
+          "duration_minutes": 15,
+          "exercises": [
+            "Hip Flexor Stretch 60ث كل جهة",
+            "Hamstring Stretch 60ث",
+            "Chest Opener Stretch 60ث",
+            "Lat Stretch 45ث كل جهة",
+            "Thoracic Rotation 10 كل جهة",
+            "Pigeon Pose 60ث كل جهة"
+          ]
+        },
+        "cool_down": "5 دقائق تنفس عميق"
+      }
+    ],
+    "tips": [
+      "اللياقة الشاملة أفضل للصحة طويل المدى من التخصص. / Overall fitness is better for long-term health than specialization.",
+      "يوم السبت مفتوح — الرياضة يجب أن تكون ممتعة. / Saturday is open — sport should be enjoyable.",
+      "تتبع الطاقة والنوم بقدر تتبع القوة. / Track energy and sleep as much as tracking strength.",
+      "الهدف هنا الصحة والاستمرارية — لا المنافسة. / Goal here is health and sustainability — not competition."
+    ]
+  },
+  {
+    "id": "WP-GF-HOME-F-36-50-3R",
+    "goal": "لياقة عامة / General Fitness",
+    "location": "منزل / Home",
+    "gender": "أنثى / Female",
+    "age_group": "36-50",
+    "age_label": "متوسطة العمر / Middle Age Female",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ إلى متوسط / Beginner to Intermediate",
+    "program_name": "4 أيام لياقة شاملة للمرأة في المنزل 36-50 سنة",
+    "equipment_needed": [
+      "حصيرة / Mat",
+      "دمبل خفيف-متوسط / Light-medium dumbbell",
+      "شريط مقاومة / Resistance band"
+    ],
+    "program_duration_weeks": 12,
+    "description": "برنامج لياقة منزلي للمرأة في سن 36-50 يراعي تقلبات الهرمونات والمفاصل والطاقة. / Home fitness program for women 36-50 considering hormonal changes, joint health and energy.",
+    "age_specific_notes": [
+      "انخفاض الإستروجين يبدأ — التمرين يعوض ذلك ويقلل أعراض سن اليأس. / Estrogen starts declining — exercise compensates and reduces menopause symptoms.",
+      "تمارين الأثقال تحمي كثافة العظام — مهمة جداً في هذا العمر. / Weight training protects bone density — very important at this age.",
+      "راحة أطول بين الجلسات مطلوبة. / Longer rest between sessions is needed.",
+      "قللي الشدة خلال أسابيع التعب الهرموني. / Reduce intensity during hormonal fatigue weeks."
+    ],
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "أرجل + مؤخرة خفيف-متوسط"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "مشي 30 دقيقة + تمدد"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "علوي + كور"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "يوجا أو تمدد"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "Full Body خفيف + كارديو"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "مرونة + تقوية عامة"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة تامة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "أرجل + مؤخرة",
+        "day_type": "lower_body",
+        "warm_up": "10 دقائق مشي + hip circles + 15 سكوات جوي",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات بالدمبل (خفيف إلى متوسط)",
+            "name_en": "DB Squat",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 75,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "هيب ثراست بالدمبل",
+            "name_en": "Hip Thrust with Dumbbell",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": "مهم لصحة الورك وكثافة العظام / Important for hip health and bone density"
+          },
+          {
+            "order": 3,
+            "name_ar": "رومانيان ديدليفت خفيف",
+            "name_en": "Light RDL",
+            "muscle_primary": "فخذ خلفي / Hamstrings",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "شريط مقاومة — مشي جانبي",
+            "name_en": "Band Lateral Walk",
+            "muscle_primary": "فخذ خارجي / Outer Thigh",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15 per side",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز على درجة",
+            "name_en": "Step Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "10 دقائق تمدد عميق"
+      },
+      {
+        "day_name": "علوي + كور",
+        "day_type": "upper_core",
+        "warm_up": "10 دقائق + دوران كتف",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ضغط على الركبتين",
+            "name_en": "Knee Push-up",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس",
+            "sets": 3,
+            "reps": "12-15",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": "أو ضغط كامل إذا استطعتِ"
+          },
+          {
+            "order": 2,
+            "name_ar": "بنت أوفر رو بالدمبل",
+            "name_en": "DB Bent Over Row",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "أوفرهيد برس دمبل جالسة",
+            "name_en": "Seated DB Overhead Press",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 60,
+            "rpe": "6-7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "رفع جانبي خفيف",
+            "name_en": "Light Lateral Raise",
+            "muscle_primary": "كتف جانبي / Lateral Deltoid",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "بلانك + bird dog + dead bug",
+            "name_en": "Core Trio",
+            "muscle_primary": "كور / Core",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "30ث + 10 + 10",
+            "rest_seconds": 45,
+            "rpe": "5-6",
+            "notes": "ممتاز لاستقرار الظهر والحوض / Excellent for back and pelvis stability"
+          }
+        ],
+        "cool_down": "10 دقائق تمدد"
+      },
+      {
+        "day_name": "Full Body خفيف + كارديو",
+        "day_type": "full_body_light",
+        "warm_up": "10 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "Full Body Circuit خفيف",
+            "name_en": "Light Full Body Circuit",
+            "muscle_primary": "كامل الجسم / Full Body",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12-15 لكل تمرين",
+            "rest_seconds": 45,
+            "rpe": "5-6",
+            "notes": "سكوات + ضغط + رو + هيب ثراست — بدون توقف طويل / Squat + Push-up + Row + Hip Thrust — no long breaks"
+          },
+          {
+            "order": 2,
+            "name_ar": "كارديو خفيف",
+            "name_en": "Light Cardio",
+            "muscle_primary": "قلب / Heart",
+            "muscle_secondary": "",
+            "sets": 1,
+            "reps": "20-25 دقيقة مشي سريع أو رقص في البيت",
+            "rest_seconds": 0,
+            "rpe": "5",
+            "notes": "الرقص ممتاز — ممتع وفعال / Dancing is great — fun and effective"
+          }
+        ],
+        "cool_down": "10 دقائق"
+      },
+      {
+        "day_name": "مرونة + تقوية عامة",
+        "day_type": "flexibility_strength",
+        "warm_up": "10 دقائق",
+        "flexibility_block": {
+          "duration_minutes": 20,
+          "exercises": [
+            "Hip Flexor Stretch",
+            "Pigeon Pose",
+            "Chest Opener",
+            "Hamstring Stretch",
+            "Thoracic Rotation",
+            "Cat-Cow x 15"
+          ]
+        },
+        "light_strength": [
+          {
+            "name_ar": "بلانك تنويعات",
+            "name_en": "Plank Variations",
+            "sets": 3,
+            "duration": "30 ثانية"
+          },
+          {
+            "name_ar": "شريط مقاومة كيك باك",
+            "name_en": "Band Kickback",
+            "sets": 2,
+            "reps": "20 per side"
+          },
+          {
+            "name_ar": "سكوات جوي بطيء",
+            "name_en": "Slow Bodyweight Squat",
+            "sets": 2,
+            "reps": "15"
+          }
+        ],
+        "cool_down": "10 دقائق تنفس عميق + تمدد"
+      }
+    ],
+    "tips": [
+      "المرونة وصحة المفاصل في هذا العمر لها نفس أهمية القوة. / Flexibility and joint health at this age are as important as strength.",
+      "الأثقال تحمي العظام من الهشاشة — لا تخافي منها. / Weights protect bones from osteoporosis — don't fear them.",
+      "استمعي لجسمك — بعض أيام الهرمونات تحتاج تخفيف الشدة. / Listen to your body — some hormonal days need reduced intensity.",
+      "المشي 30 دقيقة يومياً يكفي لصحة القلب. / 30 min daily walk is enough for heart health."
+    ]
+  },
+  {
+    "id": "WP-MB-HOME-M-15-20-3R",
+    "goal": "بناء عضلات / Muscle Building",
+    "location": "منزل / Home",
+    "gender": "ذكر / Male",
+    "age_group": "15-20",
+    "age_label": "مراهق / Teen Male",
+    "rest_days_per_week": 3,
+    "training_days_per_week": 4,
+    "level": "مبتدئ / Beginner",
+    "program_name": "4 أيام تقوية جسم كاملة للمراهق في المنزل",
+    "program_duration_weeks": 12,
+    "equipment_needed": [
+      "لا شيء أساساً — وزن الجسم / Primarily nothing — bodyweight",
+      "دمبل خفيف 10-20kg اختياري / Light dumbbell 10-20kg optional",
+      "بار سحب / Pull-up bar"
+    ],
+    "teen_specific_notes": [
+      "الجسم في طور النمو — التغذية والنوم أهم من التمرين الثقيل. / Body is growing — nutrition and sleep more important than heavy training.",
+      "تجنب الأثقال الثقيلة جداً التي قد تضر بصفائح النمو. / Avoid very heavy weights that may harm growth plates.",
+      "التركيز على الشكل الصحيح قبل أي شيء. / Focus on proper form before anything.",
+      "3-4 أيام كافية تماماً — لا تفرط في التدريب. / 3-4 days is completely sufficient — don't overtrain.",
+      "البروتين من الطعام أولاً — مكملات غذائية غير ضرورية في هذا السن. / Protein from food first — supplements not needed at this age."
+    ],
+    "weekly_schedule": [
+      {
+        "day": "الاثنين / Monday",
+        "type": "تمرين / Training",
+        "focus": "صدر + كتف + ترايسبس"
+      },
+      {
+        "day": "الثلاثاء / Tuesday",
+        "type": "راحة / Rest",
+        "focus": "رياضة ممتعة أو مشي"
+      },
+      {
+        "day": "الأربعاء / Wednesday",
+        "type": "تمرين / Training",
+        "focus": "ظهر + بايسبس"
+      },
+      {
+        "day": "الخميس / Thursday",
+        "type": "راحة / Rest",
+        "focus": "راحة"
+      },
+      {
+        "day": "الجمعة / Friday",
+        "type": "تمرين / Training",
+        "focus": "أرجل + بطن"
+      },
+      {
+        "day": "السبت / Saturday",
+        "type": "تمرين / Training",
+        "focus": "Full Body خفيف"
+      },
+      {
+        "day": "الأحد / Sunday",
+        "type": "راحة / Rest",
+        "focus": "راحة"
+      }
+    ],
+    "workout_days": [
+      {
+        "day_name": "صدر + كتف + ترايسبس",
+        "day_type": "push",
+        "warm_up": "5 دقائق + arm circles + shoulder warmup",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "ضغط (Push-up)",
+            "name_en": "Push-up",
+            "muscle_primary": "صدر / Chest",
+            "muscle_secondary": "ترايسبس، كتف",
+            "sets": 4,
+            "reps": "15-20",
+            "rest_seconds": 60,
+            "rpe": "7-8",
+            "notes": "الأساس — أتقنه قبل أي شيء / The foundation — master it before anything"
+          },
+          {
+            "order": 2,
+            "name_ar": "ضغط مرفوع القدم (Decline Push-up)",
+            "name_en": "Decline Push-up",
+            "muscle_primary": "صدر سفلي / Lower Chest",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "ضغط ضيق (Diamond Push-up)",
+            "name_en": "Diamond Push-up",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "صدر داخلي",
+            "sets": 3,
+            "reps": "12",
+            "rest_seconds": 60,
+            "rpe": "7-8",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "ترايسبس ديبس على الكرسي",
+            "name_en": "Chair Triceps Dips",
+            "muscle_primary": "ترايسبس / Triceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "رفع جانبي بدمبل خفيف أو كتب",
+            "name_en": "Lateral Raise (DB or books)",
+            "muscle_primary": "كتف / Shoulders",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": "حتى زجاجات الماء تفي بالغرض / Even water bottles work"
+          }
+        ],
+        "cool_down": "تمدد 5 دقائق"
+      },
+      {
+        "day_name": "ظهر + بايسبس",
+        "day_type": "pull",
+        "warm_up": "5 دقائق",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سحب للأعلى (Pull-up)",
+            "name_en": "Pull-up",
+            "muscle_primary": "ظهر / Back",
+            "muscle_secondary": "بايسبس",
+            "sets": 4,
+            "reps": "حتى الفشل / Max",
+            "rest_seconds": 90,
+            "rpe": "8-9",
+            "notes": "إذا ما تقدر — ابدأ بجامب سحب ثم إنزال بطيء (Negative Pull-up)"
+          },
+          {
+            "order": 2,
+            "name_ar": "سحب تحت (Chin-up) — راحتين للداخل",
+            "name_en": "Chin-up",
+            "muscle_primary": "بايسبس + ظهر / Biceps + Back",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "حتى الفشل / Max",
+            "rest_seconds": 90,
+            "rpe": "8",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "سوبرمان (Superman Hold)",
+            "name_en": "Superman Hold",
+            "muscle_primary": "ظهر سفلي / Lower Back",
+            "muscle_secondary": "مؤخرة",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 45,
+            "rpe": "5",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "شريط أو دمبل — بايسبس كيرل",
+            "name_en": "Band or DB Bicep Curl",
+            "muscle_primary": "بايسبس / Biceps",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد 5 دقائق"
+      },
+      {
+        "day_name": "أرجل + بطن",
+        "day_type": "legs_abs",
+        "warm_up": "5 دقائق مشي سريع + تمدد ورك",
+        "exercises": [
+          {
+            "order": 1,
+            "name_ar": "سكوات وزن الجسم",
+            "name_en": "Bodyweight Squat",
+            "muscle_primary": "فخذ أمامي / Quads",
+            "muscle_secondary": "مؤخرة",
+            "sets": 4,
+            "reps": "25",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 2,
+            "name_ar": "لانج متناوب",
+            "name_en": "Alternating Lunges",
+            "muscle_primary": "فخذ + مؤخرة / Quads + Glutes",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "15 per leg",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 3,
+            "name_ar": "هيب ثراست وزن الجسم",
+            "name_en": "Bodyweight Hip Thrust",
+            "muscle_primary": "مؤخرة / Glutes",
+            "muscle_secondary": "",
+            "sets": 4,
+            "reps": "25",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 4,
+            "name_ar": "جامبينج سكوات",
+            "name_en": "Jump Squat",
+            "muscle_primary": "فخذ / Quads",
+            "muscle_secondary": "قلب",
+            "sets": 3,
+            "reps": "15",
+            "rest_seconds": 60,
+            "rpe": "7",
+            "notes": ""
+          },
+          {
+            "order": 5,
+            "name_ar": "كاف رايز على درجة",
+            "name_en": "Step Calf Raise",
+            "muscle_primary": "ساق / Calves",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "25",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          },
+          {
+            "order": 6,
+            "name_ar": "بطن: كرنش + leg raise + بلانك",
+            "name_en": "Abs Circuit",
+            "muscle_primary": "بطن / Abs",
+            "muscle_secondary": "",
+            "sets": 3,
+            "reps": "20+15+45ث",
+            "rest_seconds": 45,
+            "rpe": "6",
+            "notes": ""
+          }
+        ],
+        "cool_down": "تمدد 10 دقائق"
+      },
+      {
+        "day_name": "Full Body خفيف ونشيط",
+        "day_type": "full_body_light",
+        "warm_up": "5 دقائق",
+        "circuit": {
+          "rounds": 4,
+          "rest_between_rounds": 90,
+          "exercises": [
+            {
+              "name_ar": "ضغط",
+              "name_en": "Push-up",
+              "reps": 15
+            },
+            {
+              "name_ar": "سحب للأعلى",
+              "name_en": "Pull-up",
+              "reps": "Max"
+            },
+            {
+              "name_ar": "سكوات",
+              "name_en": "Squat",
+              "reps": 20
+            },
+            {
+              "name_ar": "بلانك",
+              "name_en": "Plank",
+              "duration": "30 ثانية"
+            },
+            {
+              "name_ar": "بيربي خفيف",
+              "name_en": "Light Burpee",
+              "reps": 10
+            }
+          ]
+        },
+        "cool_down": "10 دقائق تمدد"
+      }
+    ],
+    "progressive_overload": {
+      "method": "زيادة الرابات أسبوعياً — ثم الانتقال لتمارين أصعب / Increase reps weekly — then progress to harder variations",
+      "rule": "ضغط 15 → ضغط بيد واسعة → ضغط مرفوع القدم → ضغط أرسي (Archer Push-up)",
+      "deload_week": "أسبوع خفيف كل 6 أسابيع"
+    },
+    "tips": [
+      "النوم 9 ساعات في هذا العمر إلزامي لنمو الجسم والعضلات. / 9 hours sleep at this age is mandatory for body and muscle growth.",
+      "البروتين من الطعام يكفي — لا تحتاج مكملات في هذا السن. / Protein from food is enough — no supplements needed at this age.",
+      "الانتظام أهم من الشدة — 4 أيام منتظمة أفضل من 7 أيام متقطعة. / Consistency more important than intensity — 4 regular days beat 7 irregular.",
+      "تعلم الشكل الصحيح قبل زيادة الصعوبة — يحمي من الإصابات. / Learn proper form before increasing difficulty — prevents injuries."
+    ]
+  }
+]
