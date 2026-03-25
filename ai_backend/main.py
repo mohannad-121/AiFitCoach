@@ -55,7 +55,7 @@ app.add_middleware(
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+load_dotenv(override=True)
 
 BACKEND_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BACKEND_DIR / "static"
@@ -252,6 +252,31 @@ def _resolve_chat_response_mode() -> str:
 
 
 CHAT_RESPONSE_MODE = _resolve_chat_response_mode()
+
+
+def _conversation_replies_should_use_llm() -> bool:
+    return CHAT_RESPONSE_MODE in {'llm', 'smart'}
+
+
+def _dataset_short_reply_allowed(user_input: str) -> bool:
+    return len(normalize_text(user_input).split()) <= 4
+
+
+def _in_domain_or_strong_fitness_query(user_input: str, language: str) -> bool:
+    in_domain, _score = ROUTER.is_in_domain(user_input, language=language)
+    if (not in_domain) and _contains_any(user_input, STRONG_DOMAIN_KEYWORDS):
+        in_domain = True
+    return in_domain
+
+
+def _ollama_unavailable_reply(language: str) -> str:
+    model_name = getattr(LLM, 'active_model', None) or os.getenv('OLLAMA_MODEL', 'qwen3:8b')
+    return _lang_reply(
+        language,
+        f"Local AI is unavailable. Start Ollama and run `ollama pull {model_name}`, then retry.",
+        f"الذكاء المحلي غير متاح حالياً. شغّل Ollama ثم نفّذ `ollama pull {model_name}` وبعدها أعد المحاولة.",
+        f"الذكاء المحلي واقف حالياً. شغّل Ollama واعمل `ollama pull {model_name}` وجرّب مرة ثانية.",
+    )
 VOICE_STT = WhisperSTT(model_name=os.getenv("WHISPER_MODEL", "openai/whisper-base"))
 VOICE_TTS = LocalTTS(output_dir=STATIC_AUDIO_DIR)
 VOICE_PIPELINE = VoicePipeline(stt_engine=VOICE_STT, tts_engine=VOICE_TTS, llm_client=LLM)
@@ -1742,6 +1767,122 @@ def _training_plan_to_workout_option(
     }
 
 
+def _focus_keywords_for_goal(goal: str) -> list[str]:
+    goal_norm = _normalize_goal(goal)
+    if goal_norm == "muscle_gain":
+        return ["chest", "back", "legs", "shoulders", "arms"]
+    if goal_norm == "fat_loss":
+        return ["full body", "cardio", "core", "legs"]
+    if goal_norm == "endurance":
+        return ["cardio", "legs", "core"]
+    return ["full body", "chest", "back", "legs", "shoulders"]
+
+
+def _pick_training_exercises_for_focus(
+    exercise_pool: list[dict[str, Any]],
+    focus_keywords: list[str],
+    used_names: set[str],
+    limit: int,
+) -> list[dict[str, Any]]:
+    selected: list[dict[str, Any]] = []
+    lowered_focus = [normalize_text(item) for item in focus_keywords if item]
+
+    def _matches(item: dict[str, Any]) -> bool:
+        haystack = " ".join(
+            [
+                str(item.get("exercise") or ""),
+                str(item.get("muscle_group") or item.get("muscle") or ""),
+                str(item.get("type") or ""),
+                str(item.get("why_recommended") or ""),
+            ]
+        )
+        haystack_norm = normalize_text(haystack)
+        return any(keyword in haystack_norm for keyword in lowered_focus)
+
+    for item in exercise_pool:
+        exercise_name = str(item.get("exercise") or item.get("name") or "Exercise").strip()
+        if not exercise_name or exercise_name in used_names:
+            continue
+        if _matches(item):
+            selected.append(item)
+            used_names.add(exercise_name)
+        if len(selected) >= limit:
+            return selected
+
+    for item in exercise_pool:
+        exercise_name = str(item.get("exercise") or item.get("name") or "Exercise").strip()
+        if not exercise_name or exercise_name in used_names:
+            continue
+        selected.append(item)
+        used_names.add(exercise_name)
+        if len(selected) >= limit:
+            break
+
+    return selected
+
+
+def _build_training_variant_workout_option(
+    profile: dict[str, Any],
+    language: str,
+    variant: dict[str, Any],
+    exercise_pool: list[dict[str, Any]],
+) -> Optional[dict[str, Any]]:
+    training_days = max(3, min(5, int(_to_float(profile.get("training_days_per_week")) or 4)))
+    plan_days: list[dict[str, Any]] = []
+    used_names: set[str] = set()
+    per_day_limit = int(variant.get("exercise_count", 5))
+    focus_cycle = variant.get("focus_cycle", [])
+
+    for day_index, (english_day, arabic_day) in enumerate(WEEK_DAYS):
+        if day_index >= training_days:
+            plan_days.append({
+                "day": english_day,
+                "dayAr": arabic_day,
+                "focus": "Rest",
+                "exercises": [],
+            })
+            continue
+
+        focus = focus_cycle[day_index % len(focus_cycle)] if focus_cycle else "full body"
+        picked = _pick_training_exercises_for_focus(exercise_pool, [focus], used_names, per_day_limit)
+        exercises = [
+            {
+                "name": str(item.get("exercise") or item.get("name") or "Exercise"),
+                "nameAr": str(item.get("exercise") or item.get("name") or "Exercise"),
+                "sets": str(item.get("sets") or variant.get("sets") or "3"),
+                "reps": str(item.get("reps") or variant.get("reps") or "8-12"),
+                "rest_seconds": int(_to_float(item.get("rest_seconds")) or variant.get("rest_seconds") or 60),
+                "notes": str(item.get("why_recommended") or item.get("description") or ""),
+            }
+            for item in picked
+        ]
+        if not exercises:
+            return None
+        plan_days.append(
+            {
+                "day": english_day,
+                "dayAr": arabic_day,
+                "focus": str(variant.get("focus_titles", {}).get(focus, focus.title())),
+                "exercises": exercises,
+            }
+        )
+
+    return {
+        "id": f"workout_{uuid.uuid4().hex[:10]}",
+        "type": "workout",
+        "title": str(variant.get("title") or "Training-Based Workout Plan"),
+        "title_ar": str(variant.get("title_ar") or "خطة تمارين مبنية على التدريب"),
+        "goal": _normalize_goal(profile.get("goal") or "general_fitness"),
+        "fitness_level": str(profile.get("fitness_level") or "beginner"),
+        "rest_days": [day["day"] for day in plan_days if not day.get("exercises")],
+        "duration_days": 7,
+        "days": plan_days,
+        "created_at": datetime.utcnow().isoformat(),
+        "source": "multi_dataset_training_variant",
+        "training_variant": str(variant.get("key") or "training"),
+    }
+
+
 def _build_training_meals(
     sample_meal_plans: list[dict[str, Any]],
     daily_calories: int,
@@ -1856,6 +1997,88 @@ def _training_plan_to_nutrition_option(
     }
 
 
+def _build_training_variant_nutrition_option(
+    profile: dict[str, Any],
+    variant: dict[str, Any],
+    food_pool: list[dict[str, Any]],
+) -> Optional[dict[str, Any]]:
+    base_calories = _calculate_calories(profile)
+    daily_calories = max(1200, int(round(base_calories + int(variant.get("calorie_shift", 0)))))
+    meals_per_day = max(3, min(5, int(_to_float(profile.get("meals_per_day")) or variant.get("meals_per_day") or 4)))
+    restrictions = _build_food_restrictions(profile)
+    forbidden_labels = {normalize_text(label) for label in restrictions.get("labels", [])}
+
+    filtered_foods: list[dict[str, Any]] = []
+    for food in food_pool:
+        name = str(food.get("name") or "").strip()
+        if not name:
+            continue
+        if forbidden_labels and any(label in normalize_text(name) for label in forbidden_labels):
+            continue
+        filtered_foods.append(food)
+
+    if not filtered_foods:
+        filtered_foods = food_pool[:]
+    if not filtered_foods:
+        return None
+
+    meal_templates = filtered_foods[: max(meals_per_day, 8)]
+    calories_per_meal = max(150, int(round(daily_calories / max(1, meals_per_day))))
+    days: list[dict[str, Any]] = []
+    total_protein = 0
+
+    for day_en, day_ar in WEEK_DAYS:
+        meals: list[dict[str, Any]] = []
+        for meal_index in range(meals_per_day):
+            template = meal_templates[(meal_index + len(days)) % len(meal_templates)]
+            protein = int(round((_to_float(template.get("protein_g")) or 20) * float(variant.get("protein_mul", 1.0))))
+            carbs = int(round((_to_float(template.get("carbs_g")) or 25) * float(variant.get("carb_mul", 1.0))))
+            fat = int(round((_to_float(template.get("fat_g")) or 8) * float(variant.get("fat_mul", 1.0))))
+            total_protein += protein
+            name = str(template.get("name") or f"Meal {meal_index + 1}")
+            category = str(template.get("category") or "balanced")
+            meals.append(
+                {
+                    "name": name,
+                    "nameAr": name,
+                    "description": f"{category.title()} meal with dataset-driven macros",
+                    "descriptionAr": f"وجبة {category} مبنية على بيانات التدريب",
+                    "calories": str(calories_per_meal),
+                    "protein": protein,
+                    "carbs": carbs,
+                    "fat": fat,
+                    "time": f"meal_{meal_index + 1}",
+                }
+            )
+        days.append({"day": day_en, "dayAr": day_ar, "meals": meals})
+
+    estimated_protein = int(round(total_protein / max(1, len(WEEK_DAYS))))
+    macro_calories = max(1, (estimated_protein * 4) + (meals_per_day * 25 * 4) + (meals_per_day * 8 * 9))
+    macro_split = {
+        "protein_pct": round((estimated_protein * 4) / macro_calories * 100, 1),
+        "carbs_pct": round(((meals_per_day * 25) * 4) / macro_calories * 100, 1),
+        "fat_pct": round(((meals_per_day * 8) * 9) / macro_calories * 100, 1),
+    }
+
+    return {
+        "id": f"nutrition_{uuid.uuid4().hex[:10]}",
+        "type": "nutrition",
+        "title": str(variant.get("title") or "Training-Based Nutrition Plan"),
+        "title_ar": str(variant.get("title_ar") or "خطة تغذية مبنية على التدريب"),
+        "goal": _normalize_goal(profile.get("goal") or "general_fitness"),
+        "daily_calories": daily_calories,
+        "estimated_protein": estimated_protein,
+        "meals_per_day": meals_per_day,
+        "days": days,
+        "notes": str(variant.get("notes") or ""),
+        "macro_split": macro_split,
+        "forbidden_foods": list(restrictions.get("labels", [])),
+        "created_at": datetime.utcnow().isoformat(),
+        "source": "multi_dataset_training_variant",
+        "training_variant": str(variant.get("key") or "training"),
+    }
+
+
 def _generate_workout_plan_options_from_training(
     profile: dict[str, Any],
     language: str,
@@ -1865,14 +2088,69 @@ def _generate_workout_plan_options_from_training(
         return []
     try:
         plan = training_pipeline.get_personalized_plan(profile)
+        exercise_pool = training_pipeline.get_personalized_exercises(profile, limit=36)
     except Exception as exc:
         logger.warning("Training pipeline plan generation failed: %s", exc)
         return []
 
-    option = _training_plan_to_workout_option(plan, profile, language)
-    if not option:
-        return []
-    return [option]
+    options: list[dict[str, Any]] = []
+    base_option = _training_plan_to_workout_option(plan, profile, language)
+    if base_option:
+        options.append(base_option)
+
+    goal_focus = _focus_keywords_for_goal(str(profile.get("goal") or "general_fitness"))
+    variants = [
+        {
+            "key": "strength_data",
+            "title": "Data-Driven Strength Split",
+            "title_ar": "خطة قوة مبنية على البيانات",
+            "focus_cycle": goal_focus,
+            "exercise_count": 5,
+            "sets": "4",
+            "reps": "6-10",
+            "rest_seconds": 90,
+            "focus_titles": {"full body": "Full Body", "cardio": "Conditioning", "core": "Core"},
+        },
+        {
+            "key": "volume_data",
+            "title": "Multi-Dataset Hypertrophy Plan",
+            "title_ar": "خطة تضخيم متعددة البيانات",
+            "focus_cycle": goal_focus[::-1] or goal_focus,
+            "exercise_count": 6,
+            "sets": "4",
+            "reps": "8-15",
+            "rest_seconds": 75,
+            "focus_titles": {"full body": "Volume Session", "cardio": "Metabolic Session", "core": "Core Builder"},
+        },
+        {
+            "key": "efficient_data",
+            "title": "Efficient Equipment-Based Plan",
+            "title_ar": "خطة فعالة حسب المعدات",
+            "focus_cycle": ["full body", *goal_focus[:3]],
+            "exercise_count": 4,
+            "sets": "3",
+            "reps": "10-12",
+            "rest_seconds": 60,
+            "focus_titles": {"full body": "Equipment-Efficient", "cardio": "Conditioning", "core": "Core"},
+        },
+    ]
+
+    for variant in variants:
+        option = _build_training_variant_workout_option(profile, language, variant, exercise_pool)
+        if option:
+            options.append(option)
+        if len(options) >= count:
+            break
+
+    deduped: list[dict[str, Any]] = []
+    seen_titles: set[str] = set()
+    for option in options:
+        title = str(option.get("title") or option.get("id") or "")
+        if title in seen_titles:
+            continue
+        seen_titles.add(title)
+        deduped.append(option)
+    return deduped[:count]
 
 
 def _generate_nutrition_plan_options_from_training(
@@ -1884,14 +2162,68 @@ def _generate_nutrition_plan_options_from_training(
         return []
     try:
         plan = training_pipeline.get_personalized_plan(profile)
+        food_pool = training_pipeline.get_personalized_foods(profile, limit=40)
     except Exception as exc:
         logger.warning("Training pipeline plan generation failed: %s", exc)
         return []
 
-    option = _training_plan_to_nutrition_option(plan, profile, language)
-    if not option:
-        return []
-    return [option]
+    options: list[dict[str, Any]] = []
+    base_option = _training_plan_to_nutrition_option(plan, profile, language)
+    if base_option:
+        options.append(base_option)
+
+    variants = [
+        {
+            "key": "balanced_data",
+            "title": "Data-Driven Balanced Nutrition",
+            "title_ar": "خطة تغذية متوازنة مبنية على البيانات",
+            "calorie_shift": 0,
+            "protein_mul": 1.0,
+            "carb_mul": 1.0,
+            "fat_mul": 1.0,
+            "meals_per_day": 4,
+            "notes": "Balanced meals built from the trained food datasets.",
+        },
+        {
+            "key": "high_protein_data",
+            "title": "High-Protein Recovery Plan",
+            "title_ar": "خطة تعافي عالية البروتين",
+            "calorie_shift": 80,
+            "protein_mul": 1.25,
+            "carb_mul": 0.95,
+            "fat_mul": 0.9,
+            "meals_per_day": 4,
+            "notes": "Higher protein distribution for recovery and muscle retention.",
+        },
+        {
+            "key": "lean_cut_data",
+            "title": "Lean Cutting Nutrition Plan",
+            "title_ar": "خطة تغذية للتنشيف الذكي",
+            "calorie_shift": -180,
+            "protein_mul": 1.2,
+            "carb_mul": 0.8,
+            "fat_mul": 0.85,
+            "meals_per_day": 5,
+            "notes": "Leaner calorie profile while preserving protein intake.",
+        },
+    ]
+
+    for variant in variants:
+        option = _build_training_variant_nutrition_option(profile, variant, food_pool)
+        if option:
+            options.append(option)
+        if len(options) >= count:
+            break
+
+    deduped: list[dict[str, Any]] = []
+    seen_titles: set[str] = set()
+    for option in options:
+        title = str(option.get("title") or option.get("id") or "")
+        if title in seen_titles:
+            continue
+        seen_titles.add(title)
+        deduped.append(option)
+    return deduped[:count]
 
 
 def _build_profile(req: ChatRequest, user_state: dict[str, Any]) -> dict[str, Any]:
@@ -5318,25 +5650,23 @@ async def chat(req: ChatRequest) -> ChatResponse:
         memory.add_assistant_message(performance_reply)
         return ChatResponse(reply=performance_reply, conversation_id=conversation_id, language=language)
 
-    # Always give priority to deterministic dataset replies before any routing/LLM work.
-    # This fixes cases where intents were defined in conversation_intents.json but never surfaced.
-    dataset_reply = _dataset_conversation_reply(routing_input, language)
-    if dataset_reply:
-        memory.add_assistant_message(dataset_reply)
-        return ChatResponse(reply=dataset_reply, conversation_id=conversation_id, language=language)
-
     if CHAT_RESPONSE_MODE != "dataset_only":
-        in_domain, _score = ROUTER.is_in_domain(routing_input, language=language)
-        if (not in_domain) and _contains_any(routing_input, STRONG_DOMAIN_KEYWORDS):
-            in_domain = True
+        if not _conversation_replies_should_use_llm():
+            dataset_reply = _dataset_conversation_reply(routing_input, language)
+            if dataset_reply:
+                memory.add_assistant_message(dataset_reply)
+                return ChatResponse(reply=dataset_reply, conversation_id=conversation_id, language=language)
+
+        in_domain = _in_domain_or_strong_fitness_query(routing_input, language)
         if not in_domain:
             out_reply = _strict_out_of_scope_reply(language)
             memory.add_assistant_message(out_reply)
             return ChatResponse(reply=out_reply, conversation_id=conversation_id, language=language)
 
-        # Keep deterministic short conversational replies for very short inputs.
+        # Hybrid mode may still use short deterministic replies, but llm/smart mode
+        # keeps normal in-domain gym conversation on the model.
         dataset_reply = _dataset_conversation_reply(routing_input, language)
-        if dataset_reply and len(normalize_text(routing_input).split()) <= 4:
+        if dataset_reply and (not _conversation_replies_should_use_llm()) and _dataset_short_reply_allowed(routing_input):
             memory.add_assistant_message(dataset_reply)
             return ChatResponse(reply=dataset_reply, conversation_id=conversation_id, language=language)
 
@@ -5350,12 +5680,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             recent_messages=recent_messages,
         )
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
-            llm_reply = _lang_reply(
-                language,
-                "Local AI is unavailable. This project runs free with Ollama. Start Ollama, run `ollama pull llama3.2:3b`, then retry.",
-                "الذكاء المحلي غير متاح حالياً. هذا المشروع مجاني عبر Ollama. شغّل Ollama ثم نفّذ `ollama pull llama3.2:3b` وبعدها أعد المحاولة.",
-                "الذكاء المحلي واقف حالياً. المشروع مجاني على Ollama. شغّل Ollama واعمل `ollama pull llama3.2:3b` وجرّب مرة ثانية.",
-            )
+            llm_reply = _ollama_unavailable_reply(language)
 
         filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
         memory.add_assistant_message(filtered_reply)
