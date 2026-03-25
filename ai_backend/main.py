@@ -6,6 +6,7 @@ import re
 import json
 import uuid
 import shutil
+import asyncio
 from functools import lru_cache
 from copy import deepcopy
 from datetime import datetime
@@ -64,46 +65,58 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Initialize Multi-Dataset Training Pipeline
 training_pipeline = None
+training_pipeline_task = None
 
-@app.on_event("startup")
-async def initialize_training_pipeline():
-    """Initialize multi-dataset training system on startup."""
+
+def _initialize_training_pipeline_sync() -> None:
     global training_pipeline
-    if os.getenv("TRAINING_PIPELINE_ENABLED", "1").lower() in {"0", "false", "no", "off"}:
-        logger.info("Training pipeline disabled by TRAINING_PIPELINE_ENABLED")
-        training_pipeline = None
-        return
     try:
         from training_pipeline import TrainingPipeline
         from dataset_paths import resolve_dataset_root
-        
+
         logger.info("Initializing multi-dataset training pipeline...")
-        
+
         dataset_root = resolve_dataset_root()
         model_cache_path = BACKEND_DIR / "models" / "training_cache"
-        
-        training_pipeline = TrainingPipeline(dataset_root, model_cache_path)
-        
+
+        pipeline = TrainingPipeline(dataset_root, model_cache_path)
+
         # Try to load cached models (fast)
-        if training_pipeline.load_cached_models():
-            logger.info("✅ Loaded cached training models")
+        if pipeline.load_cached_models():
+            logger.info("Loaded cached training models")
         else:
             # Train if no cache (slow, one-time)
-            logger.info("Training on 50+ datasets... this may take 10-30 seconds")
-            training_pipeline.train()
-            logger.info("✅ Training complete! Models will be cached for next startup")
-        
-        summary = training_pipeline.get_summary()
-        logger.info(f"📊 Training Pipeline Ready:")
+            logger.info("Training on 50+ datasets in the background")
+            pipeline.train()
+            logger.info("Training complete! Models will be cached for next startup")
+
+        summary = pipeline.get_summary()
+        logger.info("Training Pipeline Ready:")
         logger.info(f"   - Datasets: {summary['dataset_summary']['total_datasets']}")
         logger.info(f"   - Records: {summary['dataset_summary']['total_records']:,}")
         logger.info(f"   - Exercises: {summary['training_summary']['exercises_count']}")
         logger.info(f"   - Foods: {summary['training_summary']['foods_count']}")
-        
+        training_pipeline = pipeline
+
     except Exception as e:
-        logger.warning(f"⚠️ Training pipeline initialization failed: {e}")
+        logger.warning(f"Training pipeline initialization failed: {e}")
         logger.info("Continuing without multi-dataset training (fallback to standard recommender)")
         training_pipeline = None
+
+@app.on_event("startup")
+async def initialize_training_pipeline():
+    """Initialize multi-dataset training system in the background on startup."""
+    global training_pipeline, training_pipeline_task
+    if os.getenv("TRAINING_PIPELINE_ENABLED", "1").lower() in {"0", "false", "no", "off"}:
+        logger.info("Training pipeline disabled by TRAINING_PIPELINE_ENABLED")
+        training_pipeline = None
+        return
+    if training_pipeline_task is not None and not training_pipeline_task.done():
+        logger.info("Training pipeline initialization already running")
+        return
+
+    logger.info("Scheduling training pipeline initialization in the background")
+    training_pipeline_task = asyncio.create_task(asyncio.to_thread(_initialize_training_pipeline_sync))
 
 
 class ChatRequest(BaseModel):
@@ -222,7 +235,9 @@ DATASET_REGISTRY = DatasetRegistry(
     resolve_dataset_root(),
     Path(__file__).resolve().parent / "data" / "dataset_registry_index.json",
 )
-DATASET_REGISTRY.build_index(force_rebuild=True)
+DATASET_REGISTRY.build_index(
+    force_rebuild=os.getenv("DATASET_REGISTRY_FORCE_REBUILD", "0").lower() in {"1", "true", "yes", "on"}
+)
 
 MEMORY_SESSIONS: Dict[str, MemorySystem] = {}
 PENDING_PLANS: Dict[str, Dict[str, Any]] = {}
