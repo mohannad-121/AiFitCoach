@@ -104,6 +104,12 @@ function getPlanDayIndex(dayStr: string): number {
   return dayNameToIndex[lower] ?? -1;
 }
 
+function planDayHasItems(day: PlanDay | null | undefined): boolean {
+  const exercises = Array.isArray(day?.exercises) ? day.exercises.length : 0;
+  const meals = Array.isArray(day?.meals) ? day.meals.length : 0;
+  return exercises + meals > 0;
+}
+
 function getWeekDates(weekOffset: number): Date[] {
   const today = new Date();
   const currentDay = today.getDay(); // 0=Sun
@@ -264,6 +270,7 @@ export function SchedulePage() {
     if (!plan) return null;
     const jsDay = date.getDay(); // 0=Sun...6=Sat
     for (let i = 0; i < plan.plan_data.length; i++) {
+      if (!planDayHasItems(plan.plan_data[i])) continue;
       const planDayIdx = getPlanDayIndex(plan.plan_data[i].day) !== -1 
         ? getPlanDayIndex(plan.plan_data[i].day) 
         : getPlanDayIndex(plan.plan_data[i].dayAr || '');

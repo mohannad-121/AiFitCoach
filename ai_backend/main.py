@@ -1712,34 +1712,26 @@ def _generate_workout_plan_options_from_dataset(
         else:
             rest_days_local = rest_days[:]
 
-        training_days = [day for day, _ in WEEK_DAYS if day not in rest_days_local][:days_per_week]
-        if len(training_days) < days_per_week:
-            for day, _ in WEEK_DAYS:
-                if day not in training_days:
-                    training_days.append(day)
-                if len(training_days) >= days_per_week:
-                    break
-
-        training_day_payload: dict[str, dict[str, Any]] = {
-            d["day"]: {"focus": d.get("focus") or "Workout", "exercises": d.get("exercises", [])}
-            for d in structured_program_days
-            if d.get("exercises")
-        }
-
         normalized_days: list[dict[str, Any]] = []
-        for day_en, day_ar in WEEK_DAYS:
-            payload = training_day_payload.get(day_en)
-            if payload:
-                normalized_days.append(
-                    {
-                        "day": day_en,
-                        "dayAr": day_ar,
-                        "focus": payload.get("focus", "Workout"),
-                        "exercises": payload.get("exercises", []),
-                    }
-                )
-            else:
-                normalized_days.append({"day": day_en, "dayAr": day_ar, "focus": "Rest", "exercises": []})
+        for day_payload in structured_program_days:
+            day_en = str(day_payload.get("day") or "").strip()
+            if not day_en or day_en in rest_days_local or not day_payload.get("exercises"):
+                continue
+            normalized_days.append(
+                {
+                    "day": day_en,
+                    "dayAr": str(day_payload.get("dayAr") or day_en),
+                    "focus": day_payload.get("focus") or "Workout",
+                    "exercises": day_payload.get("exercises", []),
+                }
+            )
+            if len(normalized_days) >= days_per_week:
+                break
+
+        if not normalized_days:
+            continue
+
+        active_days = {day["day"] for day in normalized_days}
 
         title_en = (
             _dataset_text(program.get("name"), "en")
@@ -1764,7 +1756,7 @@ def _generate_workout_plan_options_from_dataset(
                 "title_ar": title_ar,
                 "goal": goal,
                 "fitness_level": _dataset_level_key(program.get("level")),
-                "rest_days": [d["day"] for d in normalized_days if not d.get("exercises")],
+                "rest_days": [day_en for day_en, _ in WEEK_DAYS if day_en not in active_days],
                 "duration_days": 7,
                 "days": normalized_days,
                 "created_at": datetime.utcnow().isoformat(),
@@ -1942,8 +1934,29 @@ def _training_plan_to_workout_option(
     default_reps = "8-12"
     cursor = 0
     plan_days: list[dict[str, Any]] = []
+    requested_days = int(_to_float(profile.get("training_days_per_week")) or 0)
+    target_training_days = max(1, min(7, requested_days)) if requested_days > 0 else 0
+    if target_training_days == 0:
+        detected_days = sum(
+            1
+            for english_day, _ in WEEK_DAYS
+            if _normalize_training_exercises(
+                (schedule_map.get(english_day.lower()) or {}).get("exercises", []),
+                default_sets,
+                default_reps,
+            )
+        )
+        if detected_days > 0:
+            target_training_days = max(1, min(7, detected_days))
+        elif recommended:
+            target_training_days = max(1, min(7, math.ceil(len(recommended) / 4)))
+        else:
+            target_training_days = 3
 
     for english_day, arabic_day in WEEK_DAYS:
+        if len(plan_days) >= target_training_days:
+            break
+
         payload = schedule_map.get(english_day.lower())
         focus = str(payload.get("focus") if payload else "") or "Workout"
         exercises = _normalize_training_exercises(payload.get("exercises") if payload else [], default_sets, default_reps)
@@ -1957,7 +1970,10 @@ def _training_plan_to_workout_option(
                 exercises = _normalize_training_exercises(recommended[:4], default_sets, default_reps)
 
         if not exercises and "rest" in focus.lower():
-            focus = "Rest"
+            continue
+
+        if not exercises:
+            continue
 
         plan_days.append(
             {
@@ -1968,7 +1984,8 @@ def _training_plan_to_workout_option(
             }
         )
 
-    rest_days = [d.get("day") for d in plan_days if not d.get("exercises")]
+    active_days = {str(day.get("day") or "") for day in plan_days if day.get("exercises")}
+    rest_days = [day_en for day_en, _ in WEEK_DAYS if day_en not in active_days]
     total_exercises = sum(len(day.get("exercises", [])) for day in plan_days)
     if total_exercises == 0:
         return None
@@ -2053,7 +2070,7 @@ def _build_training_variant_workout_option(
     variant: dict[str, Any],
     exercise_pool: list[dict[str, Any]],
 ) -> Optional[dict[str, Any]]:
-    training_days = max(3, min(5, int(_to_float(profile.get("training_days_per_week")) or 4)))
+    training_days = max(1, min(7, int(_to_float(profile.get("training_days_per_week")) or 4)))
     plan_days: list[dict[str, Any]] = []
     used_names: set[str] = set()
     per_day_limit = int(variant.get("exercise_count", 5))
@@ -2061,13 +2078,7 @@ def _build_training_variant_workout_option(
 
     for day_index, (english_day, arabic_day) in enumerate(WEEK_DAYS):
         if day_index >= training_days:
-            plan_days.append({
-                "day": english_day,
-                "dayAr": arabic_day,
-                "focus": "Rest",
-                "exercises": [],
-            })
-            continue
+            break
 
         focus = focus_cycle[day_index % len(focus_cycle)] if focus_cycle else "full body"
         picked = _pick_training_exercises_for_focus(exercise_pool, [focus], used_names, per_day_limit)
@@ -2100,7 +2111,7 @@ def _build_training_variant_workout_option(
         "title_ar": str(variant.get("title_ar") or "خطة تمارين مبنية على التدريب"),
         "goal": _normalize_goal(profile.get("goal") or "general_fitness"),
         "fitness_level": str(profile.get("fitness_level") or "beginner"),
-        "rest_days": [day["day"] for day in plan_days if not day.get("exercises")],
+        "rest_days": [day_en for day_en, _ in WEEK_DAYS if day_en not in {day["day"] for day in plan_days}],
         "duration_days": 7,
         "days": plan_days,
         "created_at": datetime.utcnow().isoformat(),
@@ -3058,8 +3069,12 @@ def _select_exercises(focus: str, difficulty: str, max_items: int = 5) -> list[d
 def _generate_workout_plan(profile: dict[str, Any], language: str) -> dict[str, Any]:
     goal = profile.get("goal") or "general_fitness"
     difficulty = str(profile.get("fitness_level", "beginner")).lower()
-    rest_days = profile.get("rest_days") or ["Friday"]
+    requested_days = int(_to_float(profile.get("training_days_per_week")) or 0)
+    training_days = max(1, min(7, requested_days)) if requested_days > 0 else 6
+    rest_days = profile.get("rest_days") or []
     rest_days = [day for day in rest_days if isinstance(day, str)]
+    if not rest_days:
+        rest_days = [day for day, _ in WEEK_DAYS[training_days:]]
 
     if goal == "muscle_gain":
         weekly_focus = ["chest", "back", "legs", "shoulders", "core"]
@@ -3075,14 +3090,6 @@ def _generate_workout_plan(profile: dict[str, Any], language: str) -> dict[str, 
     focus_index = 0
     for english_day, arabic_day in WEEK_DAYS:
         if english_day in rest_days:
-            plan_days.append(
-                {
-                    "day": english_day,
-                    "dayAr": arabic_day,
-                    "focus": "Rest",
-                    "exercises": [],
-                }
-            )
             continue
 
         focus = weekly_focus[focus_index % len(weekly_focus)]

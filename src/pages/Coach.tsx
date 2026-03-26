@@ -73,6 +73,20 @@ const WEEK_TEMPLATE = [
   { day: 'Friday', dayAr: 'الجمعة' },
 ];
 
+const buildWorkoutDayIndexes = (daysPerWeek: number) => {
+  const clamped = Math.max(1, Math.min(7, daysPerWeek));
+  const patterns: Record<number, number[]> = {
+    1: [0],
+    2: [0, 3],
+    3: [0, 2, 4],
+    4: [0, 1, 3, 5],
+    5: [0, 1, 2, 4, 6],
+    6: [0, 1, 2, 3, 4, 6],
+    7: [0, 1, 2, 3, 4, 5, 6],
+  };
+  return patterns[clamped] || patterns[3];
+};
+
 const toIsoDay = (value?: string | null) => {
   if (!value) return null;
   const date = new Date(value);
@@ -814,11 +828,12 @@ export function CoachPage() {
 
   const toWorkoutPlanData = (plan: any) => {
     if (Array.isArray(plan?.days) && plan.days.length > 0) {
-      return plan.days;
+      return plan.days.filter((day: any) => Array.isArray(day?.exercises) && day.exercises.length > 0);
     }
 
     const exercises = Array.isArray(plan?.exercises) ? plan.exercises : [];
-    const workoutDayIndexes = [0, 2, 4]; // Saturday, Monday, Wednesday
+    const requestedDays = Number(plan?.training_days_per_week ?? plan?.trainingDaysPerWeek ?? plan?.days_per_week ?? 3);
+    const workoutDayIndexes = buildWorkoutDayIndexes(Number.isFinite(requestedDays) ? requestedDays : 3);
     const grouped = workoutDayIndexes.map(() => [] as any[]);
 
     exercises.forEach((exercise: any, index: number) => {

@@ -156,7 +156,6 @@ class WorkoutPlanGenerator:
             focus_index = 0
             for day_en, day_ar in WEEK_DAYS:
                 if day_en in rest_days:
-                    plan_days.append({"day": day_en, "dayAr": day_ar, "focus": "Rest", "exercises": []})
                     continue
 
                 focus = focus_cycle[focus_index % len(focus_cycle)]
