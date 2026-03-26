@@ -14,6 +14,7 @@ import { useVoiceChat, type VoiceChatApiResponse } from '@/hooks/useVoiceChat';
 import { supabase } from '@/integrations/supabase/client';
 import { PlanApprovalUI } from '@/components/ai/PlanApprovalUI';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { exercises } from '@/data/exercises';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -56,34 +57,90 @@ const WEEK_TEMPLATE = [
   { day: 'Friday', dayAr: 'الجمعة' },
 ];
 
-const WEBSITE_KNOWLEDGE = {
-  app_name: 'FitCoach',
-  pages: {
-    home: 'Main landing page and primary navigation hub.',
-    workouts: 'Workout and exercise browsing page for training exploration.',
-    coach: 'AI Coach page for text chat, voice chat, plan generation, and plan approval.',
-    schedule: 'Schedule page where approved workout and nutrition plans are saved and tracked.',
-    profile: 'Profile page showing user information like age, weight, height, goal, location, and fitness summary.',
-    onboarding: 'Setup flow that collects profile basics, health status, allergies, dietary preferences, fitness level, training days, equipment, injuries, and daily activity level.',
-    auth: 'Authentication page for sign in and sign up.',
+const WEBSITE_PAGES = {
+  home: {
+    purpose: 'Main landing page and navigation hub for FitCoach.',
+    primary_actions: ['start onboarding', 'open workouts', 'open AI coach', 'open schedule', 'open profile'],
   },
-  onboarding_sections: {
-    health_status: {
-      chronic_conditions_examples: ['Diabetes', 'Blood Pressure', 'Heart', 'Asthma', 'Joints', 'Back Pain'],
-      allergies_examples: ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Wheat', 'Shellfish'],
-      dietary_preferences_examples: ['Vegetarian', 'Vegan', 'Halal', 'Keto', 'Gluten Free', 'Lactose Free'],
-    },
+  workouts: {
+    purpose: 'Exercise explorer that filters the exercise library by muscle group, goal, place, and gender.',
+    primary_actions: ['select muscles on anatomy map', 'filter by goal', 'filter by home or gym', 'filter by gender'],
   },
-  ai_capabilities: [
-    'general chat',
-    'fitness coaching',
-    'nutrition guidance',
-    'workout plan suggestions',
-    'nutrition plan suggestions',
-    'voice chat',
-    'plan approval workflow',
-  ],
+  coach: {
+    purpose: 'AI Coach page for text chat, voice chat, plan generation, plan approval, and chat history.',
+    primary_actions: ['ask questions', 'use voice chat', 'create workout plans', 'create nutrition plans', 'approve or reject plans'],
+  },
+  schedule: {
+    purpose: 'Weekly schedule page for active workout plans, nutrition plans, completions, and daily logs.',
+    primary_actions: ['review plans by day', 'mark exercises complete', 'save daily workout notes', 'save nutrition notes', 'save mood or energy'],
+  },
+  profile: {
+    purpose: 'Profile summary page for personal stats, BMI, health information, and training details.',
+    primary_actions: ['review BMI', 'review health information', 'review training details', 'edit data'],
+  },
+  onboarding: {
+    purpose: 'Multi-step setup flow that collects the user profile used across the app and by the AI coach.',
+    primary_actions: ['complete profile basics', 'record health status', 'set goals', 'set training details', 'set workout location'],
+  },
+  auth: {
+    purpose: 'Authentication page for sign in and sign up.',
+    primary_actions: ['sign in', 'sign up', 'log out'],
+  },
 } as const;
+
+const ONBOARDING_FLOW = [
+  {
+    key: 'basic_info',
+    title_en: 'Basic Info',
+    title_ar: 'معلومات أساسية',
+    fields: ['name', 'age', 'gender'],
+    helper_notes: [],
+  },
+  {
+    key: 'body_stats',
+    title_en: 'Body Stats',
+    title_ar: 'قياسات الجسم',
+    fields: ['weight_kg', 'height_cm'],
+    helper_notes: [],
+  },
+  {
+    key: 'health_status',
+    title_en: 'Health Status',
+    title_ar: 'الحالة الصحية',
+    fields: ['chronic_conditions', 'allergies', 'dietary_preferences'],
+    helper_notes: [
+      'Chronic conditions can be selected from Diabetes, Blood Pressure, Heart, Asthma, Joints, and Back Pain, or typed manually.',
+      'Allergies can be selected from Peanuts, Tree Nuts, Milk, Eggs, Wheat, and Shellfish, or typed manually.',
+      'Dietary preferences can be selected from Vegetarian, Vegan, Halal, Keto, Gluten Free, and Lactose Free, or typed manually.',
+      'The UI note says users can leave the field empty if they have no health issues, allergies, or dietary preferences.',
+    ],
+  },
+  {
+    key: 'goals',
+    title_en: 'Your Goals',
+    title_ar: 'أهدافك',
+    fields: ['goal'],
+    helper_notes: ['Goal options are Build Muscle, Lose Weight, and General Fitness.'],
+  },
+  {
+    key: 'training_details',
+    title_en: 'Training Details',
+    title_ar: 'تفاصيل التدريب',
+    fields: ['fitness_level', 'training_days_per_week', 'equipment', 'injuries', 'activity_level'],
+    helper_notes: [
+      'Equipment is a free-text field with examples like dumbbells, barbell, and bands.',
+      'Injuries or pain is a free-text field for any injury or pain notes.',
+      'Daily activity level options are Low, Moderate, and High.',
+    ],
+  },
+  {
+    key: 'workout_preference',
+    title_en: 'Workout Preference',
+    title_ar: 'مكان التمرين',
+    fields: ['location'],
+    helper_notes: ['Location options are Home and Gym.'],
+  },
+] as const;
 
 const getConversationsStorageKey = (userId: string) => `fitcoach_conversations_${userId}`;
 const getCurrentConversationStorageKey = (userId: string) => `fitcoach_current_conversation_${userId}`;
@@ -139,17 +196,11 @@ export function CoachPage() {
   const [voiceMode, setVoiceMode] = useState(false);
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const [pendingVoiceResponse, setPendingVoiceResponse] = useState<VoiceChatApiResponse | null>(null);
+  const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const voiceModeRef = useRef(false);
   const assistantAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const websiteContext = {
-    ...WEBSITE_KNOWLEDGE,
-    current_page: 'coach',
-    current_path: location.pathname,
-    current_language: language === 'ar' ? 'ar' : 'en',
-  };
 
   const focusInput = useCallback(() => {
     window.setTimeout(() => {
@@ -164,6 +215,128 @@ export function CoachPage() {
       }
     }, 0);
   }, []);
+
+  const buildWebsiteContext = useCallback(async (): Promise<Record<string, unknown>> => {
+    const exerciseMuscles = Array.from(new Set(exercises.map((exercise) => exercise.muscle))).sort();
+    const exerciseGoals = Array.from(new Set(exercises.map((exercise) => exercise.goal))).sort();
+    const exerciseLocations = Array.from(new Set(exercises.map((exercise) => exercise.location))).sort();
+    const exerciseGenders = Array.from(new Set(exercises.map((exercise) => exercise.gender))).sort();
+
+    let recentDailyLogs: Array<Record<string, string>> = [];
+    if (user) {
+      try {
+        const { data } = await supabase
+          .from('daily_logs')
+          .select('log_date,workout_notes,nutrition_notes,mood')
+          .eq('user_id', user.id)
+          .order('log_date', { ascending: false })
+          .limit(7);
+
+        recentDailyLogs = (data || [])
+          .filter((log) => Boolean(log.workout_notes || log.nutrition_notes || log.mood))
+          .map((log) => ({
+            log_date: log.log_date || '',
+            workout_notes: log.workout_notes || '',
+            nutrition_notes: log.nutrition_notes || '',
+            mood: log.mood || '',
+          }));
+      } catch (error) {
+        console.warn('Failed building website context from daily logs:', error);
+      }
+    }
+
+    return {
+      app_name: 'FitCoach',
+      current_page: 'coach',
+      current_path: location.pathname,
+      current_language: language === 'ar' ? 'ar' : 'en',
+      pages: WEBSITE_PAGES,
+      onboarding_flow: ONBOARDING_FLOW,
+      profile_page: {
+        sections: [
+          'profile header with name, gender, goal, and email',
+          'body mass index card with BMI value and category',
+          'stats cards for age, height, weight, goal, and location',
+          'health information for chronic conditions, allergies, and dietary preferences',
+          'training details for level, training days, activity level, equipment, and injuries',
+        ],
+      },
+      workouts_page: {
+        title_en: 'Muscle Map',
+        title_ar: 'خريطة العضلات',
+        anatomy_selector: true,
+        supported_muscles: exerciseMuscles,
+        supported_goals: exerciseGoals,
+        supported_locations: exerciseLocations,
+        supported_genders: exerciseGenders,
+        exercise_count: exercises.length,
+        result_card_fields: ['name', 'localized name', 'sets', 'reps', 'description', 'video link if available'],
+      },
+      schedule_page: {
+        supports_week_navigation: true,
+        tabs: ['workout', 'nutrition'],
+        daily_log_fields: ['workout_notes', 'nutrition_notes', 'mood'],
+        daily_log_labels_en: ['What did you train today?', 'How was your nutrition today?', 'Mood / Energy'],
+        daily_log_labels_ar: ['شو تمرنت اليوم؟', 'شو أكلت اليوم؟', 'مزاجك/طاقتك اليوم'],
+        daily_log_help_en: 'These notes help the AI coach track your daily progress.',
+        daily_log_help_ar: 'هذه الملاحظات تساعد المدرب الذكي على فهم تقدمك اليومي.',
+        empty_state_workout_en: 'No workout schedule. Ask AI Coach to create one!',
+        empty_state_nutrition_en: 'No nutrition plan. Ask AI Coach to create one!',
+      },
+      ai_coach_capabilities: [
+        'general chat',
+        'fitness coaching',
+        'nutrition guidance',
+        'website and onboarding explanations',
+        'workout plan suggestions',
+        'nutrition plan suggestions',
+        'voice chat',
+        'plan approval workflow',
+        'chat history',
+      ],
+      user_visible_profile: profile
+        ? {
+            name: profile.name || '',
+            age: profile.age,
+            gender: profile.gender,
+            weight: profile.weight,
+            height: profile.height,
+            goal: profile.goal,
+            location: profile.location,
+            fitnessLevel: profile.fitnessLevel,
+            trainingDaysPerWeek: profile.trainingDaysPerWeek,
+            equipment: profile.equipment || '',
+            injuries: profile.injuries || '',
+            activityLevel: profile.activityLevel,
+            chronicConditions: profile.chronicConditions || '',
+            allergies: profile.allergies || '',
+            dietaryPreferences: profile.dietaryPreferences || '',
+            onboardingCompleted: profile.onboardingCompleted,
+          }
+        : null,
+      user_saved_notes: {
+        source: 'daily_logs table and schedule page daily log form',
+        recent_daily_logs: recentDailyLogs,
+      },
+    };
+  }, [language, location.pathname, profile, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshWebsiteContext = async () => {
+      const nextContext = await buildWebsiteContext();
+      if (!cancelled) {
+        setWebsiteContext(nextContext);
+      }
+    };
+
+    void refreshWebsiteContext();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [buildWebsiteContext]);
 
   useEffect(() => {
     voiceModeRef.current = voiceMode;
@@ -1004,6 +1177,8 @@ export function CoachPage() {
         content: msg.content,
       }));
 
+      const website_context = await buildWebsiteContext();
+
       const payload = {
         message: text.trim(),
         user_id: user.id,
@@ -1012,7 +1187,7 @@ export function CoachPage() {
         user_profile,
         tracking_summary,
         plan_snapshot,
-        website_context: websiteContext,
+        website_context,
         recent_messages,
       };
 

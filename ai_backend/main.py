@@ -5321,6 +5321,13 @@ def _general_llm_reply(
     if nutrition_kb_context and short_query:
         nutrition_kb_context = "\n".join(nutrition_kb_context.splitlines()[:4])
 
+    website_context_text = ""
+    if website_context:
+        try:
+            website_context_text = json.dumps(website_context, ensure_ascii=False)
+        except TypeError:
+            website_context_text = str(website_context)
+
     system_prompt = (
         "You are a smart, helpful AI assistant with elite fitness coach and nutrition expertise.\n"
         "You can answer general questions as well as fitness, training, sports performance, and nutrition topics.\n"
@@ -5339,7 +5346,9 @@ def _general_llm_reply(
         "If progress is weak or user reports no body change, ask about sleep, hydration, meal adherence, and workout execution before giving final advice.\n"
         "When user asks about exercises, guide them and mention they can use /workouts for muscle-specific exercise explorer.\n"
         "Ground your advice in the provided dataset context, nutrition snippets, and recent messages.\n"
-        "When user asks about this website or app, use the provided website context as the source of truth for pages, forms, features, and user flows.\n"
+        "When user asks about this website or app, use the provided website context as the source of truth for pages, forms, helper notes, saved note fields, and user flows.\n"
+        "When user asks what the app knows about them, inspect the provided profile, tracking summary, plan snapshot, and user_saved_notes before answering.\n"
+        "If a requested profile field or note is blank or missing, say it is not recorded yet instead of guessing.\n"
         "Keep responses concise but useful, usually 1 short intro plus 3-6 strong bullets when appropriate.\n"
         "End with one clear next action, question, or recommendation when that improves the answer.\n"
         "Prefer a direct answer over long setup text.\n"
@@ -5357,8 +5366,8 @@ def _general_llm_reply(
     if nutrition_kb_context:
         context_lines.append("Nutrition reference snippets (from DATAFORPROJECT.pdf):")
         context_lines.append("\n".join(nutrition_kb_context.splitlines()[: nutrition_context_limit * 4]))
-    if website_context:
-        context_lines.append(f"Website/app context: {website_context}")
+    if website_context_text:
+        context_lines.append(f"Website/app context (JSON): {website_context_text}")
     messages = [{"role": "system", "content": system_prompt + '\n'.join(context_lines)}]
 
     external_history = _normalize_recent_messages(recent_messages)
