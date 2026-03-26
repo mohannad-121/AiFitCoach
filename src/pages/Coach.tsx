@@ -967,7 +967,7 @@ export function CoachPage() {
       };
 
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 25000);
+      const timeoutId = window.setTimeout(() => controller.abort(), 120000);
       const apiResponse = await fetch(`${AI_BACKEND_URL}/chat`, {
         method: 'POST',
         headers: {

@@ -144,6 +144,7 @@ class LLMClient:
             "stream": False,
             "options": {
                 "temperature": self.temperature if temperature is None else temperature,
+                "num_ctx": 1024 if (max_tokens or 0) <= 160 else 1536,
             },
         }
         if max_tokens is not None:
@@ -188,6 +189,7 @@ class LLMClient:
             "stream": True,
             "options": {
                 "temperature": self.temperature if temperature is None else temperature,
+                "num_ctx": 1024 if (max_tokens or 0) <= 160 else 1536,
             },
         }
         if max_tokens is not None:

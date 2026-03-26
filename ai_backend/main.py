@@ -269,6 +269,89 @@ def _in_domain_or_strong_fitness_query(user_input: str, language: str) -> bool:
     return in_domain
 
 
+def _looks_like_contextual_followup(user_input: str) -> bool:
+    normalized = normalize_text(user_input)
+    if not normalized:
+        return False
+
+    followup_phrases = {
+        "tell me more",
+        "tell me more about",
+        "more about",
+        "what about",
+        "can you explain",
+        "explain more",
+        "i want",
+        "i want you",
+        "can you help",
+        "should i",
+        "is it good",
+        "is that good",
+        "before workout",
+        "after workout",
+        "قبل التمرين",
+        "بعد التمرين",
+        "احكيلي اكثر",
+        "احكيلي أكثر",
+        "زيدني",
+        "شو رأيك",
+        "ممكن تشرح",
+        "بدي",
+        "بدي اياك",
+    }
+    return _contains_phrase(normalized, followup_phrases)
+
+
+def _recent_history_is_fitness_related(
+    recent_messages: Optional[list[dict[str, Any]]],
+    memory: Optional[MemorySystem],
+) -> bool:
+    history: list[dict[str, Any]] = []
+    if recent_messages:
+        history = _normalize_recent_messages(recent_messages)[-6:]
+    elif memory is not None:
+        history = memory.get_conversation_history()[-6:]
+
+    for msg in reversed(history):
+        content = str(msg.get("content", "")).strip()
+        if not content:
+            continue
+        if _contains_any(content, STRONG_DOMAIN_KEYWORDS | NUTRITION_KB_KEYWORDS | PROGRESS_KEYWORDS):
+            return True
+    return False
+
+
+def _contextual_followup_reply(
+    user_input: str,
+    language: str,
+    recent_messages: Optional[list[dict[str, Any]]],
+    memory: Optional[MemorySystem],
+) -> Optional[str]:
+    if not _looks_like_contextual_followup(user_input):
+        return None
+    if not _recent_history_is_fitness_related(recent_messages, memory):
+        return None
+
+    normalized = normalize_text(user_input)
+    if _contains_phrase(normalized, {"i want", "i want you", "help me", "can you help", "بدي", "ساعدني", "ممكن تساعدني"}):
+        return _lang_reply(
+            language,
+            "Absolutely. Tell me what you want help with right now: training, nutrition, fat loss, muscle gain, or fixing your current plan.",
+            "بالتأكيد. أخبرني الآن في ماذا تريد المساعدة: التمرين، التغذية، خسارة الدهون، زيادة العضلات، أم تعديل خطتك الحالية.",
+            "أكيد. احكيلي هسا شو بدك مساعدة فيه: تمرين، تغذية، تنزيل دهون، زيادة عضل، أو تعديل خطتك الحالية.",
+        )
+
+    if _contains_phrase(normalized, {"tell me more", "tell me more about", "more about", "what about", "can you explain", "explain more", "احكيلي اكثر", "احكيلي أكثر", "شو رأيك"}):
+        return _lang_reply(
+            language,
+            "Sure. Mention the food, exercise, or goal you want to go deeper on, and I will explain it in a gym-focused way.",
+            "بالتأكيد. اذكر الطعام أو التمرين أو الهدف الذي تريد التوسع فيه، وسأشرحه لك بطريقة موجهة للياقة.",
+            "أكيد. احكيلي عن الأكل أو التمرين أو الهدف اللي بدك تتوسع فيه، وأنا بشرحه إلك بطريقة موجهة للجيم.",
+        )
+
+    return None
+
+
 def _ollama_unavailable_reply(language: str) -> str:
     model_name = getattr(LLM, 'active_model', None) or os.getenv('OLLAMA_MODEL', 'qwen3:8b')
     return _lang_reply(
@@ -825,15 +908,18 @@ def _is_nutrition_knowledge_query(user_input: str) -> bool:
     normalized = normalize_text(user_input)
     if not normalized:
         return False
-    return _contains_any(normalized, NUTRITION_KB_KEYWORDS | NUTRITION_PLAN_KEYWORDS)
+    if _contains_any(normalized, NUTRITION_KB_KEYWORDS | NUTRITION_PLAN_KEYWORDS):
+        return True
+    if NUTRITION_KB.ready and len(normalized.split()) <= 8:
+        hits = NUTRITION_KB.search(user_input, top_k=1, max_chars=140)
+        return bool(hits)
+    return False
 
 
 def _is_greeting_query(user_input: str) -> bool:
     normalized = normalize_text(user_input)
     if not normalized:
         return False
-    if _dataset_intent_matches(user_input, "greeting"):
-        return True
     if len(normalized.split()) > 4:
         return False
     greeting_phrases = {
@@ -856,10 +942,16 @@ def _is_name_query(user_input: str) -> bool:
             "what is your name",
             "your name",
             "name",
+            "who are you",
+            "what can you do",
+            "what do you do",
+            "introduce yourself",
             "اسمك",
             "شو اسمك",
             "مين انت",
             "من انت",
+            "شو بتعمل",
+            "عرفني عنك",
         },
     )
 
@@ -875,6 +967,50 @@ def _is_how_are_you_query(user_input: str) -> bool:
             "كيف الحال",
         },
     )
+
+
+def _is_vague_followup_query(user_input: str) -> bool:
+    normalized = normalize_text(user_input)
+    if not normalized:
+        return False
+
+    vague_phrases = {
+        "give me",
+        "help me",
+        "more",
+        "another",
+        "what else",
+        "what now",
+        "go on",
+        "continue",
+        "start",
+        "ابدأ",
+        "كمل",
+        "كمان",
+        "اعطيني",
+        "ساعدني",
+    }
+    if normalized in vague_phrases:
+        return True
+
+    tokens = normalized.split()
+    if len(tokens) > 3:
+        return False
+
+    vague_starters = {
+        "give",
+        "help",
+        "suggest",
+        "recommend",
+        "start",
+        "more",
+        "another",
+        "اعطيني",
+        "ساعدني",
+        "اقترح",
+        "كمل",
+    }
+    return bool(tokens) and tokens[0] in vague_starters
 
 
 def _is_workout_plan_request(user_input: str) -> bool:
@@ -1070,6 +1206,72 @@ def _nutrition_kb_context(user_input: str, profile: dict[str, Any], top_k: int =
     if not hits:
         return ""
     return "\n".join(f"- {hit['text']}" for hit in hits)
+
+
+def _quick_nutrition_reply(user_input: str, language: str, profile: dict[str, Any]) -> Optional[str]:
+    normalized = normalize_text(user_input)
+    if not normalized:
+        return None
+
+    if _contains_any(normalized, {"banana", "bananas", "موز", "موزه", "موزة"}):
+        goal = _normalize_goal(profile.get("goal") or "")
+        extra_en = {
+            "muscle_gain": "It works especially well before training if you need easy carbs, and even better with whey or Greek yogurt.",
+            "fat_loss": "It is still fine during fat loss, just fit it into your calories and pair it with protein if you want better satiety.",
+        }.get(goal, "It is especially useful before training because it gives quick carbs and is easy to digest.")
+        extra_ar_fusha = {
+            "muscle_gain": "وهو مناسب جدًا قبل التمرين إذا كنت تحتاج كربوهيدرات سهلة، ويصبح أفضل مع الواي أو الزبادي اليوناني.",
+            "fat_loss": "وهو مناسب أيضًا أثناء خسارة الدهون، لكن أدخله ضمن سعراتك ويفضل أن تقرنه ببروتين لزيادة الشبع.",
+        }.get(goal, "وهو مفيد خاصة قبل التمرين لأنه يمنحك كربوهيدرات سريعة وسهلة الهضم.")
+        extra_ar_jordanian = {
+            "muscle_gain": "وبفيد كثير قبل التمرين إذا بدك كربوهيدرات سهلة، وبيكون أحسن مع واي أو زبادي يوناني.",
+            "fat_loss": "وبرضه مناسب بالتنشيف، بس دخّله ضمن سعراتك ويفضل تضيف معه بروتين عشان الشبع.",
+        }.get(goal, "وهو مفيد خصوصًا قبل التمرين لأنه بيعطيك كربوهيدرات سريعة وسهل على الهضم.")
+        return _lang_reply(
+            language,
+            "Banana is a good gym food. It gives you quick carbs, potassium, and easy energy. " + extra_en,
+            "الموز خيار جيد للرياضة. يمنحك كربوهيدرات سريعة، وبوتاسيوم، وطاقة سهلة. " + extra_ar_fusha,
+            "الموز خيار ممتاز للجيم. بعطيك كربوهيدرات سريعة، وبوتاسيوم، وطاقة سهلة. " + extra_ar_jordanian,
+        )
+
+    if not _is_nutrition_knowledge_query(user_input):
+        return None
+
+    if _contains_any(normalized, {"protein", "بروتين", "بروتينات"}):
+        goal = _normalize_goal(profile.get("goal") or "")
+        focus_en = {
+            "bulking": "Aim for a larger portion and add carbs like oats or rice.",
+            "cutting": "Keep it lean and pair it with fruit or vegetables.",
+        }.get(goal, "Keep it balanced with fiber or fruit so it is easy to stick to.")
+        focus_ar_fusha = {
+            "bulking": "كبّر الحصة وأضف كربوهيدرات مثل الشوفان أو الأرز إذا كان هدفك بناء العضلات.",
+            "cutting": "اجعلها خفيفة وقليلة الدهون مع فاكهة أو خضار إذا كان هدفك التنشيف.",
+        }.get(goal, "وازنها مع ألياف أو فاكهة حتى تكون سهلة الالتزام.")
+        focus_ar_jordanian = {
+            "bulking": "إذا هدفك تضخيم كبّر الحصة وزيد شوفان أو رز.",
+            "cutting": "إذا هدفك تنشيف خليها خفيفة مع فاكهة أو خضار.",
+        }.get(goal, "وازنها مع ألياف أو فاكهة عشان تلتزم فيها بسهولة.")
+        return _lang_reply(
+            language,
+            "Quick protein idea: Greek yogurt with whey and berries, or eggs with cottage cheese. Aim for about 25-35 g protein in one serving. " + focus_en,
+            "فكرة بروتين سريعة: زبادي يوناني مع واي وبيري، أو بيض مع جبنة قريش. استهدف تقريبًا 25 إلى 35 غ بروتين في الحصة الواحدة. " + focus_ar_fusha,
+            "فكرة بروتين سريعة: زبادي يوناني مع واي وتوت، أو بيض مع جبنة قريش. خليك تقريبًا بين 25 و35 غ بروتين بالوجبة. " + focus_ar_jordanian,
+        )
+
+    hits = NUTRITION_KB.search(user_input, top_k=1, max_chars=220) if NUTRITION_KB.ready else []
+    if not hits:
+        return None
+
+    snippet = str(hits[0].get("text", "")).strip()
+    if not snippet:
+        return None
+
+    return _lang_reply(
+        language,
+        f"Quick answer: {snippet}",
+        f"إجابة سريعة: {snippet}",
+        f"جواب سريع: {snippet}",
+    )
 
 
 def _normalize_goal(goal: Any) -> str:
@@ -2402,7 +2604,7 @@ def _profile_query_reply(
     weight = profile.get("weight")
     normalized = normalize_text(user_input)
 
-    if _contains_any(normalized, WHO_AM_I_KEYWORDS):
+    if _contains_phrase(normalized, WHO_AM_I_KEYWORDS):
         if name:
             return _lang_reply(
                 language,
@@ -2417,7 +2619,7 @@ def _profile_query_reply(
             "لسا ما عندي اسمك. حطه بصفحة البروفايل وبخصصلك كل الردود.",
         )
 
-    if _contains_any(normalized, ASK_MY_AGE_KEYWORDS):
+    if _contains_phrase(normalized, ASK_MY_AGE_KEYWORDS):
         if age is not None:
             return _lang_reply(
                 language,
@@ -2432,7 +2634,7 @@ def _profile_query_reply(
             "لسا ما عندي عمرك. حدّثه بالبروفايل وبستخدمه بخططك.",
         )
 
-    if _contains_any(normalized, ASK_MY_HEIGHT_KEYWORDS):
+    if _contains_phrase(normalized, ASK_MY_HEIGHT_KEYWORDS):
         if height is not None:
             return _lang_reply(
                 language,
@@ -2447,7 +2649,7 @@ def _profile_query_reply(
             "لسا ما عندي طولك. أضفه بالبروفايل عشان أدق بالتمارين والسعرات.",
         )
 
-    if _contains_any(normalized, ASK_MY_WEIGHT_KEYWORDS):
+    if _contains_phrase(normalized, ASK_MY_WEIGHT_KEYWORDS):
         if weight is not None:
             return _lang_reply(
                 language,
@@ -2462,7 +2664,7 @@ def _profile_query_reply(
             "لسا ما عندي وزنك. أضفه بالبروفايل وبضبطلك السعرات أدق.",
         )
 
-    if _contains_any(normalized, ASK_MY_GOAL_KEYWORDS):
+    if _contains_phrase(normalized, ASK_MY_GOAL_KEYWORDS):
         if goal_label:
             return _lang_reply(
                 language,
@@ -3769,45 +3971,85 @@ def _extract_plan_choice_index(user_input: str, options_count: int) -> int | Non
 
 def _greeting_reply(language: str, profile: Optional[dict[str, Any]] = None) -> str:
     display_name = _profile_display_name(profile or {})
-    dataset_reply = _dataset_intent_response("greeting", language, seed=display_name or "user")
-    if dataset_reply:
-        return dataset_reply
-
-    name_suffix = f" {display_name}" if display_name else ""
-    warmup = _motivation_line(language, f"greet-{display_name or 'user'}")
+    goal_label = _profile_goal_label(str((profile or {}).get("goal", "")), language)
     if language == "en":
-        return (
-            f"Hi{name_suffix}! {warmup} "
-            "I am your AI fitness coach. "
-            "I can help with workouts, nutrition plans, and progress tracking."
-        )
-    if language == "ar_fusha":
+        if display_name and goal_label:
+            return (
+                f"Hey {display_name} 👋 Ready when you are. "
+                f"I can help you with {goal_label}, workouts, nutrition, or fixing a plateau. "
+                "What do you want right now: training, food, or progress?"
+            )
         if display_name:
             return (
-                f"مرحبًا {display_name}! {warmup} "
-                "أنا مدربك الرياضي الذكي. "
-                "أساعدك في التمارين والتغذية ومتابعة الالتزام."
+                f"Hey {display_name} 👋 I’m ready. "
+                "I can help with workouts, meals, recovery, or progress analysis. "
+                "What do you want to work on right now?"
             )
-        return f"مرحبًا! {warmup} أنا مدربك الرياضي الذكي. أساعدك في التمارين والتغذية ومتابعة الالتزام."
+        return (
+            "Hey 👋 I’m ready. I can help with workouts, nutrition, recovery, and progress analysis. "
+            "Tell me what you want right now and I’ll answer directly."
+        )
+    if language == "ar_fusha":
+        if display_name and goal_label:
+            return (
+                f"مرحبًا {display_name} 👋 أنا جاهز. "
+                f"أستطيع مساعدتك في {goal_label}، والتمارين، والتغذية، وحل ثبات التقدم. "
+                "ماذا تريد الآن: تمرين أم غذاء أم تحليل للتقدم؟"
+            )
+        if display_name:
+            return (
+                f"مرحبًا {display_name} 👋 أنا جاهز. "
+                "أستطيع مساعدتك في التمارين، والوجبات، والتعافي، وتحليل التقدم. "
+                "ما الذي تريد العمل عليه الآن؟"
+            )
+        return (
+            "مرحبًا 👋 أنا جاهز. أستطيع مساعدتك في التمارين، والتغذية، والتعافي، وتحليل التقدم. "
+            "أخبرني بما تريده الآن وسأجيبك مباشرة."
+        )
+    if display_name and goal_label:
+        return (
+            f"هلا {display_name} 👋 أنا جاهز. بقدر أساعدك بـ {goal_label}، والتمارين، والأكل، وحل ثبات النتائج. "
+            "شو بدك هسا: تمرين، أكل، ولا تحليل تقدم؟"
+        )
     if display_name:
-        return f"هلا {display_name}! {warmup} أنا كوتشك الذكي، وبساعدك بالتمارين والأكل ومتابعة الالتزام."
-    return f"هلا! {warmup} أنا كوتشك الذكي، وبساعدك بالتمارين والأكل ومتابعة الالتزام."
+        return (
+            f"هلا {display_name} 👋 أنا جاهز. بقدر أساعدك بالتمارين، والأكل، والتعافي، وتحليل تقدمك. "
+            "شو بدك نشتغل عليه هسا؟"
+        )
+    return (
+        "هلا 👋 أنا جاهز. بقدر أساعدك بالتمارين، والتغذية، والتعافي، وتحليل التقدم. "
+        "احكيلي شو بدك الآن وبجاوبك مباشرة."
+    )
 
 
 def _name_reply(language: str) -> str:
     if language == "en":
-        return "I am your AI Fitness Coach specialized in training and nutrition only."
+        return (
+            "I’m your AI fitness coach. I can break down exercises, answer nutrition questions, "
+            "analyze progress, and build workout or meal plans from your profile."
+        )
     if language == "ar_fusha":
-        return "أنا مدرب اللياقة الذكي الخاص بك، ومتخصص فقط في التدريب والتغذية."
-    return "أنا كوتشك الذكي، ومتخصص بس بالتمارين والتغذية."
+        return (
+            "أنا مدرب اللياقة الذكي الخاص بك. أستطيع شرح التمارين، والإجابة عن أسئلة التغذية، "
+            "وتحليل التقدم، وبناء خطط تمارين أو وجبات اعتمادًا على ملفك الشخصي."
+        )
+    return (
+        "أنا كوتشك الذكي. بقدر أشرح التمارين، وأجاوب عن التغذية، وأحلل تقدمك، "
+        "وأبني خطط تمارين أو وجبات حسب ملفك."
+    )
 
 
 def _how_are_you_reply(language: str) -> str:
     if language == "en":
-        return "I am ready to coach you. Tell me your goal and I will build your plan."
+        return (
+            "I’m good and ready to help. If you want, I can do one of three things right now: "
+            "improve your workout, answer a food question, or check your progress."
+        )
     if language == "ar_fusha":
-        return "أنا جاهز لتدريبك. أخبرني بهدفك وسأبني لك خطة مناسبة."
-    return "تمام وجاهز أدربك. احكيلي هدفك وببني لك خطة مناسبة."
+        return (
+            "أنا بخير وجاهز للمساعدة. إذا أردت، أستطيع الآن أن أحسن تمرينك، أو أجيب عن سؤال غذائي، أو أراجع تقدمك."
+        )
+    return "تمام وجاهز للمساعدة. إذا بدك، بقدر أعدّل تمرينك، أو أجاوب عن الأكل، أو أراجع تقدمك هسا."
 
 
 def _exercise_reply(query: str, language: str) -> str:
@@ -5037,6 +5279,37 @@ def _general_llm_reply(
     state = state or {}
     plan_snapshot = state.get("plan_snapshot", {})
     nutrition_kb_context = _nutrition_kb_context(user_message, profile, top_k=3)
+    normalized_message = normalize_text(user_message)
+    short_query = len(normalized_message.split()) <= 8 and len(user_message.strip()) <= 80
+
+    profile_summary = {
+        "name": display_name or "Unknown",
+        "goal": profile.get("goal"),
+        "gender": profile.get("gender"),
+        "age": profile.get("age"),
+        "weight": profile.get("weight"),
+        "height": profile.get("height"),
+        "fitness_level": profile.get("fitness_level") or profile.get("fitnessLevel"),
+        "location": profile.get("location"),
+        "injuries": profile.get("injuries"),
+        "equipment": profile.get("equipment"),
+    }
+    compact_tracking_summary = {
+        "adherence_score": (tracking_summary or {}).get("adherence_score"),
+        "completed_last_7_days": (tracking_summary or {}).get("completed_last_7_days"),
+        "active_workout_plans": (tracking_summary or {}).get("active_workout_plans"),
+        "active_nutrition_plans": (tracking_summary or {}).get("active_nutrition_plans"),
+    }
+    compact_plan_snapshot = {
+        "active_workout_plans": (plan_snapshot or {}).get("active_workout_plans"),
+        "active_nutrition_plans": (plan_snapshot or {}).get("active_nutrition_plans"),
+    }
+    max_tokens = 140 if short_query else 260
+    nutrition_context_limit = 1 if short_query else 3
+    history_limit = 4 if short_query else 8
+
+    if nutrition_kb_context and short_query:
+        nutrition_kb_context = "\n".join(nutrition_kb_context.splitlines()[:4])
 
     system_prompt = (
         "You are an elite AI fitness coach and nutrition advisor.\n"
@@ -5057,31 +5330,33 @@ def _general_llm_reply(
         "Ground your advice in the provided dataset context, nutrition snippets, and recent messages.\n"
         "Keep responses concise but useful, usually 1 short intro plus 3-6 strong bullets when appropriate.\n"
         "End with one clear next action, question, or recommendation when that improves the answer.\n"
+        "Prefer a direct answer over long setup text.\n"
         f"{language_instructions}\n"
     )
+    if short_query:
+        system_prompt += "For short requests, answer in 2-4 concise sentences or 3 short bullets max.\n"
 
     context_lines = [
-        f"User name: {display_name or 'Unknown'}",
-        f"User profile: {profile}",
-        f"Tracking summary: {tracking_summary or {}}",
-        f"Plan snapshot: {plan_snapshot or {}}",
+        f"User summary: {profile_summary}",
+        f"Tracking summary: {compact_tracking_summary}",
+        f"Plan snapshot: {compact_plan_snapshot}",
         f"Plans recently deleted flag: {bool(state.get('plans_recently_deleted', False))}",
     ]
     if nutrition_kb_context:
         context_lines.append("Nutrition reference snippets (from DATAFORPROJECT.pdf):")
-        context_lines.append(nutrition_kb_context)
+        context_lines.append("\n".join(nutrition_kb_context.splitlines()[: nutrition_context_limit * 4]))
     messages = [{"role": "system", "content": system_prompt + '\n'.join(context_lines)}]
 
     external_history = _normalize_recent_messages(recent_messages)
     if external_history:
-        messages.extend(external_history[-10:])
+        messages.extend(external_history[-history_limit:])
     else:
-        messages.extend(memory.get_conversation_history()[-8:])
+        messages.extend(memory.get_conversation_history()[-history_limit:])
 
     last_history_text = normalize_text(messages[-1]["content"]) if len(messages) > 1 else ""
     if last_history_text != normalize_text(user_message):
         messages.append({"role": "user", "content": user_message})
-    return LLM.chat_completion(messages, max_tokens=700)
+    return LLM.chat_completion(messages, max_tokens=max_tokens)
 
 
 @app.get("/health")
@@ -5651,14 +5926,74 @@ async def chat(req: ChatRequest) -> ChatResponse:
         return ChatResponse(reply=performance_reply, conversation_id=conversation_id, language=language)
 
     if CHAT_RESPONSE_MODE != "dataset_only":
+        contextual_followup_reply = _contextual_followup_reply(user_input, language, recent_messages, memory)
+        if contextual_followup_reply:
+            memory.add_assistant_message(contextual_followup_reply)
+            return ChatResponse(reply=contextual_followup_reply, conversation_id=conversation_id, language=language)
+
+        if _is_name_query(user_input):
+            reply = _name_reply(language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(reply=reply, conversation_id=conversation_id, language=language)
+
+        if _is_how_are_you_query(user_input):
+            reply = _how_are_you_reply(language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(reply=reply, conversation_id=conversation_id, language=language)
+
+        if _is_greeting_query(user_input):
+            reply = _greeting_reply(language, profile)
+            memory.add_assistant_message(reply)
+            return ChatResponse(reply=reply, conversation_id=conversation_id, language=language)
+
+        social_reply = _social_reply(user_input, language, profile)
+        if social_reply:
+            memory.add_assistant_message(social_reply)
+            return ChatResponse(reply=social_reply, conversation_id=conversation_id, language=language)
+
+        profile_reply = _profile_query_reply(user_input, language, profile, tracking_summary)
+        if profile_reply:
+            memory.add_assistant_message(profile_reply)
+            return ChatResponse(reply=profile_reply, conversation_id=conversation_id, language=language)
+
+        if _contains_any(lowered, PLAN_STATUS_KEYWORDS):
+            status_reply = _plan_status_reply(language, state.get("plan_snapshot"))
+            memory.add_assistant_message(status_reply)
+            return ChatResponse(reply=status_reply, conversation_id=conversation_id, language=language)
+
         if not _conversation_replies_should_use_llm():
             dataset_reply = _dataset_conversation_reply(routing_input, language)
             if dataset_reply:
                 memory.add_assistant_message(dataset_reply)
                 return ChatResponse(reply=dataset_reply, conversation_id=conversation_id, language=language)
 
+        quick_nutrition_reply = _quick_nutrition_reply(user_input, language, profile)
+        if quick_nutrition_reply:
+            filtered_reply, _ = MODERATION.filter_content(quick_nutrition_reply, language=language)
+            memory.add_assistant_message(filtered_reply)
+            return ChatResponse(reply=filtered_reply, conversation_id=conversation_id, language=language)
+
         in_domain = _in_domain_or_strong_fitness_query(routing_input, language)
+        if (not in_domain) and _looks_like_contextual_followup(user_input):
+            in_domain = _recent_history_is_fitness_related(recent_messages, memory)
         if not in_domain:
+            if _conversation_replies_should_use_llm() and _is_vague_followup_query(routing_input):
+                llm_reply = _general_llm_reply(
+                    user_message=user_input,
+                    language=language,
+                    profile=profile,
+                    tracking_summary=tracking_summary,
+                    memory=memory,
+                    state=state,
+                    recent_messages=recent_messages,
+                )
+                if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
+                    llm_reply = _ollama_unavailable_reply(language)
+
+                filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
+                memory.add_assistant_message(filtered_reply)
+                return ChatResponse(reply=filtered_reply, conversation_id=conversation_id, language=language)
+
             out_reply = _strict_out_of_scope_reply(language)
             memory.add_assistant_message(out_reply)
             return ChatResponse(reply=out_reply, conversation_id=conversation_id, language=language)
