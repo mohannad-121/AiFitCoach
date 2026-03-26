@@ -138,32 +138,49 @@ class LLMClient:
         temperature: float | None,
         max_tokens: int | None,
     ) -> str:
-        payload = {
-            "model": OLLAMA_MODEL,
-            "messages": messages,
-            "stream": False,
-            "options": {
-                "temperature": self.temperature if temperature is None else temperature,
-                "num_ctx": 1024 if (max_tokens or 0) <= 160 else 1536,
-            },
-        }
-        if max_tokens is not None:
-            payload["options"]["num_predict"] = max_tokens
-
         try:
-            response = requests.post(
-                f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
-                json=payload,
-                timeout=OLLAMA_TIMEOUT_SECONDS,
-            )
-            if response.status_code == 404:
-                # Older Ollama builds expose /api/generate only.
-                return self._chat_ollama_generate(messages, temperature, max_tokens)
-            if response.status_code >= 400:
-                return self._format_ollama_http_error(response)
-            response.raise_for_status()
-            data = response.json()
-            return str(data.get("message", {}).get("content", "")).strip()
+            accumulated_text = ""
+            base_messages = [dict(message) for message in messages]
+
+            for _attempt in range(3):
+                request_messages = base_messages if not accumulated_text else [
+                    *base_messages,
+                    {"role": "assistant", "content": accumulated_text},
+                    {
+                        "role": "user",
+                        "content": "Continue exactly from where you stopped. Do not repeat anything. Finish the answer.",
+                    },
+                ]
+                payload = {
+                    "model": OLLAMA_MODEL,
+                    "messages": request_messages,
+                    "stream": False,
+                    "options": {
+                        "temperature": self.temperature if temperature is None else temperature,
+                        "num_ctx": self._ollama_num_ctx(max_tokens),
+                    },
+                }
+                if max_tokens is not None:
+                    payload["options"]["num_predict"] = max_tokens
+
+                response = requests.post(
+                    f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
+                    json=payload,
+                    timeout=OLLAMA_TIMEOUT_SECONDS,
+                )
+                if response.status_code == 404:
+                    # Older Ollama builds expose /api/generate only.
+                    return self._chat_ollama_generate(messages, temperature, max_tokens)
+                if response.status_code >= 400:
+                    return self._format_ollama_http_error(response)
+                response.raise_for_status()
+                data = response.json()
+                new_text = str(data.get("message", {}).get("content", "")).strip()
+                accumulated_text = self._append_ollama_text(accumulated_text, new_text)
+                if not self._ollama_needs_continuation(data):
+                    break
+
+            return accumulated_text.strip()
         except Exception as exc:
             log_error(
                 "LLM_OLLAMA_COMPLETION_ERROR",
@@ -189,7 +206,7 @@ class LLMClient:
             "stream": True,
             "options": {
                 "temperature": self.temperature if temperature is None else temperature,
-                "num_ctx": 1024 if (max_tokens or 0) <= 160 else 1536,
+                "num_ctx": self._ollama_num_ctx(max_tokens),
             },
         }
         if max_tokens is not None:
@@ -251,27 +268,45 @@ class LLMClient:
         temperature: float | None,
         max_tokens: int | None,
     ) -> str:
-        payload = {
-            "model": OLLAMA_MODEL,
-            "prompt": self._messages_to_prompt(messages),
-            "stream": False,
-            "options": {
-                "temperature": self.temperature if temperature is None else temperature,
-            },
-        }
-        if max_tokens is not None:
-            payload["options"]["num_predict"] = max_tokens
+        accumulated_text = ""
+        base_messages = [dict(message) for message in messages]
 
-        response = requests.post(
-            f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
-            json=payload,
-            timeout=OLLAMA_TIMEOUT_SECONDS,
-        )
-        if response.status_code >= 400:
-            return self._format_ollama_http_error(response)
-        response.raise_for_status()
-        data = response.json()
-        return str(data.get("response", "")).strip()
+        for _attempt in range(3):
+            request_messages = base_messages if not accumulated_text else [
+                *base_messages,
+                {"role": "assistant", "content": accumulated_text},
+                {
+                    "role": "user",
+                    "content": "Continue exactly from where you stopped. Do not repeat anything. Finish the answer.",
+                },
+            ]
+            payload = {
+                "model": OLLAMA_MODEL,
+                "prompt": self._messages_to_prompt(request_messages),
+                "stream": False,
+                "options": {
+                    "temperature": self.temperature if temperature is None else temperature,
+                    "num_ctx": self._ollama_num_ctx(max_tokens),
+                },
+            }
+            if max_tokens is not None:
+                payload["options"]["num_predict"] = max_tokens
+
+            response = requests.post(
+                f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
+                json=payload,
+                timeout=OLLAMA_TIMEOUT_SECONDS,
+            )
+            if response.status_code >= 400:
+                return self._format_ollama_http_error(response)
+            response.raise_for_status()
+            data = response.json()
+            new_text = str(data.get("response", "")).strip()
+            accumulated_text = self._append_ollama_text(accumulated_text, new_text)
+            if not self._ollama_needs_continuation(data):
+                break
+
+        return accumulated_text.strip()
 
     def _chat_ollama_generate_stream(
         self,
@@ -285,6 +320,7 @@ class LLMClient:
             "stream": True,
             "options": {
                 "temperature": self.temperature if temperature is None else temperature,
+                "num_ctx": self._ollama_num_ctx(max_tokens),
             },
         }
         if max_tokens is not None:
@@ -310,6 +346,31 @@ class LLMClient:
                 text = str(line.get("response", ""))
                 if text:
                     yield text
+
+    @staticmethod
+    def _ollama_num_ctx(max_tokens: int | None) -> int:
+        if (max_tokens or 0) > 480:
+            return 3072
+        if (max_tokens or 0) > 240:
+            return 2048
+        if (max_tokens or 0) > 160:
+            return 1536
+        return 1024
+
+    @staticmethod
+    def _ollama_needs_continuation(payload: dict[str, Any]) -> bool:
+        done_reason = str(payload.get("done_reason", "")).strip().lower()
+        return done_reason in {"length", "max_tokens"}
+
+    @staticmethod
+    def _append_ollama_text(existing: str, new_text: str) -> str:
+        if not existing:
+            return new_text.strip()
+        if not new_text:
+            return existing.strip()
+        if existing.endswith((" ", "\n")) or new_text.startswith((" ", "\n", ".", ",", ":", ";", "!", "?")):
+            return f"{existing}{new_text}".strip()
+        return f"{existing} {new_text}".strip()
 
     @staticmethod
     def _format_ollama_http_error(response: requests.Response) -> str:

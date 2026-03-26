@@ -912,7 +912,15 @@ def _is_nutrition_knowledge_query(user_input: str) -> bool:
         return True
     if NUTRITION_KB.ready and len(normalized.split()) <= 8:
         hits = NUTRITION_KB.search(user_input, top_k=1, max_chars=140)
-        return bool(hits)
+        if not hits:
+            return False
+
+        top_score = _to_float(hits[0].get("score")) or 0.0
+        query_tokens = tokenize(normalized)
+
+        # Short general questions like "what's the best weather..." can share
+        # one generic word with the nutrition text. Require stronger overlap.
+        return top_score >= 3 and len(query_tokens) <= 5
     return False
 
 
@@ -5304,7 +5312,7 @@ def _general_llm_reply(
         "active_workout_plans": (plan_snapshot or {}).get("active_workout_plans"),
         "active_nutrition_plans": (plan_snapshot or {}).get("active_nutrition_plans"),
     }
-    max_tokens = 140 if short_query else 260
+    max_tokens = 320 if short_query else 700
     nutrition_context_limit = 1 if short_query else 3
     history_limit = 4 if short_query else 8
 
@@ -5312,9 +5320,10 @@ def _general_llm_reply(
         nutrition_kb_context = "\n".join(nutrition_kb_context.splitlines()[:4])
 
     system_prompt = (
-        "You are an elite AI fitness coach and nutrition advisor.\n"
-        "You ONLY answer fitness, training, sports performance, and nutrition topics.\n"
-        "If user asks outside this domain, politely refuse and redirect back to fitness.\n"
+        "You are a smart, helpful AI assistant with elite fitness coach and nutrition expertise.\n"
+        "You can answer general questions as well as fitness, training, sports performance, and nutrition topics.\n"
+        "For fitness and nutrition topics, answer with expert-level depth, personalization, and practical coaching.\n"
+        "For non-fitness topics, answer clearly and briefly, and do not pretend to have live or real-time data when you do not.\n"
         "Be warm, sharp, practical, and highly personalized.\n"
         "Personalize responses using user profile fields (name, goal, age, height, weight, health constraints).\n"
         "Answer like a strong modern assistant: start with the direct answer, then give the most useful breakdown or steps.\n"
@@ -5977,7 +5986,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         if (not in_domain) and _looks_like_contextual_followup(user_input):
             in_domain = _recent_history_is_fitness_related(recent_messages, memory)
         if not in_domain:
-            if _conversation_replies_should_use_llm() and _is_vague_followup_query(routing_input):
+            if _conversation_replies_should_use_llm():
                 llm_reply = _general_llm_reply(
                     user_message=user_input,
                     language=language,

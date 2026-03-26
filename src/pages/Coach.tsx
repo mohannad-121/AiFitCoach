@@ -448,9 +448,11 @@ export function CoachPage() {
             updated_at: conv.updated_at,
           });
         }
+        const restoredCurrentId = localSnapshot.currentId || currentId;
+        const selectedConversation = convsWithMessages.find((conv) => conv.id === restoredCurrentId) || convsWithMessages[0];
         setConversations(convsWithMessages);
-        setCurrentId(convsWithMessages[0].id);
-        setCurrentMessages(convsWithMessages[0].messages);
+        setCurrentId(selectedConversation.id);
+        setCurrentMessages(selectedConversation.messages);
       } else if (localSnapshot.conversations.length === 0) {
         await createConversation();
       }
