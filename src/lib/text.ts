@@ -1,4 +1,6 @@
 const MOJIBAKE_PATTERN = /(?:Ã.|Ø.|Ù.|ðŸ|â€|â€™|â€œ|â€\u009d|Â|[\u201a-\u201e\u2020-\u2022\u2026\u2030\u2039\u203a\u20AC\u2122\u0152\u0153\u0160\u0161\u0178\u017D\u017E])/;
+const ARABIC_CHAR_PATTERN = /[\u0600-\u06FF]/g;
+const MOJIBAKE_MARKERS = ['Ø', 'Ù', 'Ã', 'Â', 'Ð', 'â', 'ï»¿'] as const;
 
 const CP1252_REVERSE_MAP: Record<number, number> = {
   0x20ac: 0x80, // €
@@ -30,15 +32,33 @@ const CP1252_REVERSE_MAP: Record<number, number> = {
   0x0178: 0x9f, // Ÿ
 };
 
-function decodeLatin1AsUtf8(value: string): string {
-  const bytes = new Uint8Array(
-    [...value].map((char) => {
-      const code = char.codePointAt(0) ?? 0;
-      if (code <= 0xff) return code;
-      return CP1252_REVERSE_MAP[code] ?? 0x3f; // '?'
-    })
-  );
-  return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+function decodeLatin1AsUtf8(value: string): string | null {
+  const bytes: number[] = [];
+
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code <= 0xff) {
+      bytes.push(code);
+      continue;
+    }
+
+    const mapped = CP1252_REVERSE_MAP[code];
+    if (mapped !== undefined) {
+      bytes.push(mapped);
+      continue;
+    }
+
+    return null;
+  }
+
+  return new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes));
+}
+
+function scoreText(value: string): number {
+  const arabicChars = (value.match(ARABIC_CHAR_PATTERN) || []).length;
+  const markerChars = MOJIBAKE_MARKERS.reduce((total, marker) => total + value.split(marker).length - 1, 0);
+  const replacementChars = (value.match(/[\uFFFD?]/g) || []).length;
+  return (arabicChars * 3) - (markerChars * 2) - (replacementChars * 2);
 }
 
 export function repairMojibake(value: string): string {
@@ -50,6 +70,7 @@ export function repairMojibake(value: string): string {
     if (!MOJIBAKE_PATTERN.test(repaired)) break;
     const decoded = decodeLatin1AsUtf8(repaired);
     if (!decoded || decoded === repaired) break;
+    if (scoreText(decoded) <= scoreText(repaired)) break;
     repaired = decoded;
   }
 
