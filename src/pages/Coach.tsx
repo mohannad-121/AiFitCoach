@@ -45,6 +45,22 @@ interface StoredSchedulePlan {
   created_at: string;
 }
 
+interface CompletionRow {
+  id: string;
+  completed_at?: string | null;
+  log_date?: string | null;
+  plan_id: string;
+  day_index?: number | null;
+  exercise_index?: number | null;
+}
+
+interface DailyLogRow {
+  log_date?: string | null;
+  workout_notes?: string | null;
+  nutrition_notes?: string | null;
+  mood?: string | null;
+}
+
 const AI_BACKEND_URL = import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002';
 const NUTRITION_PREFIX = '\u{1F37D}\uFE0F';
 const WEEK_TEMPLATE = [
@@ -56,6 +72,17 @@ const WEEK_TEMPLATE = [
   { day: 'Thursday', dayAr: 'الخميس' },
   { day: 'Friday', dayAr: 'الجمعة' },
 ];
+
+const toIsoDay = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value.length >= 10 ? value.slice(0, 10) : value;
+  }
+  return date.toISOString().slice(0, 10);
+};
+
+const cleanNote = (value?: string | null) => (value || '').replace(/\s+/g, ' ').trim();
 
 const WEBSITE_PAGES = {
   home: {
@@ -1023,12 +1050,12 @@ export function CoachPage() {
     try {
       const { data: plansData } = await supabase
         .from('workout_plans')
-        .select('id,title,plan_data')
+        .select('id,title,title_ar,plan_data,is_active')
         .eq('user_id', user.id);
 
       const { data: completionsData } = await supabase
         .from('workout_completions')
-        .select('id,completed_at')
+        .select('id,completed_at,log_date,plan_id,day_index,exercise_index')
         .eq('user_id', user.id);
 
       const { data: logsData } = await supabase
@@ -1036,32 +1063,47 @@ export function CoachPage() {
         .select('log_date,workout_notes,nutrition_notes,mood')
         .eq('user_id', user.id);
 
+      const plans = (plansData || []) as Array<StoredSchedulePlan & { title_ar?: string; is_active?: boolean }>;
+      const completions = (completionsData || []) as CompletionRow[];
+      const dailyLogs = (logsData || []) as DailyLogRow[];
+      const plansById = new Map(plans.map((plan) => [plan.id, plan]));
+
       let totalTasks = 0;
-      for (const plan of plansData || []) {
+      let totalWorkoutTasks = 0;
+      let totalNutritionTasks = 0;
+      for (const plan of plans) {
         const days = Array.isArray((plan as any).plan_data) ? (plan as any).plan_data : [];
         for (const day of days) {
           const exercises = Array.isArray(day?.exercises) ? day.exercises.length : 0;
           const meals = Array.isArray(day?.meals) ? day.meals.length : 0;
           totalTasks += exercises + meals;
+          if ((plan.title || '').startsWith(NUTRITION_PREFIX)) {
+            totalNutritionTasks += meals;
+          } else {
+            totalWorkoutTasks += exercises;
+          }
         }
       }
 
-      const completedTasks = (completionsData || []).length;
+      const completedTasks = completions.length;
       const adherence = totalTasks > 0 ? Math.min(1, completedTasks / totalTasks) : 0;
-      const activeWorkoutPlans = (plansData || []).filter((plan) => !(plan.title || '').startsWith(NUTRITION_PREFIX)).length;
-      const activeNutritionPlans = (plansData || []).filter((plan) => (plan.title || '').startsWith(NUTRITION_PREFIX)).length;
+      const workoutPlans = plans.filter((plan) => !(plan.title || '').startsWith(NUTRITION_PREFIX));
+      const nutritionPlans = plans.filter((plan) => (plan.title || '').startsWith(NUTRITION_PREFIX));
+      const activeWorkoutPlans = workoutPlans.filter((plan) => plan.is_active).length || workoutPlans.length;
+      const activeNutritionPlans = nutritionPlans.filter((plan) => plan.is_active).length || nutritionPlans.length;
 
-      const sortedByDate = [...(completionsData || [])]
+      const sortedByDate = [...completions]
         .filter((row) => row.completed_at)
         .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
       const lastCompletionAt = sortedByDate[0]?.completed_at || null;
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const completedLast7Days = (completionsData || []).filter((row) => {
-        if (!row.completed_at) return false;
-        return new Date(row.completed_at).getTime() >= sevenDaysAgo;
-      }).length;
+      const completionsLast7Days = completions.filter((row) => {
+        const sourceDate = row.completed_at || row.log_date;
+        if (!sourceDate) return false;
+        return new Date(sourceDate).getTime() >= sevenDaysAgo;
+      });
+      const completedLast7Days = completionsLast7Days.length;
 
-      const dailyLogs = logsData || [];
       const logsLast7Days = dailyLogs.filter((row) => {
         if (!row.log_date) return false;
         return new Date(row.log_date).getTime() >= sevenDaysAgo;
@@ -1070,16 +1112,128 @@ export function CoachPage() {
         .filter((row) => row.log_date)
         .sort((a, b) => new Date(b.log_date).getTime() - new Date(a.log_date).getTime())[0]?.log_date || null;
 
+      const plannedWorkoutDays = new Set<string>();
+      const plannedNutritionDays = new Set<string>();
+      const cadencePlans = plans.filter((plan) => plan.is_active);
+      for (const plan of cadencePlans.length ? cadencePlans : plans) {
+        const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
+        days.forEach((day: any, index: number) => {
+          const dayLabel = String(day?.day || WEEK_TEMPLATE[index]?.day || index);
+          if ((plan.title || '').startsWith(NUTRITION_PREFIX)) {
+            if (Array.isArray(day?.meals) && day.meals.length > 0) plannedNutritionDays.add(dayLabel);
+          } else if (Array.isArray(day?.exercises) && day.exercises.length > 0) {
+            plannedWorkoutDays.add(dayLabel);
+          }
+        });
+      }
+
+      const completionDaySet = new Set(
+        completionsLast7Days
+          .map((row) => toIsoDay(row.log_date || row.completed_at || null))
+          .filter(Boolean) as string[]
+      );
+      const workoutLogDaysSet = new Set(
+        logsLast7Days
+          .filter((row) => cleanNote(row.workout_notes))
+          .map((row) => toIsoDay(row.log_date || null))
+          .filter(Boolean) as string[]
+      );
+      const nutritionLogDaysSet = new Set(
+        logsLast7Days
+          .filter((row) => cleanNote(row.nutrition_notes))
+          .map((row) => toIsoDay(row.log_date || null))
+          .filter(Boolean) as string[]
+      );
+
+      const recentExerciseCompletions = sortedByDate.slice(0, 12).map((row) => {
+        const plan = plansById.get(row.plan_id);
+        const days = Array.isArray(plan?.plan_data) ? plan?.plan_data : [];
+        const day = typeof row.day_index === 'number' ? days[row.day_index] : null;
+        const exercise = Array.isArray(day?.exercises) && typeof row.exercise_index === 'number'
+          ? day.exercises[row.exercise_index]
+          : null;
+        return {
+          date: toIsoDay(row.log_date || row.completed_at || null),
+          plan_title: plan?.title || '',
+          day: day?.day || day?.dayAr || '',
+          exercise_name: exercise?.name || exercise?.nameAr || 'Exercise completed',
+        };
+      });
+
+      const recentActivity = logsLast7Days
+        .map((row) => {
+          const day = toIsoDay(row.log_date || null);
+          return {
+            date: day,
+            completed_exercises: day ? completionsLast7Days.filter((item) => toIsoDay(item.log_date || item.completed_at || null) === day).length : 0,
+            workout_notes: cleanNote(row.workout_notes),
+            nutrition_notes: cleanNote(row.nutrition_notes),
+            mood: cleanNote(row.mood),
+          };
+        })
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+        .slice(0, 7);
+
+      const recentWorkoutNotes = logsLast7Days.map((row) => cleanNote(row.workout_notes)).filter(Boolean).slice(0, 5);
+      const recentNutritionNotes = logsLast7Days.map((row) => cleanNote(row.nutrition_notes)).filter(Boolean).slice(0, 5);
+      const recentMoods = logsLast7Days.map((row) => cleanNote(row.mood)).filter(Boolean).slice(0, 5);
+
+      const activePlanDetails = plans
+        .filter((plan) => plan.is_active)
+        .slice(0, 4)
+        .map((plan) => {
+          const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
+          const sampleExercises = days.flatMap((day: any) => Array.isArray(day?.exercises) ? day.exercises.slice(0, 2) : []).slice(0, 6);
+          const sampleMeals = days.flatMap((day: any) => Array.isArray(day?.meals) ? day.meals.slice(0, 2) : []).slice(0, 6);
+          return {
+            title: plan.title,
+            type: (plan.title || '').startsWith(NUTRITION_PREFIX) ? 'nutrition' : 'workout',
+            weekly_days_with_items: days.filter((day: any) => (Array.isArray(day?.exercises) && day.exercises.length > 0) || (Array.isArray(day?.meals) && day.meals.length > 0)).length,
+            sample_exercises: sampleExercises.map((item: any) => item?.name || item?.nameAr).filter(Boolean),
+            sample_meals: sampleMeals.map((item: any) => item?.name || item?.nameAr).filter(Boolean),
+          };
+        });
+
       return {
         completed_tasks: completedTasks,
         total_tasks: totalTasks,
         adherence_score: adherence,
+        completed_workout_tasks: completedTasks,
+        total_workout_tasks: totalWorkoutTasks,
+        total_nutrition_tasks: totalNutritionTasks,
         active_workout_plans: activeWorkoutPlans,
         active_nutrition_plans: activeNutritionPlans,
         completed_last_7_days: completedLast7Days,
         last_completed_at: lastCompletionAt,
         days_logged_last_7: logsLast7Days.length,
         last_log_date: lastLogDate,
+        recent_completed_exercises: recentExerciseCompletions,
+        recent_workout_notes: recentWorkoutNotes,
+        recent_nutrition_notes: recentNutritionNotes,
+        recent_moods: recentMoods,
+        recent_activity: recentActivity,
+        active_plan_details: activePlanDetails,
+        weekly_stats: {
+          workout_days: completionDaySet.size,
+          planned_days: plannedWorkoutDays.size,
+          planned_nutrition_days: plannedNutritionDays.size,
+          workout_log_days: workoutLogDaysSet.size,
+          nutrition_log_days: nutritionLogDaysSet.size,
+          completed_workouts: completedLast7Days,
+          recent_exercise_names: recentExerciseCompletions.map((item) => item.exercise_name).filter(Boolean).slice(0, 8),
+        },
+        monthly_stats: {
+          consistency_percent: Math.round(adherence * 100),
+          days_logged: dailyLogs.length,
+          workout_log_days: dailyLogs.filter((row) => cleanNote(row.workout_notes)).length,
+          nutrition_log_days: dailyLogs.filter((row) => cleanNote(row.nutrition_notes)).length,
+        },
+        goal: profile
+          ? {
+              type: profile.goal,
+              current_weight: profile.weight,
+            }
+          : undefined,
       };
     } catch (error) {
       console.error('Failed building tracking summary', error);

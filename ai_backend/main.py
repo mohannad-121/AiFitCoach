@@ -465,6 +465,10 @@ PERFORMANCE_ANALYSIS_KEYWORDS = {
     "remaining weeks",
     "progress percentage",
     "how am i progressing",
+    "how was my progress",
+    "how was my performance",
+    "how did i do",
+    "how am i doing",
     "تحليل الأداء",
     "تحليل الاداء",
     "اداء",
@@ -490,7 +494,13 @@ PERFORMANCE_ANALYSIS_KEYWORDS = {
     "قديش تقدمي",
     "وين وصلت",
     "شو نسبة التقدم",
-    "نسبة التقدم"
+    "نسبة التقدم",
+    "كيف كان ادائي",
+    "كيف كان أدائي",
+    "كيف كان تقدمي",
+    "كيف ماشي",
+    "شلون كان ادائي",
+    "شلون كان أدائي",
 }
 APPROVE_KEYWORDS = {"approve", "yes", "ÙˆØ§ÙÙ‚", "Ø§Ø¹ØªÙ…Ø¯", "Ù…ÙˆØ§ÙÙ‚"}
 REJECT_KEYWORDS = {"reject", "no", "Ø±ÙØ¶", "Ù„Ø§", "ØºÙŠØ± Ø§Ù„Ø®Ø·Ø©", "Ø¨Ø¯Ù„ Ø§Ù„Ø®Ø·Ø©"}
@@ -638,6 +648,11 @@ PROGRESS_KEYWORDS = PROGRESS_KEYWORDS | {
     "\u0627\u0644\u062a\u0642\u062f\u0645",
     "\u0627\u0646\u062c\u0627\u0632",
     "\u0645\u0627 \u0641\u064a \u0641\u0631\u0642",
+    "\u0627\u062f\u0627\u0626\u064a",
+    "\u0623\u062f\u0627\u0626\u064a",
+    "performance",
+    "my progress",
+    "my performance",
 }
 JORDANIAN_HINTS = JORDANIAN_HINTS | {
     "\u0634\u0648",
@@ -4946,24 +4961,110 @@ def _basic_progress_reply(language: str, tracking_summary: dict[str, Any]) -> st
     percent = int(round((adherence or 0) * 100))
     last7 = _to_float(tracking_summary.get("completed_last_7_days")) or 0
     last_completion = tracking_summary.get("last_completed_at")
+    days_logged = int(_to_float(tracking_summary.get("days_logged_last_7")) or 0)
+    weekly_stats = tracking_summary.get("weekly_stats") if isinstance(tracking_summary.get("weekly_stats"), dict) else {}
+    workout_days = int(_to_float(_dict_get_any(weekly_stats, ["workout_days"])) or 0)
+    planned_days = int(_to_float(_dict_get_any(weekly_stats, ["planned_days"])) or 0)
+    nutrition_log_days = int(_to_float(_dict_get_any(weekly_stats, ["nutrition_log_days"])) or 0)
+    recent_exercises = tracking_summary.get("recent_completed_exercises") if isinstance(tracking_summary.get("recent_completed_exercises"), list) else []
+    recent_workout_notes = tracking_summary.get("recent_workout_notes") if isinstance(tracking_summary.get("recent_workout_notes"), list) else []
+    recent_nutrition_notes = tracking_summary.get("recent_nutrition_notes") if isinstance(tracking_summary.get("recent_nutrition_notes"), list) else []
+    recent_moods = tracking_summary.get("recent_moods") if isinstance(tracking_summary.get("recent_moods"), list) else []
+
+    exercise_names = []
+    for item in recent_exercises[:3]:
+        if isinstance(item, dict):
+            name = str(item.get("exercise_name", "")).strip()
+            if name:
+                exercise_names.append(name)
+
+    workout_line = None
+    if planned_days > 0:
+        workout_line = f"{workout_days}/{planned_days} workout days hit this week"
+    elif workout_days > 0:
+        workout_line = f"{workout_days} workout days recorded this week"
+
+    nutrition_line = None
+    if nutrition_log_days > 0:
+        nutrition_line = f"{nutrition_log_days} nutrition log days recorded this week"
+
+    note_line = str(recent_workout_notes[0]).strip() if recent_workout_notes else None
+    food_line = str(recent_nutrition_notes[0]).strip() if recent_nutrition_notes else None
+    mood_line = str(recent_moods[0]).strip() if recent_moods else None
 
     if language == "en":
         parts = [
             f"Progress: {percent}% ({int(completed)}/{int(total)} tasks).",
             f"Last 7 days: {int(last7)} completed.",
         ]
+        if days_logged:
+            parts.append(f"Logs captured on {days_logged} days.")
+        if workout_line:
+            parts.append(workout_line + ".")
+        if nutrition_line:
+            parts.append(nutrition_line + ".")
+        if exercise_names:
+            parts.append("Recent exercises: " + ", ".join(exercise_names) + ".")
+        if note_line:
+            parts.append(f"Latest workout note: {note_line}")
+        if food_line:
+            parts.append(f"Latest nutrition note: {food_line}")
+        if mood_line:
+            parts.append(f"Latest mood/energy note: {mood_line}")
         if last_completion:
             parts.append(f"Last completion: {last_completion}.")
         parts.append("If you want a timeline to your goal, share your current and target weight.")
         return " ".join(parts)
 
+    if language == "ar_fusha":
+        parts_ar = [
+            f"التقدم: {percent}% ({int(completed)}/{int(total)} مهمة).",
+            f"آخر 7 أيام: {int(last7)} مهمة مكتملة.",
+        ]
+        if days_logged:
+            parts_ar.append(f"تم تسجيل ملاحظات في {days_logged} أيام.")
+        if planned_days > 0:
+            parts_ar.append(f"أيام التمرين هذا الأسبوع: {workout_days}/{planned_days}.")
+        elif workout_days > 0:
+            parts_ar.append(f"تم تسجيل {workout_days} أيام تمرين هذا الأسبوع.")
+        if nutrition_log_days > 0:
+            parts_ar.append(f"تم تسجيل التغذية في {nutrition_log_days} أيام هذا الأسبوع.")
+        if exercise_names:
+            parts_ar.append("أحدث التمارين المنجزة: " + "، ".join(exercise_names) + ".")
+        if note_line:
+            parts_ar.append(f"آخر ملاحظة تمرين: {note_line}")
+        if food_line:
+            parts_ar.append(f"آخر ملاحظة تغذية: {food_line}")
+        if mood_line:
+            parts_ar.append(f"آخر ملاحظة طاقة/مزاج: {mood_line}")
+        if last_completion:
+            parts_ar.append(f"آخر إكمال: {last_completion}.")
+        parts_ar.append("إذا أردت تقدير المدة للوصول إلى هدفك، أرسل وزنك الحالي والوزن المستهدف.")
+        return " ".join(parts_ar)
+
     parts_ar = [
-        f"????? {percent}% ({int(completed)}/{int(total)} ????).",
-        f"??? 7 ????: {int(last7)} ????.",
+        f"تقدمك: {percent}% ({int(completed)}/{int(total)} مهمة).",
+        f"آخر 7 أيام: خلصت {int(last7)} مهمة.",
     ]
+    if days_logged:
+        parts_ar.append(f"سجلت ملاحظات بـ {days_logged} أيام.")
+    if planned_days > 0:
+        parts_ar.append(f"أيام التمرين هالأسبوع: {workout_days}/{planned_days}.")
+    elif workout_days > 0:
+        parts_ar.append(f"سجلت {workout_days} أيام تمرين هالأسبوع.")
+    if nutrition_log_days > 0:
+        parts_ar.append(f"وسجلت التغذية بـ {nutrition_log_days} أيام.")
+    if exercise_names:
+        parts_ar.append("آخر التمارين اللي خلصتها: " + "، ".join(exercise_names) + ".")
+    if note_line:
+        parts_ar.append(f"آخر ملاحظة تمرين: {note_line}")
+    if food_line:
+        parts_ar.append(f"آخر ملاحظة تغذية: {food_line}")
+    if mood_line:
+        parts_ar.append(f"آخر ملاحظة طاقة/مزاج: {mood_line}")
     if last_completion:
-        parts_ar.append(f"??? ?????: {last_completion}.")
-    parts_ar.append("??? ??? ???? ????? ?????? ???? ???? ?????? ??????.")
+        parts_ar.append(f"آخر إكمال: {last_completion}.")
+    parts_ar.append("إذا بدك أحسب المدة لهدفك بدقة، ابعت وزنك الحالي وهدفك النهائي.")
     return " ".join(parts_ar)
 
 
@@ -5307,8 +5408,14 @@ def _general_llm_reply(
     compact_tracking_summary = {
         "adherence_score": (tracking_summary or {}).get("adherence_score"),
         "completed_last_7_days": (tracking_summary or {}).get("completed_last_7_days"),
+        "days_logged_last_7": (tracking_summary or {}).get("days_logged_last_7"),
         "active_workout_plans": (tracking_summary or {}).get("active_workout_plans"),
         "active_nutrition_plans": (tracking_summary or {}).get("active_nutrition_plans"),
+        "weekly_stats": (tracking_summary or {}).get("weekly_stats"),
+        "recent_completed_exercises": (tracking_summary or {}).get("recent_completed_exercises"),
+        "recent_workout_notes": (tracking_summary or {}).get("recent_workout_notes"),
+        "recent_nutrition_notes": (tracking_summary or {}).get("recent_nutrition_notes"),
+        "recent_moods": (tracking_summary or {}).get("recent_moods"),
     }
     compact_plan_snapshot = {
         "active_workout_plans": (plan_snapshot or {}).get("active_workout_plans"),
