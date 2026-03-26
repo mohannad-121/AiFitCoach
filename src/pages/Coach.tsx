@@ -13,7 +13,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useVoiceChat, type VoiceChatApiResponse } from '@/hooks/useVoiceChat';
 import { supabase } from '@/integrations/supabase/client';
 import { PlanApprovalUI } from '@/components/ai/PlanApprovalUI';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -56,6 +56,35 @@ const WEEK_TEMPLATE = [
   { day: 'Friday', dayAr: 'الجمعة' },
 ];
 
+const WEBSITE_KNOWLEDGE = {
+  app_name: 'FitCoach',
+  pages: {
+    home: 'Main landing page and primary navigation hub.',
+    workouts: 'Workout and exercise browsing page for training exploration.',
+    coach: 'AI Coach page for text chat, voice chat, plan generation, and plan approval.',
+    schedule: 'Schedule page where approved workout and nutrition plans are saved and tracked.',
+    profile: 'Profile page showing user information like age, weight, height, goal, location, and fitness summary.',
+    onboarding: 'Setup flow that collects profile basics, health status, allergies, dietary preferences, fitness level, training days, equipment, injuries, and daily activity level.',
+    auth: 'Authentication page for sign in and sign up.',
+  },
+  onboarding_sections: {
+    health_status: {
+      chronic_conditions_examples: ['Diabetes', 'Blood Pressure', 'Heart', 'Asthma', 'Joints', 'Back Pain'],
+      allergies_examples: ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Wheat', 'Shellfish'],
+      dietary_preferences_examples: ['Vegetarian', 'Vegan', 'Halal', 'Keto', 'Gluten Free', 'Lactose Free'],
+    },
+  },
+  ai_capabilities: [
+    'general chat',
+    'fitness coaching',
+    'nutrition guidance',
+    'workout plan suggestions',
+    'nutrition plan suggestions',
+    'voice chat',
+    'plan approval workflow',
+  ],
+} as const;
+
 const getConversationsStorageKey = (userId: string) => `fitcoach_conversations_${userId}`;
 const getCurrentConversationStorageKey = (userId: string) => `fitcoach_current_conversation_${userId}`;
 const getLocalPlansStorageKey = (userId: string) => `fitcoach_schedule_plans_${userId}`;
@@ -90,6 +119,7 @@ export function CoachPage() {
   const { user } = useAuth();
   const { profile } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -110,8 +140,30 @@ export function CoachPage() {
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const [pendingVoiceResponse, setPendingVoiceResponse] = useState<VoiceChatApiResponse | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const voiceModeRef = useRef(false);
   const assistantAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const websiteContext = {
+    ...WEBSITE_KNOWLEDGE,
+    current_page: 'coach',
+    current_path: location.pathname,
+    current_language: language === 'ar' ? 'ar' : 'en',
+  };
+
+  const focusInput = useCallback(() => {
+    window.setTimeout(() => {
+      const node = textareaRef.current;
+      if (!node) return;
+      node.focus();
+      const end = node.value.length;
+      try {
+        node.setSelectionRange(end, end);
+      } catch {
+        // Some browsers may not support selection on this control state.
+      }
+    }, 0);
+  }, []);
 
   useEffect(() => {
     voiceModeRef.current = voiceMode;
@@ -152,6 +204,7 @@ export function CoachPage() {
     language,
     userId: user?.id,
     conversationId: currentId || user?.id || null,
+    websiteContext,
     onResponse: handleVoiceBackendResponse,
   });
   const isBusy = isLoading || isVoiceProcessing;
@@ -382,6 +435,8 @@ export function CoachPage() {
         playBackendAudio(pendingVoiceResponse.audio_path);
       } else if (voiceModeRef.current) {
         window.setTimeout(() => startListeningIfPossible(), 250);
+      } else {
+        focusInput();
       }
 
       setPendingVoiceResponse(null);
@@ -397,6 +452,7 @@ export function CoachPage() {
     currentMessages,
     pendingVoiceResponse,
     playBackendAudio,
+    focusInput,
     startListeningIfPossible,
     user,
   ]);
@@ -415,9 +471,6 @@ export function CoachPage() {
     try {
       if (!supabase || !supabase.from) {
         console.warn('Supabase not available');
-        if (localSnapshot.conversations.length === 0) {
-          await createConversation();
-        }
         setLoadingConvs(false);
         return;
       }
@@ -453,14 +506,9 @@ export function CoachPage() {
         setConversations(convsWithMessages);
         setCurrentId(selectedConversation.id);
         setCurrentMessages(selectedConversation.messages);
-      } else if (localSnapshot.conversations.length === 0) {
-        await createConversation();
       }
     } catch (error) {
       console.warn('Failed to load conversations:', error);
-      if (localSnapshot.conversations.length === 0) {
-        await createConversation();
-      }
     } finally {
       setLoadingConvs(false);
     }
@@ -541,7 +589,6 @@ export function CoachPage() {
       } else {
         setCurrentId(null);
         setCurrentMessages([]);
-        await createConversation();
       }
     }
   };
@@ -965,6 +1012,7 @@ export function CoachPage() {
         user_profile,
         tracking_summary,
         plan_snapshot,
+        website_context: websiteContext,
         recent_messages,
       };
 
@@ -1026,6 +1074,7 @@ export function CoachPage() {
       }
 
       if (autoSpeak) speakWithVoice(assistantText);
+      if (!voiceModeRef.current) focusInput();
     } catch (error: any) {
       console.error('Error:', error);
       setIsTypingReply(false);
@@ -1047,6 +1096,7 @@ export function CoachPage() {
     } finally {
       setIsTypingReply(false);
       setIsLoading(false);
+      if (!voiceModeRef.current) focusInput();
     }
   };
 
@@ -1501,6 +1551,7 @@ export function CoachPage() {
                 </Button>
               )}
               <Textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}

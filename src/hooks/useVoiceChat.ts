@@ -13,6 +13,7 @@ interface UseVoiceChatOptions {
   language: 'en' | 'ar';
   userId?: string | null;
   conversationId?: string | null;
+  websiteContext?: Record<string, unknown> | null;
   onResponse: (payload: VoiceChatApiResponse) => void | Promise<void>;
 }
 
@@ -28,6 +29,7 @@ export function useVoiceChat({
   language,
   userId,
   conversationId,
+  websiteContext,
   onResponse,
 }: UseVoiceChatOptions) {
   const [isListening, setIsListening] = useState(false);
@@ -66,6 +68,7 @@ export function useVoiceChat({
         formData.append('language', language);
         if (userId) formData.append('user_id', userId);
         if (conversationId) formData.append('conversation_id', conversationId);
+        if (websiteContext) formData.append('website_context', JSON.stringify(websiteContext));
 
         const response = await fetch(`${backendUrl}/voice-chat`, {
           method: 'POST',
@@ -100,7 +103,7 @@ export function useVoiceChat({
         setIsProcessing(false);
       }
     },
-    [backendUrl, conversationId, language, onResponse, userId]
+    [backendUrl, conversationId, language, onResponse, userId, websiteContext]
   );
 
   const startListening = useCallback(async () => {

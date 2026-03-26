@@ -142,6 +142,7 @@ class ChatRequest(BaseModel):
     tracking_summary: Optional[Dict[str, Any]] = None
     recent_messages: Optional[list[Dict[str, Any]]] = None
     plan_snapshot: Optional[Dict[str, Any]] = None
+    website_context: Optional[Dict[str, Any]] = None
 
 
 def _repair_mojibake(text: str) -> str:
@@ -5276,6 +5277,7 @@ def _general_llm_reply(
     memory: MemorySystem,
     state: Optional[dict[str, Any]] = None,
     recent_messages: Optional[list[dict[str, Any]]] = None,
+    website_context: Optional[dict[str, Any]] = None,
 ) -> str:
     language_instructions = {
         "en": "Reply in polished English. Use 0-2 relevant emojis naturally.",
@@ -5337,6 +5339,7 @@ def _general_llm_reply(
         "If progress is weak or user reports no body change, ask about sleep, hydration, meal adherence, and workout execution before giving final advice.\n"
         "When user asks about exercises, guide them and mention they can use /workouts for muscle-specific exercise explorer.\n"
         "Ground your advice in the provided dataset context, nutrition snippets, and recent messages.\n"
+        "When user asks about this website or app, use the provided website context as the source of truth for pages, forms, features, and user flows.\n"
         "Keep responses concise but useful, usually 1 short intro plus 3-6 strong bullets when appropriate.\n"
         "End with one clear next action, question, or recommendation when that improves the answer.\n"
         "Prefer a direct answer over long setup text.\n"
@@ -5354,6 +5357,8 @@ def _general_llm_reply(
     if nutrition_kb_context:
         context_lines.append("Nutrition reference snippets (from DATAFORPROJECT.pdf):")
         context_lines.append("\n".join(nutrition_kb_context.splitlines()[: nutrition_context_limit * 4]))
+    if website_context:
+        context_lines.append(f"Website/app context: {website_context}")
     messages = [{"role": "system", "content": system_prompt + '\n'.join(context_lines)}]
 
     external_history = _normalize_recent_messages(recent_messages)
@@ -5995,6 +6000,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                     memory=memory,
                     state=state,
                     recent_messages=recent_messages,
+                    website_context=req.website_context,
                 )
                 if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
                     llm_reply = _ollama_unavailable_reply(language)
@@ -6022,6 +6028,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             memory=memory,
             state=state,
             recent_messages=recent_messages,
+            website_context=req.website_context,
         )
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
             llm_reply = _ollama_unavailable_reply(language)
@@ -6370,12 +6377,14 @@ async def _voice_llm_responder(
     language: str,
     user_id: Optional[str],
     conversation_id: Optional[str],
+    website_context: Optional[dict[str, Any]] = None,
 ) -> tuple[str, Optional[str]]:
     chat_req = ChatRequest(
         message=transcript,
         user_id=user_id,
         conversation_id=conversation_id,
         language=language,
+        website_context=website_context,
     )
     chat_resp = await chat(chat_req)
     return chat_resp.reply, chat_resp.conversation_id
@@ -6387,10 +6396,19 @@ async def voice_chat(
     language: str = Form("en"),
     user_id: Optional[str] = Form(None),
     conversation_id: Optional[str] = Form(None),
+    website_context: Optional[str] = Form(None),
 ) -> VoiceChatResponse:
     uid = _normalize_user_id(user_id)
     conv_id = _normalize_conversation_id(conversation_id, uid)
     lang = "ar" if (language or "").lower().startswith("ar") else "en"
+    parsed_website_context: Optional[dict[str, Any]] = None
+    if website_context:
+        try:
+            payload = json.loads(website_context)
+            if isinstance(payload, dict):
+                parsed_website_context = payload
+        except Exception:
+            parsed_website_context = None
 
     if audio.content_type and not audio.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="Uploaded file must be an audio format.")
@@ -6407,7 +6425,13 @@ async def voice_chat(
             language=lang,
             user_id=uid,
             conversation_id=conv_id,
-            llm_responder=_voice_llm_responder,
+            llm_responder=lambda transcript, voice_language, voice_user_id, voice_conversation_id: _voice_llm_responder(
+                transcript,
+                voice_language,
+                voice_user_id,
+                voice_conversation_id,
+                parsed_website_context,
+            ),
         )
 
         return VoiceChatResponse(
