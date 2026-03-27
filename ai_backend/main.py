@@ -34,6 +34,7 @@ from predict import predict_goal, predict_plan_intent, predict_success
 from response_datasets import ResponseDatasets
 from dataset_paths import resolve_dataset_root, resolve_derived_root
 from rag_context import RagContextBuilder
+from supabase_context import SupabaseContextRepository
 from voice.stt import WhisperSTT
 from voice.tts import LocalTTS
 from voice.voice_pipeline import VoicePipeline, VoicePipelineError, VoicePipelineResult
@@ -225,6 +226,13 @@ class PlanIntentPredictionRequest(BaseModel):
     message: str
 
 
+class RagDebugQueryRequest(BaseModel):
+    user_id: str
+    query: str
+    conversation_id: Optional[str] = None
+    top_k: Optional[int] = 5
+
+
 def _resolve_response_dataset_dir() -> Path:
     base_data_dir = Path(__file__).resolve().parent / "data"
     candidates = [
@@ -245,6 +253,10 @@ AI_ENGINE = AIEngine(Path(__file__).resolve().parent / "exercises.json")
 CATEGORY_DATA = DataCatalog(resolve_dataset_root(), resolve_derived_root())
 RAG_CONTEXT_BUILDER = RagContextBuilder(CATEGORY_DATA)
 PERSISTENT_RAG = PersistentRagStore(BACKEND_DIR / "data" / "rag_store")
+SUPABASE_CONTEXT = SupabaseContextRepository(
+    os.getenv("VITE_SUPABASE_URL", ""),
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("VITE_SUPABASE_ANON_KEY", ""),
+)
 NUTRITION_KB = KnowledgeEngine(Path(__file__).resolve().parent / "knowledge" / "dataforproject.txt")
 RESPONSE_DATASET_DIR = _resolve_response_dataset_dir()
 RESPONSE_DATASETS = ResponseDatasets(RESPONSE_DATASET_DIR)
@@ -330,6 +342,16 @@ def _build_user_rag_documents(
             }
         )
 
+        progress_metrics = tracking_summary.get("progress_metrics") if isinstance(tracking_summary.get("progress_metrics"), dict) else {}
+        if progress_metrics:
+            docs.append(
+                {
+                    "id": f"{user_id}_progress_metrics",
+                    "text": f"Progress metrics: {_json_text(progress_metrics)}",
+                    "metadata": {"kind": "progress_metrics"},
+                }
+            )
+
         for index, plan in enumerate((tracking_summary.get("active_plan_details") or [])[:8]):
             docs.append(
                 {
@@ -409,6 +431,50 @@ def _refresh_persistent_rag_context(
             PERSISTENT_RAG.upsert_documents(_rag_namespace_for_user(user_id), user_docs, replace=True)
     except Exception as exc:
         logger.warning("Failed refreshing persistent RAG context: %s", exc)
+
+
+def _merge_recent_messages(
+    database_messages: Optional[list[dict[str, Any]]],
+    request_messages: Optional[list[dict[str, Any]]],
+) -> list[dict[str, str]]:
+    merged: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in _normalize_recent_messages(database_messages) + _normalize_recent_messages(request_messages):
+        role = str(item.get("role") or "").strip().lower()
+        content = _repair_mojibake(str(item.get("content") or "").strip())
+        if role not in {"user", "assistant"} or not content:
+            continue
+        key = (role, content)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append({"role": role, "content": content})
+    return merged[-12:]
+
+
+def _load_database_context(user_id: str, conversation_id: Optional[str]) -> dict[str, Any]:
+    if not SUPABASE_CONTEXT.enabled:
+        return {"enabled": False}
+    try:
+        return SUPABASE_CONTEXT.load_user_context(user_id, conversation_id)
+    except Exception as exc:
+        logger.warning("Database-backed context load failed for %s: %s", user_id, exc)
+        return {"enabled": False, "error": str(exc)}
+
+
+def _format_rag_hits_for_debug(user_id: str, query: str, top_k: int = 5) -> list[dict[str, Any]]:
+    formatted: list[dict[str, Any]] = []
+    for hit in _persistent_rag_hits(user_id, query, top_k=top_k):
+        formatted.append(
+            {
+                "namespace": hit.get("namespace"),
+                "id": hit.get("id"),
+                "score": hit.get("score"),
+                "metadata": repair_mojibake_deep(hit.get("metadata") or {}),
+                "text": _repair_mojibake(str(hit.get("text") or "")),
+            }
+        )
+    return formatted
 
 
 def _persistent_rag_hits(user_id: str, query: str, top_k: int = 3) -> list[dict[str, Any]]:
@@ -3836,12 +3902,13 @@ def _generate_nutrition_plan(profile: dict[str, Any], language: str) -> dict[str
 
 
 def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) -> str:
+    plan = _sanitize_plan_payload(plan_type, plan, language)
     if plan_type == "workout":
         workout_days = [d for d in plan.get("days", []) if d.get("exercises")]
         workout_day_names = [str(d.get("day") or "") for d in workout_days if d.get("day")]
         rest_days = list(plan.get("rest_days") or [d.get("day") for d in plan.get("days", []) if not d.get("exercises")])
         sample = workout_days[0]["exercises"][:3] if workout_days else []
-        sample_text = "\n".join([f"- {x['name']} ({x['sets']}x{x['reps']})" for x in sample])
+        sample_text = "\n".join([f"- {_clean_plan_label(x.get('name'), 'Exercise')} ({x['sets']}x{x['reps']})" for x in sample])
         training_days_count = len(workout_days)
         workout_days_line = " · ".join(workout_day_names) if workout_day_names else "Not specified"
 
@@ -3872,7 +3939,7 @@ def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) ->
     calories = plan.get("daily_calories", 0)
     meals_count = plan.get("meals_per_day", 4)
     sample_meals = plan.get("days", [{}])[0].get("meals", [])[:3]
-    sample_text = "\n".join([f"- {m['name']} ({m['calories']} kcal)" for m in sample_meals])
+    sample_text = "\n".join([f"- {_clean_plan_label(m.get('name'), 'Meal')} ({m['calories']} kcal)" for m in sample_meals])
 
     if language == "en":
         return (
@@ -3893,6 +3960,57 @@ def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) ->
     )
 
 
+def _looks_like_bad_arabic(text: str) -> bool:
+    return bool(text) and any(marker in text for marker in ("Ø", "Ù", "Ã", "Ð"))
+
+
+def _clean_plan_label(text: Any, fallback: str) -> str:
+    cleaned = _repair_mojibake(str(text or "")).replace("_", " ").strip()
+    if not cleaned or _looks_like_bad_arabic(cleaned):
+        return fallback
+    return cleaned
+
+
+def _sanitize_plan_payload(plan_type: str, plan: dict[str, Any], language: Optional[str] = None) -> dict[str, Any]:
+    cleaned = repair_mojibake_deep(deepcopy(plan)) if isinstance(plan, dict) else {}
+    if not cleaned:
+        return {}
+
+    default_title_en = "Nutrition Plan" if plan_type == "nutrition" else "Workout Plan"
+    default_title_ar = "خطة تغذية" if plan_type == "nutrition" else "خطة تمارين"
+    cleaned["title"] = _clean_plan_label(cleaned.get("title"), default_title_en)
+    cleaned["title_ar"] = _clean_plan_label(cleaned.get("title_ar"), default_title_ar)
+
+    for day in cleaned.get("days", []):
+        if not isinstance(day, dict):
+            continue
+        day["day"] = _clean_plan_label(day.get("day"), str(day.get("day") or ""))
+        day["dayAr"] = _clean_plan_label(day.get("dayAr"), str(day.get("dayAr") or day.get("day") or ""))
+        day["focus"] = _clean_plan_label(day.get("focus"), str(day.get("focus") or ""))
+        for exercise in day.get("exercises", []):
+            if not isinstance(exercise, dict):
+                continue
+            fallback_name = _clean_plan_label(exercise.get("name"), "Exercise")
+            exercise["name"] = fallback_name
+            exercise["nameAr"] = _clean_plan_label(exercise.get("nameAr"), fallback_name)
+            if exercise.get("notes"):
+                exercise["notes"] = _repair_mojibake(str(exercise.get("notes") or "")).strip()
+        for meal in day.get("meals", []):
+            if not isinstance(meal, dict):
+                continue
+            fallback_name = _clean_plan_label(meal.get("name"), "Meal")
+            meal["name"] = fallback_name
+            meal["nameAr"] = _clean_plan_label(meal.get("nameAr"), fallback_name)
+            if meal.get("description"):
+                meal["description"] = _repair_mojibake(str(meal.get("description") or "")).strip()
+            if meal.get("descriptionAr"):
+                meal["descriptionAr"] = _clean_plan_label(meal.get("descriptionAr"), str(meal.get("description") or ""))
+
+    if language == "ar_fusha" and plan_type == "nutrition" and cleaned.get("title") == default_title_en:
+        cleaned["title"] = default_title_ar
+    return cleaned
+
+
 def _generate_workout_plan_options(profile: dict[str, Any], language: str, count: int = 5) -> list[dict[str, Any]]:
     target_count = max(PLAN_OPTION_PAGE_SIZE, min(PLAN_OPTION_POOL_TARGET, int(count or PLAN_OPTION_PAGE_SIZE)))
     base_options: list[dict[str, Any]] = []
@@ -3909,7 +4027,8 @@ def _generate_workout_plan_options(profile: dict[str, Any], language: str, count
     if not base_options:
         base_options = [_generate_workout_plan(profile, language)]
 
-    return _expand_workout_option_pool(base_options, profile, language, target_count)
+    expanded = _expand_workout_option_pool(base_options, profile, language, target_count)
+    return [_sanitize_plan_payload("workout", option, language) for option in expanded]
 
 
 def _generate_nutrition_plan_options(profile: dict[str, Any], language: str, count: int = 5) -> list[dict[str, Any]]:
@@ -3928,7 +4047,8 @@ def _generate_nutrition_plan_options(profile: dict[str, Any], language: str, cou
     if not base_options:
         base_options = [_generate_nutrition_plan(profile, language)]
 
-    return _expand_nutrition_option_pool(base_options, profile, language, target_count)
+    expanded = _expand_nutrition_option_pool(base_options, profile, language, target_count)
+    return [_sanitize_plan_payload("nutrition", option, language) for option in expanded]
 
 
 def _preferred_training_days(profile: dict[str, Any], fallback: int = 3) -> int:
@@ -5541,6 +5661,114 @@ def _basic_progress_reply(language: str, tracking_summary: dict[str, Any]) -> st
     return " ".join(parts_ar)
 
 
+def _activity_progress_analysis_reply(language: str, tracking_summary: dict[str, Any]) -> str:
+    progress_metrics = tracking_summary.get("progress_metrics") if isinstance(tracking_summary.get("progress_metrics"), dict) else {}
+    weekly_stats = tracking_summary.get("weekly_stats") if isinstance(tracking_summary.get("weekly_stats"), dict) else {}
+    recent_workout_notes = tracking_summary.get("recent_workout_notes") if isinstance(tracking_summary.get("recent_workout_notes"), list) else []
+    recent_nutrition_notes = tracking_summary.get("recent_nutrition_notes") if isinstance(tracking_summary.get("recent_nutrition_notes"), list) else []
+    recent_moods = tracking_summary.get("recent_moods") if isinstance(tracking_summary.get("recent_moods"), list) else []
+
+    recent_completed = int(_to_float(progress_metrics.get("recent_completed_tasks")) or _to_float(weekly_stats.get("recent_completed_tasks")) or tracking_summary.get("completed_last_7_days") or 0)
+    prior_completed = int(_to_float(progress_metrics.get("prior_completed_tasks")) or _to_float(weekly_stats.get("previous_completed_tasks")) or 0)
+    completion_delta = int(_to_float(progress_metrics.get("completion_delta")) or _to_float(weekly_stats.get("completion_delta")) or (recent_completed - prior_completed))
+    workout_adherence_percent = int(_to_float(progress_metrics.get("workout_adherence_percent")) or _to_float(weekly_stats.get("workout_adherence_percent")) or 0)
+    logging_consistency_percent = int(_to_float(progress_metrics.get("logging_consistency_percent")) or _to_float(weekly_stats.get("logging_consistency_percent")) or 0)
+    workout_streak = int(_to_float(progress_metrics.get("current_workout_streak_days")) or _to_float(weekly_stats.get("current_workout_streak_days")) or 0)
+    logging_streak = int(_to_float(progress_metrics.get("current_logging_streak_days")) or _to_float(weekly_stats.get("current_logging_streak_days")) or 0)
+    trend = str(progress_metrics.get("trend") or "flat")
+    trend_label_en = {"up": "improving", "down": "slipping", "flat": "steady"}.get(trend, "steady")
+    trend_label_ar = {"up": "في تحسن", "down": "متراجع", "flat": "ثابت"}.get(trend, "ثابت")
+    latest_workout_note = str(recent_workout_notes[0]).strip() if recent_workout_notes else ""
+    latest_nutrition_note = str(recent_nutrition_notes[0]).strip() if recent_nutrition_notes else ""
+    latest_mood = str(recent_moods[0]).strip() if recent_moods else ""
+
+    if language == "en":
+        recommendations = []
+        if workout_adherence_percent < 60:
+            recommendations.append("Your main bottleneck is consistency. Lock in 2 fixed training slots before adding more volume.")
+        elif completion_delta <= 0:
+            recommendations.append("Your output is flat versus the previous week. Keep the plan, but make the next 7 days more structured.")
+        else:
+            recommendations.append("Your activity trend is positive. Keep the same structure and increase load only if recovery stays good.")
+        if logging_consistency_percent < 50:
+            recommendations.append("Log at least 4 days this week so progress analysis stays reliable.")
+        if latest_nutrition_note:
+            recommendations.append(f"Nutrition signal: {latest_nutrition_note}")
+        elif latest_workout_note:
+            recommendations.append(f"Workout signal: {latest_workout_note}")
+        parts = [
+            f"Progress review: {trend_label_en}.",
+            f"Last 7 days: {recent_completed} completed tasks vs {prior_completed} in the previous 7 days ({completion_delta:+d}).",
+            f"Workout adherence: {workout_adherence_percent}%.",
+            f"Logging consistency: {logging_consistency_percent}%.",
+            f"Workout streak: {workout_streak} days. Logging streak: {logging_streak} days.",
+        ]
+        if latest_workout_note:
+            parts.append(f"Latest workout note: {latest_workout_note}")
+        if latest_mood:
+            parts.append(f"Latest mood/energy note: {latest_mood}")
+        parts.append("Recommendations:")
+        parts.extend(f"{index}. {text}" for index, text in enumerate(recommendations[:3], start=1))
+        return "\n".join(parts)
+
+    if language == "ar_fusha":
+        recommendations_ar = []
+        if workout_adherence_percent < 60:
+            recommendations_ar.append("العائق الرئيسي الآن هو الالتزام. ثبّت يومين تدريب واضحين أولًا قبل زيادة الحجم التدريبي.")
+        elif completion_delta <= 0:
+            recommendations_ar.append("الأداء ثابت مقارنة بالأسبوع السابق. استمر على الخطة لكن نظّم الأيام السبعة القادمة بشكل أوضح.")
+        else:
+            recommendations_ar.append("اتجاه النشاط جيد. حافظ على نفس الإيقاع ولا ترفع الحمل إلا إذا كان التعافي جيدًا.")
+        if logging_consistency_percent < 50:
+            recommendations_ar.append("سجّل 4 أيام على الأقل هذا الأسبوع حتى يبقى تحليل التقدم دقيقًا.")
+        if latest_nutrition_note:
+            recommendations_ar.append(f"إشارة التغذية الأخيرة: {latest_nutrition_note}")
+        elif latest_workout_note:
+            recommendations_ar.append(f"إشارة التمرين الأخيرة: {latest_workout_note}")
+        parts_ar = [
+            f"مراجعة التقدم: {trend_label_ar}.",
+            f"آخر 7 أيام: {recent_completed} مهام مكتملة مقابل {prior_completed} في السبعة السابقة ({completion_delta:+d}).",
+            f"التزام التمرين: {workout_adherence_percent}%.",
+            f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
+            f"سلسلة التمرين: {workout_streak} أيام. سلسلة التسجيل: {logging_streak} أيام.",
+        ]
+        if latest_workout_note:
+            parts_ar.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
+        if latest_mood:
+            parts_ar.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
+        parts_ar.append("التوصيات:")
+        parts_ar.extend(f"{index}. {text}" for index, text in enumerate(recommendations_ar[:3], start=1))
+        return "\n".join(parts_ar)
+
+    recommendations_jo = []
+    if workout_adherence_percent < 60:
+        recommendations_jo.append("المشكلة الأساسية هسا بالالتزام. ثبّت يومين تمرين ثابتين أول إشي قبل ما تزود الحجم.")
+    elif completion_delta <= 0:
+        recommendations_jo.append("أداؤك ثابت عن الأسبوع اللي قبله. كمّل على الخطة بس رتّب الأسبوع الجاي بشكل أوضح.")
+    else:
+        recommendations_jo.append("اتجاهك منيح. خليك على نفس النسق وزيد الحمل فقط إذا التعافي تمام.")
+    if logging_consistency_percent < 50:
+        recommendations_jo.append("سجل على الأقل 4 أيام هالأسبوع عشان يضل التحليل دقيق.")
+    if latest_nutrition_note:
+        recommendations_jo.append(f"آخر إشارة تغذية: {latest_nutrition_note}")
+    elif latest_workout_note:
+        recommendations_jo.append(f"آخر إشارة تمرين: {latest_workout_note}")
+    parts_jo = [
+        f"مراجعة التقدم: {trend_label_ar}.",
+        f"آخر 7 أيام: خلصت {recent_completed} مهام مقابل {prior_completed} بالأسبوع اللي قبله ({completion_delta:+d}).",
+        f"التزام التمرين: {workout_adherence_percent}%.",
+        f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
+        f"ستريك التمرين: {workout_streak} أيام. ستريك التسجيل: {logging_streak} أيام.",
+    ]
+    if latest_workout_note:
+        parts_jo.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
+    if latest_mood:
+        parts_jo.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
+    parts_jo.append("التوصيات:")
+    parts_jo.extend(f"{index}. {text}" for index, text in enumerate(recommendations_jo[:3], start=1))
+    return "\n".join(parts_jo)
+
+
 def _performance_analysis_reply(
     language: str,
     profile: dict[str, Any],
@@ -5629,6 +5857,9 @@ def _performance_analysis_reply(
             missing_fields.append("weekly_stats.weight_change/weight_change_history or monthly_stats.strength_increase_percent")
 
     if missing_fields:
+        progress_metrics = tracking_summary.get("progress_metrics") if isinstance(tracking_summary.get("progress_metrics"), dict) else {}
+        if progress_metrics:
+            return _activity_progress_analysis_reply(language, tracking_summary)
         if isinstance(tracking_summary, dict) and (
             tracking_summary.get("completed_tasks") is not None
             or tracking_summary.get("adherence_score") is not None
@@ -6235,11 +6466,78 @@ def logic_evaluate(req: LogicEvaluationRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=f"Logic evaluation failed: {exc}") from exc
 
 
+@app.get("/debug/rag/user/{user_id}")
+def debug_rag_user(user_id: str, conversation_id: Optional[str] = Query(default=None)) -> dict[str, Any]:
+    normalized_user_id = _normalize_user_id(user_id)
+    db_context = _load_database_context(normalized_user_id, conversation_id)
+    profile = db_context.get("profile") if isinstance(db_context.get("profile"), dict) else {}
+    tracking_summary = db_context.get("tracking_summary") if isinstance(db_context.get("tracking_summary"), dict) else {}
+    plan_snapshot = db_context.get("plan_snapshot") if isinstance(db_context.get("plan_snapshot"), dict) else {}
+    recent_messages = _normalize_recent_messages(db_context.get("recent_messages"))
+
+    _refresh_persistent_rag_context(
+        normalized_user_id,
+        profile,
+        tracking_summary,
+        plan_snapshot,
+        None,
+        recent_messages,
+    )
+
+    namespace = _rag_namespace_for_user(normalized_user_id)
+    return {
+        "status": "ok",
+        "database": repair_mojibake_deep(db_context),
+        "namespaces": [
+            PERSISTENT_RAG.namespace_stats("app_knowledge"),
+            PERSISTENT_RAG.namespace_stats(namespace),
+        ],
+        "user_documents": repair_mojibake_deep(PERSISTENT_RAG.list_documents(namespace, limit=12)),
+        "app_documents": repair_mojibake_deep(PERSISTENT_RAG.list_documents("app_knowledge", limit=8)),
+    }
+
+
+@app.post("/debug/rag/query")
+def debug_rag_query(req: RagDebugQueryRequest) -> dict[str, Any]:
+    user_id = _normalize_user_id(req.user_id)
+    conversation_id = _normalize_conversation_id(req.conversation_id, user_id)
+    db_context = _load_database_context(user_id, conversation_id)
+    profile = db_context.get("profile") if isinstance(db_context.get("profile"), dict) else {}
+    tracking_summary = db_context.get("tracking_summary") if isinstance(db_context.get("tracking_summary"), dict) else {}
+    plan_snapshot = db_context.get("plan_snapshot") if isinstance(db_context.get("plan_snapshot"), dict) else {}
+    recent_messages = _normalize_recent_messages(db_context.get("recent_messages"))
+
+    _refresh_persistent_rag_context(
+        user_id,
+        profile,
+        tracking_summary,
+        plan_snapshot,
+        None,
+        recent_messages,
+    )
+
+    top_k = max(1, min(10, int(req.top_k or 5)))
+    return {
+        "status": "ok",
+        "query": _repair_mojibake(req.query),
+        "database": repair_mojibake_deep(db_context),
+        "hits": _format_rag_hits_for_debug(user_id, req.query, top_k=top_k),
+        "namespaces": [
+            PERSISTENT_RAG.namespace_stats("app_knowledge"),
+            PERSISTENT_RAG.namespace_stats(_rag_namespace_for_user(user_id)),
+        ],
+    }
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     user_id = _normalize_user_id(req.user_id)
     conversation_id = _normalize_conversation_id(req.conversation_id, user_id)
     state = _get_user_state(user_id)
+    database_context = _load_database_context(user_id, conversation_id)
+    database_profile = database_context.get("profile") if isinstance(database_context.get("profile"), dict) else {}
+    if database_profile:
+        _persist_profile_context(database_profile, state)
     explicit_profile = req.user_profile if isinstance(req.user_profile, dict) else {}
     explicit_keys = set(explicit_profile.keys())
     if "chronicConditions" in explicit_keys:
@@ -6256,21 +6554,30 @@ async def chat(req: ChatRequest) -> ChatResponse:
         explicit_keys.add("dietary_preferences")
     profile = _build_profile(req, state)
     language = _detect_language(req.language or "en", req.message, profile)
-    recent_messages = _normalize_recent_messages(req.recent_messages)
+    recent_messages = _merge_recent_messages(database_context.get("recent_messages"), req.recent_messages)
 
     _persist_profile_context(profile, state, explicit_keys)
+    db_tracking_summary = database_context.get("tracking_summary") if isinstance(database_context.get("tracking_summary"), dict) else None
+    if db_tracking_summary:
+        state["last_progress_summary"] = _merge_tracking_summaries(
+            state.get("last_progress_summary"),
+            db_tracking_summary,
+        )
     if req.tracking_summary:
         state["last_progress_summary"] = _merge_tracking_summaries(
             state.get("last_progress_summary"),
             req.tracking_summary,
         )
+    db_plan_snapshot = database_context.get("plan_snapshot") if isinstance(database_context.get("plan_snapshot"), dict) else None
+    if db_plan_snapshot:
+        _update_plan_snapshot_state(state, db_plan_snapshot)
     _update_plan_snapshot_state(state, req.plan_snapshot)
     tracking_summary = state.get("last_progress_summary")
     _refresh_persistent_rag_context(
         user_id,
         profile,
         tracking_summary,
-        req.plan_snapshot,
+        state.get("plan_snapshot") or req.plan_snapshot,
         req.website_context,
         recent_messages,
     )
@@ -6293,6 +6600,14 @@ async def chat(req: ChatRequest) -> ChatResponse:
     if message_tracking_summary:
         tracking_summary = _merge_tracking_summaries(tracking_summary, message_tracking_summary)
         state["last_progress_summary"] = tracking_summary
+        _refresh_persistent_rag_context(
+            user_id,
+            profile,
+            tracking_summary,
+            state.get("plan_snapshot") or req.plan_snapshot,
+            req.website_context,
+            recent_messages,
+        )
 
     memory = _get_memory_session(user_id, conversation_id)
     memory.add_user_message(user_input)

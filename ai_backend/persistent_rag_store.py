@@ -68,6 +68,22 @@ class PersistentRagStore:
             logger.warning("Failed loading persistent RAG documents for %s: %s", namespace, exc)
             return []
 
+    def list_documents(self, namespace: str, limit: Optional[int] = None) -> list[dict[str, Any]]:
+        documents = self._load_documents(namespace)
+        if limit is None or limit <= 0:
+            return documents
+        return documents[:limit]
+
+    def namespace_stats(self, namespace: str) -> dict[str, Any]:
+        documents = self._load_documents(namespace)
+        embeddings = self._load_embeddings(namespace)
+        return {
+            "namespace": namespace,
+            "documents": len(documents),
+            "embeddings_ready": embeddings is not None and len(documents) == int(embeddings.shape[0]),
+            "faiss_ready": self._index_path(namespace).exists(),
+        }
+
     def _save_documents(self, namespace: str, documents: list[dict[str, Any]]) -> None:
         self._documents_path(namespace).write_text(
             json.dumps(documents, ensure_ascii=False, indent=2),

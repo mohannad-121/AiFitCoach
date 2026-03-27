@@ -35,6 +35,25 @@ interface PendingPlanState {
   plan: any;
 }
 
+interface RagDebugHit {
+  namespace?: string;
+  id?: string;
+  score?: number;
+  metadata?: Record<string, unknown>;
+  text?: string;
+}
+
+interface RagDebugData {
+  query?: string;
+  hits?: RagDebugHit[];
+  database?: {
+    counts?: Record<string, number>;
+    tracking_summary?: {
+      progress_metrics?: Record<string, unknown>;
+    };
+  };
+}
+
 interface StoredSchedulePlan {
   id: string;
   user_id: string;
@@ -97,6 +116,24 @@ const toIsoDay = (value?: string | null) => {
 };
 
 const cleanNote = (value?: string | null) => (value || '').replace(/\s+/g, ' ').trim();
+
+const looksLikeBadArabic = (value: string) => /[ØÙÃÐ]/.test(value);
+
+const sanitizePlanLabel = (value: unknown, fallback: string) => {
+  const cleaned = repairMojibake(String(value ?? '')).replace(/_/g, ' ').trim();
+  return !cleaned || looksLikeBadArabic(cleaned) ? fallback : cleaned;
+};
+
+const repairDeep = (value: unknown): unknown => {
+  if (typeof value === 'string') return repairMojibake(value);
+  if (Array.isArray(value)) return value.map((item) => repairDeep(item));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, repairDeep(item)])
+    );
+  }
+  return value;
+};
 
 const WEBSITE_PAGES = {
   home: {
@@ -230,6 +267,10 @@ export function CoachPage() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PendingPlanState | null>(null);
+  const [showRagDebug, setShowRagDebug] = useState(false);
+  const [ragDebugData, setRagDebugData] = useState<RagDebugData | null>(null);
+  const [ragDebugLoading, setRagDebugLoading] = useState(false);
+  const [ragDebugError, setRagDebugError] = useState('');
   const [selectedVoice, setSelectedVoice] = useState<string>(() => {
     return localStorage.getItem('fitcoach_voice') || '';
   });
@@ -551,6 +592,45 @@ export function CoachPage() {
       }
     }, 350);
   }, [navigate]);
+
+  const loadRagDebug = useCallback(async (queryText?: string) => {
+    if (!user) return;
+    const trimmedQuery = (queryText || '').trim();
+    if (!trimmedQuery) return;
+
+    setRagDebugLoading(true);
+    setRagDebugError('');
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/debug/rag/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          conversation_id: currentId || user.id,
+          query: trimmedQuery,
+          top_k: 6,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`RAG debug request failed: ${response.status}`);
+      }
+      const payload = await response.json();
+      setRagDebugData(payload);
+    } catch (error: any) {
+      setRagDebugError(error?.message || 'Failed to load RAG debug data.');
+    } finally {
+      setRagDebugLoading(false);
+    }
+  }, [currentId, user]);
+
+  useEffect(() => {
+    if (!showRagDebug || !user) return;
+    const latestUserMessage = [...currentMessages].reverse().find((message) => message.role === 'user');
+    if (!latestUserMessage?.content) return;
+    void loadRagDebug(latestUserMessage.content);
+  }, [showRagDebug, currentMessages, loadRagDebug, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -917,21 +997,22 @@ export function CoachPage() {
     if (!extracted) return;
 
     const { type, plan } = extracted;
-    const planData = type === 'nutrition' ? toNutritionPlanData(plan) : toWorkoutPlanData(plan);
+    const cleanedPlan = repairDeep(plan) as any;
+    const planData = type === 'nutrition' ? toNutritionPlanData(cleanedPlan) : toWorkoutPlanData(cleanedPlan);
     if (!Array.isArray(planData) || planData.length === 0) return;
 
     const title = type === 'nutrition'
-      ? `${NUTRITION_PREFIX} ${plan?.title || 'Nutrition Plan'}`
-      : (plan?.title || 'AI Workout Plan');
-    const title_ar = plan?.title_ar || (type === 'nutrition' ? 'خطة تغذية' : 'خطة تمارين');
+      ? `${NUTRITION_PREFIX} ${sanitizePlanLabel(cleanedPlan?.title, 'Nutrition Plan')}`
+      : sanitizePlanLabel(cleanedPlan?.title, 'AI Workout Plan');
+    const title_ar = sanitizePlanLabel(cleanedPlan?.title_ar, type === 'nutrition' ? 'خطة تغذية' : 'خطة تمارين');
     const storedPlan: StoredSchedulePlan = {
-      id: plan?.id || `${type}_${Date.now()}`,
+      id: cleanedPlan?.id || `${type}_${Date.now()}`,
       user_id: user.id,
       title,
       title_ar,
       plan_data: planData,
       is_active: true,
-      created_at: plan?.created_at || new Date().toISOString(),
+      created_at: cleanedPlan?.created_at || new Date().toISOString(),
     };
 
     const localPlans = readLocalPlans(user.id);
@@ -1418,6 +1499,9 @@ export function CoachPage() {
       }
 
       if (autoSpeak) speakWithVoice(assistantText);
+      if (showRagDebug) {
+        void loadRagDebug(text.trim());
+      }
       if (!voiceModeRef.current) focusInput();
     } catch (error: any) {
       console.error('Error:', error);
@@ -1684,6 +1768,9 @@ export function CoachPage() {
             <Button variant="ghost" size="icon" onClick={() => setShowVoiceSettings(!showVoiceSettings)}>
               <Settings2 className="w-4 h-4" />
             </Button>
+            <Button variant={showRagDebug ? 'default' : 'ghost'} size="sm" onClick={() => setShowRagDebug((prev) => !prev)}>
+              RAG
+            </Button>
             {isSupported && (
               <Button
                 variant={voiceMode ? 'default' : 'ghost'}
@@ -1813,6 +1900,71 @@ export function CoachPage() {
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {showRagDebug && (
+            <div className="mb-4 rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">RAG Debug</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {language === 'ar' ? 'فحص المقاطع المسترجعة وسياق التقدم من قاعدة البيانات' : 'Inspect retrieved chunks and database-backed progress context'}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const latestUserMessage = [...currentMessages].reverse().find((message) => message.role === 'user');
+                    void loadRagDebug(latestUserMessage?.content || 'progress');
+                  }}
+                  disabled={ragDebugLoading}
+                >
+                  {ragDebugLoading ? 'Loading...' : 'Refresh'}
+                </Button>
+              </div>
+
+              {ragDebugError && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  {ragDebugError}
+                </div>
+              )}
+
+              {ragDebugData?.database?.counts && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  {Object.entries(ragDebugData.database.counts).map(([key, value]) => (
+                    <div key={key} className="rounded-xl bg-secondary/40 px-3 py-2">
+                      <div className="text-muted-foreground">{key}</div>
+                      <div className="font-semibold text-foreground">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {ragDebugData?.database?.tracking_summary?.progress_metrics && (
+                <pre className="overflow-x-auto rounded-xl bg-secondary/30 p-3 text-xs text-foreground whitespace-pre-wrap">
+                  {JSON.stringify(ragDebugData.database.tracking_summary.progress_metrics, null, 2)}
+                </pre>
+              )}
+
+              <div className="space-y-2">
+                {(ragDebugData?.hits || []).map((hit, index) => (
+                  <div key={`${hit.id || 'hit'}-${index}`} className="rounded-xl border border-border/40 bg-background/50 p-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
+                      <span>{hit.namespace || 'rag'}</span>
+                      {typeof hit.score === 'number' && <span>{hit.score.toFixed(3)}</span>}
+                      {hit.metadata?.kind && <span>{String(hit.metadata.kind)}</span>}
+                    </div>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{repairMojibake(hit.text || '')}</p>
+                  </div>
+                ))}
+                {!ragDebugLoading && (ragDebugData?.hits || []).length === 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {language === 'ar' ? 'لا توجد مقاطع مسترجعة بعد.' : 'No retrieved chunks yet.'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {workoutApprovalPlan && (
             <div className="mb-4">
