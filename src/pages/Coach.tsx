@@ -290,6 +290,7 @@ const ONBOARDING_FLOW = [
 const getConversationsStorageKey = (userId: string) => `fitcoach_conversations_${userId}`;
 const getCurrentConversationStorageKey = (userId: string) => `fitcoach_current_conversation_${userId}`;
 const getLocalPlansStorageKey = (userId: string) => `fitcoach_schedule_plans_${userId}`;
+const getLocalCompletionsStorageKey = (userId: string) => `fitcoach_schedule_completions_${userId}`;
 const getVoiceStorageKey = (language: 'en' | 'ar') => `fitcoach_voice_${language}`;
 
 const readLocalConversations = (userId: string): { conversations: Conversation[]; currentId: string | null } => {
@@ -308,6 +309,15 @@ const readLocalPlans = (userId: string): StoredSchedulePlan[] => {
   try {
     const raw = localStorage.getItem(getLocalPlansStorageKey(userId));
     return raw ? (JSON.parse(raw) as StoredSchedulePlan[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const readLocalCompletions = (userId: string): CompletionRow[] => {
+  try {
+    const raw = localStorage.getItem(getLocalCompletionsStorageKey(userId));
+    return raw ? (JSON.parse(raw) as CompletionRow[]) : [];
   } catch {
     return [];
   }
@@ -346,6 +356,9 @@ export function CoachPage() {
   const [voiceMode, setVoiceMode] = useState(false);
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const [pendingVoiceResponse, setPendingVoiceResponse] = useState<VoiceChatApiResponse | null>(null);
+        const localPlans = readLocalPlans(user.id);
+        const localCompletions = readLocalCompletions(user.id);
+
   const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1324,8 +1337,16 @@ export function CoachPage() {
         .select('log_date,workout_notes,nutrition_notes,mood')
         .eq('user_id', user.id);
 
-      const plans = (plansData || []) as Array<StoredSchedulePlan & { title_ar?: string; is_active?: boolean }>;
-      const completions = (completionsData || []) as CompletionRow[];
+      const remotePlans = (plansData || []) as Array<StoredSchedulePlan & { title_ar?: string; is_active?: boolean }>;
+      const remoteCompletions = (completionsData || []) as CompletionRow[];
+      const plans = [
+        ...remotePlans,
+        ...localPlans.filter((localPlan) => !remotePlans.some((remotePlan) => remotePlan.id === localPlan.id)),
+      ];
+      const completions = [
+        ...remoteCompletions,
+        ...localCompletions.filter((localCompletion) => !remoteCompletions.some((remoteCompletion) => remoteCompletion.id === localCompletion.id)),
+      ];
       const dailyLogs = (logsData || []) as DailyLogRow[];
       const plansById = new Map(plans.map((plan) => [plan.id, plan]));
       const completionTimeline = completions
