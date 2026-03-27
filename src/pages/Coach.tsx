@@ -634,7 +634,7 @@ export function CoachPage() {
     }
   }, [startListeningIfPossible]);
 
-  const speakWithBackendTts = useCallback(async (text: string) => {
+  const speakWithBackendTts = useCallback(async (text: string, targetLanguage?: 'en' | 'ar') => {
     const response = await fetch(`${AI_BACKEND_URL}/tts/speak`, {
       method: 'POST',
       headers: {
@@ -642,7 +642,7 @@ export function CoachPage() {
       },
       body: JSON.stringify({
         text,
-        language,
+        language: targetLanguage || language,
       }),
     });
 
@@ -670,6 +670,15 @@ export function CoachPage() {
     if (!cleanText) return;
 
     const resolvedVoice = resolvePreferredVoice();
+
+    if (selectedVoice === BACKEND_ARABIC_VOICE_ID) {
+      try {
+        await speakWithBackendTts(cleanText, 'ar');
+        return;
+      } catch (error) {
+        console.error('Explicit Arabic backend TTS failed:', error);
+      }
+    }
 
     if (language === 'ar' && !resolvedVoice) {
       try {
@@ -700,7 +709,7 @@ export function CoachPage() {
     };
     utterance.onerror = () => setIsAssistantSpeaking(false);
     window.speechSynthesis.speak(utterance);
-  }, [language, resolvePreferredVoice, speakWithBackendTts, startListeningIfPossible]);
+  }, [language, resolvePreferredVoice, selectedVoice, speakWithBackendTts, startListeningIfPossible]);
 
   const toggleVoiceMode = useCallback(() => {
     if (voiceModeRef.current) {
@@ -2087,11 +2096,9 @@ export function CoachPage() {
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
                       <SelectItem value="default">{language === 'ar' ? 'افتراضي' : 'Default'}</SelectItem>
-                      {language === 'ar' && (
-                        <SelectItem value={BACKEND_ARABIC_VOICE_ID}>
-                          {language === 'ar' ? 'الصوت العربي الذكي' : 'Arabic AI Voice'}
-                        </SelectItem>
-                      )}
+                      <SelectItem value={BACKEND_ARABIC_VOICE_ID}>
+                        {language === 'ar' ? 'الصوت العربي الذكي' : 'Arabic AI Voice'}
+                      </SelectItem>
                       {filteredVoices.length > 0 && (
                         <>
                           <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
