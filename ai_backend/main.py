@@ -1305,6 +1305,8 @@ def _is_vague_followup_query(user_input: str) -> bool:
 
 def _is_workout_plan_request(user_input: str) -> bool:
     normalized = normalize_text(user_input)
+    if _is_performance_analysis_request(user_input):
+        return False
     return (
         _contains_any(normalized, WORKOUT_PLAN_TERMS) or _contains_any(normalized, PLAN_BUILD_TERMS)
     ) and _contains_any(normalized, WORKOUT_REQUEST_TERMS)
@@ -1312,6 +1314,8 @@ def _is_workout_plan_request(user_input: str) -> bool:
 
 def _is_nutrition_plan_request(user_input: str) -> bool:
     normalized = normalize_text(user_input)
+    if _is_performance_analysis_request(user_input):
+        return False
     return (
         _contains_any(normalized, NUTRITION_PLAN_TERMS) or _contains_any(normalized, PLAN_BUILD_TERMS)
     ) and _contains_any(normalized, NUTRITION_REQUEST_TERMS)
@@ -7016,11 +7020,15 @@ async def chat(req: ChatRequest) -> ChatResponse:
     state["pending_diagnostic"] = None
     state["pending_diagnostic_conversation_id"] = None
 
-    requested_plan_type, plan_intent_meta = _resolve_plan_type_from_message(
-        routing_input,
-        recent_messages=recent_messages,
-        memory=memory,
-    )
+    performance_requested = _is_performance_analysis_request(routing_input, message_tracking_summary)
+    requested_plan_type = None
+    plan_intent_meta = None
+    if not performance_requested:
+        requested_plan_type, plan_intent_meta = _resolve_plan_type_from_message(
+            routing_input,
+            recent_messages=recent_messages,
+            memory=memory,
+        )
     if requested_plan_type in {"workout", "nutrition"}:
         inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(profile, tracking_summary)
         plan_profile = dict(profile)
@@ -7134,7 +7142,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         )
 
     # Handle numeric progress/performance analysis before routing decisions.
-    if _is_performance_analysis_request(routing_input, message_tracking_summary):
+    if performance_requested:
         performance_reply = _performance_analysis_reply(language, profile, tracking_summary)
         memory.add_assistant_message(performance_reply)
         return ChatResponse(reply=performance_reply, conversation_id=conversation_id, language=language)

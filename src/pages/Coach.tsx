@@ -711,6 +711,10 @@ export function CoachPage() {
     window.speechSynthesis.speak(utterance);
   }, [language, resolvePreferredVoice, selectedVoice, speakWithBackendTts, startListeningIfPossible]);
 
+  const voicePreviewText = selectedVoice === BACKEND_ARABIC_VOICE_ID
+    ? 'مرحبا، أنا المدرب الذكي العربي. كيف أقدر أساعدك اليوم؟'
+    : (language === 'ar' ? 'مرحبًا، أنا مدربك الشخصي' : 'Hello, I am your personal coach');
+
   const toggleVoiceMode = useCallback(() => {
     if (voiceModeRef.current) {
       setVoiceMode(false);
@@ -2125,7 +2129,7 @@ export function CoachPage() {
                       )}
                     </SelectContent>
                   </Select>
-                  <Button size="sm" variant="ghost" onClick={() => speakWithVoice(language === 'ar' ? 'مرحبًا، أنا مدربك الشخصي' : 'Hello, I am your personal coach')}>
+                  <Button size="sm" variant="ghost" onClick={() => speakWithVoice(voicePreviewText)}>
                     <Volume2 className="w-4 h-4" />
                   </Button>
                 </div>

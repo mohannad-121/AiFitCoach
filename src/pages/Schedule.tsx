@@ -364,8 +364,8 @@ export function SchedulePage() {
       : (language === 'ar' ? 'تم إنجاز بعض التمارين اليوم' : 'I completed some exercises today');
     const planPercent = planProgress?.percent ?? 0;
     const prompt = language === 'ar'
-      ? `حلل تقدمي في التمارين اليوم واعطني ملاحظات واضحة. التاريخ: ${selectedLogDate}. الخطة: ${currentPlan.title_ar || currentPlan.title}. التمارين المكتملة اليوم: ${completedNames}. تقدم اليوم: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). التقدم الكلي في الخطة: ${planPercent}%.`
-      : `Analyze my exercise progress today and give me clear feedback. Date: ${selectedLogDate}. Plan: ${currentPlan.title}. Completed exercises today: ${completedNames}. Daily progress: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). Overall plan progress: ${planPercent}%.`;
+      ? `حلل تقدمي في التمارين اليوم واعطني ملاحظات واضحة فقط بدون إنشاء خطة جديدة. التاريخ: ${selectedLogDate}. اسم التمرين الحالي: ${currentPlan.title_ar || currentPlan.title}. التمارين المكتملة اليوم: ${completedNames}. تقدم اليوم: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). التقدم الكلي في الجدول الحالي: ${planPercent}%.`
+      : `Analyze my exercise progress today and give me clear feedback only, without creating a new plan. Date: ${selectedLogDate}. Current workout title: ${currentPlan.title}. Completed exercises today: ${completedNames}. Daily progress: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). Overall progress in my current schedule: ${planPercent}%.`;
 
     navigate('/coach', {
       state: {
