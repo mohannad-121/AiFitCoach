@@ -29,6 +29,7 @@ from llm_client import LLMClient
 from logic_engine import evaluate_logic_metrics
 from memory_system import MemorySystem
 from moderation_layer import ModerationLayer
+from persistent_rag_store import PersistentRagStore
 from predict import predict_goal, predict_plan_intent, predict_success
 from response_datasets import ResponseDatasets
 from dataset_paths import resolve_dataset_root, resolve_derived_root
@@ -243,6 +244,7 @@ LLM = LLMClient()
 AI_ENGINE = AIEngine(Path(__file__).resolve().parent / "exercises.json")
 CATEGORY_DATA = DataCatalog(resolve_dataset_root(), resolve_derived_root())
 RAG_CONTEXT_BUILDER = RagContextBuilder(CATEGORY_DATA)
+PERSISTENT_RAG = PersistentRagStore(BACKEND_DIR / "data" / "rag_store")
 NUTRITION_KB = KnowledgeEngine(Path(__file__).resolve().parent / "knowledge" / "dataforproject.txt")
 RESPONSE_DATASET_DIR = _resolve_response_dataset_dir()
 RESPONSE_DATASETS = ResponseDatasets(RESPONSE_DATASET_DIR)
@@ -262,6 +264,162 @@ CHAT_RESPONSE_MODE = _resolve_chat_response_mode()
 
 def _conversation_replies_should_use_llm() -> bool:
     return CHAT_RESPONSE_MODE in {'llm', 'smart'}
+
+
+def _rag_namespace_for_user(user_id: str | None) -> str:
+    normalized = _normalize_user_id(user_id)
+    return f"user_context_{normalized}"
+
+
+def _json_text(value: Any) -> str:
+    try:
+        return json.dumps(value, ensure_ascii=False)
+    except Exception:
+        return str(value)
+
+
+def _build_app_knowledge_documents(website_context: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not isinstance(website_context, dict) or not website_context:
+        return []
+
+    docs: list[dict[str, Any]] = []
+    pages = website_context.get("pages") if isinstance(website_context.get("pages"), dict) else {}
+    for page_key, page_value in pages.items():
+        docs.append(
+            {
+                "id": f"page_{page_key}",
+                "text": f"App page {page_key}: {_json_text(page_value)}",
+                "metadata": {"kind": "app_page", "page": page_key},
+            }
+        )
+
+    for key in ("onboarding_flow", "profile_page", "workouts_page", "schedule_page", "ai_coach_capabilities"):
+        if key in website_context:
+            docs.append(
+                {
+                    "id": f"app_{key}",
+                    "text": f"App knowledge {key}: {_json_text(website_context.get(key))}",
+                    "metadata": {"kind": "app_knowledge", "section": key},
+                }
+            )
+    return docs
+
+
+def _build_user_rag_documents(
+    user_id: str,
+    profile: dict[str, Any],
+    tracking_summary: Optional[dict[str, Any]],
+    plan_snapshot: Optional[dict[str, Any]],
+    recent_messages: Optional[list[dict[str, Any]]] = None,
+) -> list[dict[str, Any]]:
+    docs: list[dict[str, Any]] = []
+    docs.append(
+        {
+            "id": f"{user_id}_profile",
+            "text": f"User profile: {_json_text(profile)}",
+            "metadata": {"kind": "profile"},
+        }
+    )
+
+    if tracking_summary:
+        docs.append(
+            {
+                "id": f"{user_id}_tracking_summary",
+                "text": f"Tracking summary: {_json_text(tracking_summary)}",
+                "metadata": {"kind": "tracking_summary"},
+            }
+        )
+
+        for index, plan in enumerate((tracking_summary.get("active_plan_details") or [])[:8]):
+            docs.append(
+                {
+                    "id": f"{user_id}_active_plan_{index}",
+                    "text": f"Active plan detail: {_json_text(plan)}",
+                    "metadata": {"kind": "active_plan_detail", "index": index},
+                }
+            )
+
+        for kind, values in (
+            ("workout_note", tracking_summary.get("recent_workout_notes") or []),
+            ("nutrition_note", tracking_summary.get("recent_nutrition_notes") or []),
+            ("mood_note", tracking_summary.get("recent_moods") or []),
+        ):
+            for index, value in enumerate(values[:10]):
+                text = str(value or "").strip()
+                if not text:
+                    continue
+                docs.append(
+                    {
+                        "id": f"{user_id}_{kind}_{index}",
+                        "text": f"{kind.replace('_', ' ')}: {text}",
+                        "metadata": {"kind": kind, "index": index},
+                    }
+                )
+
+        for index, activity in enumerate((tracking_summary.get("recent_activity") or [])[:10]):
+            docs.append(
+                {
+                    "id": f"{user_id}_activity_{index}",
+                    "text": f"Recent activity: {_json_text(activity)}",
+                    "metadata": {"kind": "recent_activity", "index": index},
+                }
+            )
+
+    if plan_snapshot:
+        docs.append(
+            {
+                "id": f"{user_id}_plan_snapshot",
+                "text": f"Plan snapshot: {_json_text(plan_snapshot)}",
+                "metadata": {"kind": "plan_snapshot"},
+            }
+        )
+
+    if recent_messages:
+        for index, msg in enumerate(recent_messages[-8:]):
+            role = str(msg.get("role") or "unknown")
+            content = str(msg.get("content") or "").strip()
+            if not content:
+                continue
+            docs.append(
+                {
+                    "id": f"{user_id}_recent_message_{index}",
+                    "text": f"Recent {role} message: {content}",
+                    "metadata": {"kind": "recent_message", "role": role, "index": index},
+                }
+            )
+
+    return docs
+
+
+def _refresh_persistent_rag_context(
+    user_id: str,
+    profile: dict[str, Any],
+    tracking_summary: Optional[dict[str, Any]],
+    plan_snapshot: Optional[dict[str, Any]],
+    website_context: Optional[dict[str, Any]],
+    recent_messages: Optional[list[dict[str, Any]]] = None,
+) -> None:
+    try:
+        app_docs = _build_app_knowledge_documents(website_context)
+        if app_docs:
+            PERSISTENT_RAG.upsert_documents("app_knowledge", app_docs, replace=True)
+
+        user_docs = _build_user_rag_documents(user_id, profile, tracking_summary, plan_snapshot, recent_messages)
+        if user_docs:
+            PERSISTENT_RAG.upsert_documents(_rag_namespace_for_user(user_id), user_docs, replace=True)
+    except Exception as exc:
+        logger.warning("Failed refreshing persistent RAG context: %s", exc)
+
+
+def _persistent_rag_hits(user_id: str, query: str, top_k: int = 3) -> list[dict[str, Any]]:
+    hits: list[dict[str, Any]] = []
+    for namespace in (_rag_namespace_for_user(user_id), "app_knowledge"):
+        for hit in PERSISTENT_RAG.search(namespace, query, top_k=top_k):
+            hit_with_namespace = dict(hit)
+            hit_with_namespace["namespace"] = namespace
+            hits.append(hit_with_namespace)
+    hits.sort(key=lambda item: float(item.get("score", 0.0)), reverse=True)
+    return hits[: max(1, top_k * 2)]
 
 
 PLAN_OPTION_PAGE_SIZE = 5
@@ -4130,10 +4288,24 @@ def _build_pending_plan_options_state(
 def _build_general_rag_context(
     user_message: str,
     profile: dict[str, Any],
+    user_id: Optional[str] = None,
     short_query: bool = False,
 ) -> str:
     blocks: list[str] = []
     max_chars = 900 if short_query else 2400
+
+    if user_id:
+        persistent_hits = _persistent_rag_hits(user_id, user_message, top_k=2 if short_query else 4)
+        if persistent_hits:
+            formatted = []
+            for hit in persistent_hits:
+                text = str(hit.get("text") or "").strip()
+                if not text:
+                    continue
+                namespace = str(hit.get("namespace") or "rag")
+                formatted.append(f"- [{namespace}] {text}")
+            if formatted:
+                blocks.append("Persistent knowledge retrieval:\n" + "\n".join(formatted))
 
     try:
         lightweight_context = RAG_CONTEXT_BUILDER.build(user_message, profile, top_k=2 if short_query else 5)
@@ -5675,6 +5847,7 @@ def _general_llm_reply(
     user_message: str,
     language: str,
     profile: dict[str, Any],
+    user_id: Optional[str],
     tracking_summary: Optional[dict[str, Any]],
     memory: MemorySystem,
     state: Optional[dict[str, Any]] = None,
@@ -5693,7 +5866,7 @@ def _general_llm_reply(
     nutrition_kb_context = _nutrition_kb_context(user_message, profile, top_k=3)
     normalized_message = normalize_text(user_message)
     short_query = len(normalized_message.split()) <= 8 and len(user_message.strip()) <= 80
-    rag_context = _build_general_rag_context(user_message, profile, short_query=short_query)
+    rag_context = _build_general_rag_context(user_message, profile, user_id=user_id, short_query=short_query)
 
     profile_summary = {
         "name": display_name or "Unknown",
@@ -6093,6 +6266,14 @@ async def chat(req: ChatRequest) -> ChatResponse:
         )
     _update_plan_snapshot_state(state, req.plan_snapshot)
     tracking_summary = state.get("last_progress_summary")
+    _refresh_persistent_rag_context(
+        user_id,
+        profile,
+        tracking_summary,
+        req.plan_snapshot,
+        req.website_context,
+        recent_messages,
+    )
 
     user_input = _repair_mojibake(req.message.strip())
     if not user_input:
@@ -6451,6 +6632,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                     user_message=user_input,
                     language=language,
                     profile=profile,
+                    user_id=user_id,
                     tracking_summary=tracking_summary,
                     memory=memory,
                     state=state,
@@ -6479,6 +6661,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             user_message=user_input,
             language=language,
             profile=profile,
+            user_id=user_id,
             tracking_summary=tracking_summary,
             memory=memory,
             state=state,
@@ -6594,6 +6777,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             user_message=f"{prompt}\n\nUser answer: {user_input}",
             language=language,
             profile=profile,
+            user_id=user_id,
             tracking_summary=tracking_summary,
             memory=memory,
             state=state,
@@ -6852,6 +7036,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         user_message=user_input,
         language=language,
         profile=profile,
+        user_id=user_id,
         tracking_summary=tracking_summary,
         memory=memory,
         state=state,
