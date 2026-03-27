@@ -114,10 +114,7 @@ function getPlanWindowStart(createdAt: string): Date | null {
   const created = new Date(createdAt);
   if (Number.isNaN(created.getTime())) return null;
   created.setHours(0, 0, 0, 0);
-  const saturdayOffset = (created.getDay() + 1) % 7;
-  const weekStart = new Date(created);
-  weekStart.setDate(created.getDate() - saturdayOffset);
-  return weekStart;
+  return created;
 }
 
 function planAppliesToDate(plan: WorkoutPlan, date: Date): boolean {

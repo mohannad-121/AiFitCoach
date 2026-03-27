@@ -6,6 +6,8 @@ export interface VoiceChatApiResponse {
   audio_path: string;
   conversation_id: string;
   language: string;
+  action?: string | null;
+  data?: Record<string, unknown> | null;
 }
 
 interface UseVoiceChatOptions {

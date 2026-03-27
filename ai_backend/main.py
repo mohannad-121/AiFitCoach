@@ -36,7 +36,7 @@ from dataset_paths import resolve_dataset_root, resolve_derived_root
 from rag_context import RagContextBuilder
 from supabase_context import SupabaseContextRepository
 from voice.stt import WhisperSTT
-from voice.tts import LocalTTS
+from voice.tts import LocalTTS, TTSError
 from voice.voice_pipeline import VoicePipeline, VoicePipelineError, VoicePipelineResult
 from nlp_utils import (
     extract_first_int,
@@ -179,6 +179,30 @@ class VoiceChatResponse(BaseModel):
     reply: str
     audio_path: str
     conversation_id: str
+    language: str
+    action: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+
+    @field_validator("reply", mode="before")
+    @classmethod
+    def _normalize_voice_reply_text(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        return _repair_mojibake(value)
+
+    @field_validator("data", mode="before")
+    @classmethod
+    def _normalize_voice_data_payload(cls, value: Any) -> Any:
+        return repair_mojibake_deep(value)
+
+
+class TextToSpeechRequest(BaseModel):
+    text: str
+    language: str = "en"
+
+
+class TextToSpeechResponse(BaseModel):
+    audio_path: str
     language: str
 
 
@@ -1272,59 +1296,16 @@ def _is_vague_followup_query(user_input: str) -> bool:
 
 def _is_workout_plan_request(user_input: str) -> bool:
     normalized = normalize_text(user_input)
-    plan_terms = {
-        "plan",
-        "program",
-        "schedule",
-        "weekly",
-        "خطة",
-        "خطه",
-        "جدول",
-        "برنامج",
-        "اسبوع",
-        "أسبوع",
-    }
-    workout_terms = {
-        "workout",
-        "training",
-        "exercise",
-        "gym",
-        "تمرين",
-        "تمارين",
-        "تدريب",
-        "عضل",
-        "عضلات",
-    }
-    return _contains_any(normalized, plan_terms) and _contains_any(normalized, workout_terms)
+    return (
+        _contains_any(normalized, WORKOUT_PLAN_TERMS) or _contains_any(normalized, PLAN_BUILD_TERMS)
+    ) and _contains_any(normalized, WORKOUT_REQUEST_TERMS)
 
 
 def _is_nutrition_plan_request(user_input: str) -> bool:
     normalized = normalize_text(user_input)
-    plan_terms = {
-        "plan",
-        "program",
-        "schedule",
-        "daily",
-        "خطة",
-        "خطه",
-        "جدول",
-        "برنامج",
-        "يومي",
-        "يومية",
-    }
-    nutrition_terms = {
-        "nutrition",
-        "diet",
-        "meal",
-        "calories",
-        "food",
-        "تغذية",
-        "وجبات",
-        "اكل",
-        "طعام",
-        "سعرات",
-    }
-    return _contains_any(normalized, plan_terms) and _contains_any(normalized, nutrition_terms)
+    return (
+        _contains_any(normalized, NUTRITION_PLAN_TERMS) or _contains_any(normalized, PLAN_BUILD_TERMS)
+    ) and _contains_any(normalized, NUTRITION_REQUEST_TERMS)
 
 
 def _is_generic_plan_request(user_input: str) -> bool:
@@ -1332,18 +1313,7 @@ def _is_generic_plan_request(user_input: str) -> bool:
     if not normalized:
         return False
 
-    plan_terms = {
-        "plan",
-        "program",
-        "schedule",
-        "routine",
-        "خطة",
-        "خطه",
-        "برنامج",
-        "جدول",
-        "بلان",
-    }
-    if not _contains_any(normalized, plan_terms):
+    if not (_contains_any(normalized, GENERIC_PLAN_TERMS) or _contains_any(normalized, PLAN_BUILD_TERMS)):
         return False
 
     # Not generic if already explicit.
@@ -1352,13 +1322,18 @@ def _is_generic_plan_request(user_input: str) -> bool:
     return True
 
 
-def _resolve_plan_type_from_message(user_input: str) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+def _resolve_plan_type_from_message(
+    user_input: str,
+    recent_messages: Optional[list[dict[str, Any]]] = None,
+    memory: Optional[MemorySystem] = None,
+) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    contextual_type = _resolve_contextual_plan_type(user_input, recent_messages, memory)
     if _is_workout_plan_request(user_input):
         return "workout", None
     if _is_nutrition_plan_request(user_input):
         return "nutrition", None
     if not _is_generic_plan_request(user_input):
-        return None, None
+        return contextual_type, None
 
     try:
         prediction = predict_plan_intent(user_input)
@@ -1367,11 +1342,175 @@ def _resolve_plan_type_from_message(user_input: str) -> tuple[Optional[str], Opt
         if predicted in {"workout", "nutrition"} and (confidence is None or confidence >= 0.50):
             return predicted, prediction
     except FileNotFoundError:
-        return None, None
+        return contextual_type, None
     except Exception:
-        return None, None
+        return contextual_type, None
 
-    return None, None
+    return contextual_type, None
+
+
+WORKOUT_PLAN_TERMS = {
+    "plan",
+    "program",
+    "schedule",
+    "weekly",
+    "routine",
+    "خطة",
+    "خطه",
+    "جدول",
+    "برنامج",
+    "اسبوع",
+    "أسبوع",
+    "روتين",
+}
+
+NUTRITION_PLAN_TERMS = {
+    "plan",
+    "program",
+    "schedule",
+    "daily",
+    "routine",
+    "خطة",
+    "خطه",
+    "جدول",
+    "برنامج",
+    "يومي",
+    "يومية",
+    "روتين",
+}
+
+GENERIC_PLAN_TERMS = WORKOUT_PLAN_TERMS | NUTRITION_PLAN_TERMS | {"بلان"}
+
+PLAN_BUILD_TERMS = {
+    "create",
+    "make",
+    "build",
+    "generate",
+    "prepare",
+    "design",
+    "write",
+    "organize",
+    "structure",
+    "turn into",
+    "اعمل",
+    "اعمللي",
+    "سوي",
+    "سوّي",
+    "جهز",
+    "جهزلي",
+    "حضّر",
+    "حضر",
+    "صمم",
+    "رتب",
+    "رتبلي",
+    "رتبها",
+    "حولها",
+    "حوّلها",
+    "اكتب",
+    "ابني",
+    "كون",
+}
+
+WORKOUT_REQUEST_TERMS = {
+    "workout",
+    "training",
+    "exercise",
+    "gym",
+    "split",
+    "session",
+    "تمرين",
+    "تمارين",
+    "تدريب",
+    "عضل",
+    "عضلات",
+    "حصة",
+    "جلسة",
+}
+
+NUTRITION_REQUEST_TERMS = {
+    "nutrition",
+    "diet",
+    "meal",
+    "meals",
+    "calories",
+    "food",
+    "protein",
+    "macros",
+    "تغذية",
+    "وجبة",
+    "وجبات",
+    "اكل",
+    "أكل",
+    "طعام",
+    "سعرات",
+    "بروتين",
+    "ماكروز",
+}
+
+PLAN_FOLLOWUP_TERMS = {
+    "organize it",
+    "organize it into a plan",
+    "structure it",
+    "make it a plan",
+    "turn it into a plan",
+    "put it in a schedule",
+    "schedule it",
+    "build it for me",
+    "build a plan from it",
+    "رتبها",
+    "رتبلي",
+    "نظمها",
+    "نظملي",
+    "حولها لخطة",
+    "حوّلها لخطة",
+    "حولها لجدول",
+    "حوّلها لجدول",
+    "نزّلها عالجدول",
+    "نزلها عالجدول",
+    "حطها بالجدول",
+    "حطها عالجدول",
+}
+
+
+def _recent_plan_context_messages(
+    recent_messages: Optional[list[dict[str, Any]]],
+    memory: Optional[MemorySystem],
+    limit: int = 6,
+) -> list[str]:
+    if recent_messages:
+        history = _normalize_recent_messages(recent_messages)
+        return [normalize_text(item.get("content", "")) for item in history[-limit:]]
+    if memory:
+        history = memory.get_conversation_history()[-limit:]
+        return [normalize_text(str(item.get("content", ""))) for item in history]
+    return []
+
+
+def _resolve_contextual_plan_type(
+    user_input: str,
+    recent_messages: Optional[list[dict[str, Any]]] = None,
+    memory: Optional[MemorySystem] = None,
+) -> Optional[str]:
+    normalized = normalize_text(user_input)
+    contextual_followup = _contains_any(normalized, PLAN_FOLLOWUP_TERMS) or (
+        _contains_any(normalized, PLAN_BUILD_TERMS)
+        and _contains_any(normalized, {"it", "this", "that", "ها", "هي", "هذي", "هاد"})
+    )
+    if not normalized or not contextual_followup:
+        return None
+
+    workout_score = 0
+    nutrition_score = 0
+    for offset, text in enumerate(reversed(_recent_plan_context_messages(recent_messages, memory))):
+        weight = max(1, 6 - offset)
+        if _contains_any(text, WORKOUT_REQUEST_TERMS):
+            workout_score += weight
+        if _contains_any(text, NUTRITION_REQUEST_TERMS):
+            nutrition_score += weight
+
+    if workout_score == 0 and nutrition_score == 0:
+        return None
+    return "workout" if workout_score >= nutrition_score else "nutrition"
 
 
 def _infer_goal_for_plan(profile: dict[str, Any], tracking_summary: Optional[dict[str, Any]]) -> tuple[str, Optional[float], bool]:
@@ -3908,30 +4047,33 @@ def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) ->
         workout_day_names = [str(d.get("day") or "") for d in workout_days if d.get("day")]
         rest_days = list(plan.get("rest_days") or [d.get("day") for d in plan.get("days", []) if not d.get("exercises")])
         sample = workout_days[0]["exercises"][:3] if workout_days else []
-        sample_text = "\n".join([f"- {_clean_plan_label(x.get('name'), 'Exercise')} ({x['sets']}x{x['reps']})" for x in sample])
+        sample_text = "\n".join([f"- {_clean_plan_label(x.get('name'), 'Exercise')} ({x['sets']} x {x['reps']})" for x in sample])
         training_days_count = len(workout_days)
         workout_days_line = " · ".join(workout_day_names) if workout_day_names else "Not specified"
 
         if language == "en":
             return (
-                f"I prepared a {training_days_count}-day workout plan for your goal.\n"
-                f"Training days: {workout_days_line}\n"
-                f"Rest days: {', '.join(rest_days) if rest_days else 'None'}\n"
-                f"Sample day:\n{sample_text}\n\n"
+                f"## {plan.get('title') or 'Workout Plan'}\n"
+                f"- Training days: {workout_days_line}\n"
+                f"- Rest days: {', '.join(rest_days) if rest_days else 'None'}\n"
+                f"- Weekly frequency: {training_days_count} days\n\n"
+                f"Sample session:\n{sample_text}\n\n"
                 "Do you want to approve this plan and add it to your schedule page?"
             )
         if language == "ar_fusha":
             return (
-                f"أعددت لك خطة تمارين لمدة {training_days_count} أيام حسب هدفك.\n"
-                f"أيام التمرين: {workout_days_line}\n"
-                f"أيام الراحة: {', '.join(rest_days) if rest_days else 'لا يوجد'}\n"
+                f"## {plan.get('title_ar') or plan.get('title') or 'خطة تمارين'}\n"
+                f"- أيام التمرين: {workout_days_line}\n"
+                f"- أيام الراحة: {', '.join(rest_days) if rest_days else 'لا يوجد'}\n"
+                f"- عدد أيام التدريب: {training_days_count}\n\n"
                 f"مثال ليوم تدريبي:\n{sample_text}\n\n"
                 "هل تريد اعتماد هذه الخطة وإضافتها إلى صفحة الجدول؟"
             )
         return (
-            f"جهزتلك خطة تمارين {training_days_count} أيام حسب هدفك.\n"
-            f"أيام التمرين: {workout_days_line}\n"
-            f"أيام الراحة: {', '.join(rest_days) if rest_days else 'ما في'}\n"
+            f"## {plan.get('title_ar') or plan.get('title') or 'خطة تمارين'}\n"
+            f"- أيام التمرين: {workout_days_line}\n"
+            f"- أيام الراحة: {', '.join(rest_days) if rest_days else 'ما في'}\n"
+            f"- عدد أيام التدريب: {training_days_count}\n\n"
             f"مثال يوم تدريبي:\n{sample_text}\n\n"
             "بدك تعتمد الخطة وتنزل مباشرة بصفحة الجدول؟"
         )
@@ -3943,20 +4085,113 @@ def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) ->
 
     if language == "en":
         return (
-            f"I prepared a nutrition plan: {calories} kcal/day, {meals_count} meals/day.\n"
+            f"## {plan.get('title') or 'Nutrition Plan'}\n"
+            f"- Daily calories: {calories} kcal\n"
+            f"- Meals per day: {meals_count}\n"
+            f"- Estimated protein: {plan.get('estimated_protein', 0)} g\n\n"
             f"Sample meals:\n{sample_text}\n\n"
             "Do you want to approve this plan and add it to your schedule page?"
         )
     if language == "ar_fusha":
         return (
-            f"أعددت لك خطة غذائية: {calories} سعرة يوميًا، {meals_count} وجبات يوميًا.\n"
+            f"## {plan.get('title_ar') or plan.get('title') or 'خطة تغذية'}\n"
+            f"- السعرات اليومية: {calories}\n"
+            f"- عدد الوجبات: {meals_count}\n"
+            f"- البروتين التقديري: {plan.get('estimated_protein', 0)} غ\n\n"
             f"عينة من الوجبات:\n{sample_text}\n\n"
             "هل تريد اعتماد هذه الخطة وإضافتها إلى صفحة الجدول؟"
         )
     return (
-        f"جهزتلك خطة أكل: {calories} سعرة باليوم، {meals_count} وجبات باليوم.\n"
+        f"## {plan.get('title_ar') or plan.get('title') or 'خطة تغذية'}\n"
+        f"- السعرات اليومية: {calories}\n"
+        f"- عدد الوجبات: {meals_count}\n"
+        f"- البروتين التقديري: {plan.get('estimated_protein', 0)} غ\n\n"
         f"عينة وجبات:\n{sample_text}\n\n"
         "بدك تعتمدها وتنزل على صفحة الجدول؟"
+    )
+
+
+def _detect_generated_plan_type(reply_text: str) -> Optional[str]:
+    normalized = normalize_text(reply_text)
+    if not normalized:
+        return None
+
+    day_mentions = sum(
+        1
+        for day_en, day_ar in WEEK_DAYS
+        if _contains_any(normalized, {normalize_text(day_en), normalize_text(day_ar)})
+    )
+    numbered_sections = len(re.findall(r"\bday\s*[1-7]\b|\bmeal\s*[1-7]\b|\bاليوم\s*[1-7]\b|\bوجبة\s*[1-7]\b", normalized))
+    if day_mentions < 2 and numbered_sections < 2:
+        return None
+
+    workout_markers = WORKOUT_REQUEST_TERMS | {"sets", "reps", "rest", "warmup", "إحماء", "عدة", "تكرار"}
+    nutrition_markers = NUTRITION_REQUEST_TERMS | {"kcal", "macro", "macros", "سناك", "فطور", "غداء", "عشاء"}
+    workout_score = int(_contains_any(normalized, workout_markers)) + int(_contains_any(normalized, WORKOUT_PLAN_TERMS))
+    nutrition_score = int(_contains_any(normalized, nutrition_markers)) + int(_contains_any(normalized, NUTRITION_PLAN_TERMS))
+
+    if workout_score == 0 and nutrition_score == 0:
+        return None
+    return "workout" if workout_score >= nutrition_score else "nutrition"
+
+
+def _build_pending_plan_response(
+    plan_type: str,
+    profile: dict[str, Any],
+    tracking_summary: Optional[dict[str, Any]],
+    language: str,
+    user_id: str,
+    conversation_id: str,
+    state: dict[str, Any],
+    memory: MemorySystem,
+) -> ChatResponse:
+    inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(profile, tracking_summary)
+    plan_profile = dict(profile)
+    plan_profile["goal"] = inferred_goal
+
+    if plan_type == "nutrition":
+        plan = _generate_nutrition_plan(plan_profile, language)
+    else:
+        plan = _generate_workout_plan(plan_profile, language)
+
+    plan = _sanitize_plan_payload(plan_type, plan, language)
+    plan_id = str(plan.get("id") or f"{plan_type}_{uuid.uuid4().hex[:10]}")
+    plan["id"] = plan_id
+    PENDING_PLANS[plan_id] = {
+        "user_id": user_id,
+        "conversation_id": conversation_id,
+        "plan_type": plan_type,
+        "plan": plan,
+        "approved": False,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    state["last_pending_plan_id"] = plan_id
+    state["pending_plan_options"] = None
+    state["pending_plan_type"] = None
+
+    reply = _format_plan_preview(plan_type, plan, language)
+    if inferred_by_ml:
+        goal_label = _profile_goal_label(inferred_goal, language)
+        confidence_text = (
+            f" ({_format_number((inferred_confidence or 0.0) * 100, 1)}%)"
+            if inferred_confidence is not None
+            else ""
+        )
+        intro = _lang_reply(
+            language,
+            f"I inferred your goal automatically from your training data: {goal_label}{confidence_text}.",
+            f"تم استنتاج هدفك تلقائيًا من بيانات التدريب: {goal_label}{confidence_text}.",
+            f"استنتجت هدفك تلقائيًا من بيانات التدريب: {goal_label}{confidence_text}.",
+        )
+        reply = f"{intro}\n\n{reply}"
+
+    memory.add_assistant_message(reply)
+    return ChatResponse(
+        reply=reply,
+        conversation_id=conversation_id,
+        language=language,
+        action="ask_plan",
+        data={"plan_id": plan_id, "plan_type": plan_type, "plan": plan},
     )
 
 
@@ -6127,7 +6362,7 @@ def _general_llm_reply(
         "active_workout_plans": (plan_snapshot or {}).get("active_workout_plans"),
         "active_nutrition_plans": (plan_snapshot or {}).get("active_nutrition_plans"),
     }
-    max_tokens = 320 if short_query else 700
+    max_tokens = 520 if short_query else 1400
     nutrition_context_limit = 1 if short_query else 3
     history_limit = 4 if short_query else 8
 
@@ -6163,6 +6398,7 @@ def _general_llm_reply(
         "When user asks about this website or app, use the provided website context as the source of truth for pages, forms, helper notes, saved note fields, and user flows.\n"
         "When user asks what the app knows about them, inspect the provided profile, tracking summary, plan snapshot, and user_saved_notes before answering.\n"
         "If a requested profile field or note is blank or missing, say it is not recorded yet instead of guessing.\n"
+        "Do not generate full workout plans, nutrition plans, or claim a plan was added to Schedule inside normal chat replies. The app handles plan creation, approval, and schedule saving outside the model.\n"
         "Keep responses concise but useful, usually 1 short intro plus 3-6 strong bullets when appropriate.\n"
         "End with one clear next action, question, or recommendation when that improves the answer.\n"
         "Prefer a direct answer over long setup text.\n"
@@ -6771,7 +7007,11 @@ async def chat(req: ChatRequest) -> ChatResponse:
     state["pending_diagnostic"] = None
     state["pending_diagnostic_conversation_id"] = None
 
-    requested_plan_type, plan_intent_meta = _resolve_plan_type_from_message(routing_input)
+    requested_plan_type, plan_intent_meta = _resolve_plan_type_from_message(
+        routing_input,
+        recent_messages=recent_messages,
+        memory=memory,
+    )
     if requested_plan_type in {"workout", "nutrition"}:
         inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(profile, tracking_summary)
         plan_profile = dict(profile)
@@ -6957,6 +7197,19 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
                     llm_reply = _ollama_unavailable_reply(language)
 
+                llm_plan_type = _detect_generated_plan_type(llm_reply)
+                if llm_plan_type:
+                    return _build_pending_plan_response(
+                        llm_plan_type,
+                        profile,
+                        tracking_summary,
+                        language,
+                        user_id,
+                        conversation_id,
+                        state,
+                        memory,
+                    )
+
                 filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
                 memory.add_assistant_message(filtered_reply)
                 return ChatResponse(reply=filtered_reply, conversation_id=conversation_id, language=language)
@@ -6985,6 +7238,19 @@ async def chat(req: ChatRequest) -> ChatResponse:
         )
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
             llm_reply = _ollama_unavailable_reply(language)
+
+        llm_plan_type = _detect_generated_plan_type(llm_reply)
+        if llm_plan_type:
+            return _build_pending_plan_response(
+                llm_plan_type,
+                profile,
+                tracking_summary,
+                language,
+                user_id,
+                conversation_id,
+                state,
+                memory,
+            )
 
         filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
         memory.add_assistant_message(filtered_reply)
@@ -7369,24 +7635,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
     return ChatResponse(reply=filtered_reply, conversation_id=conversation_id, language=language)
 
 
-async def _voice_llm_responder(
-    transcript: str,
-    language: str,
-    user_id: Optional[str],
-    conversation_id: Optional[str],
-    website_context: Optional[dict[str, Any]] = None,
-) -> tuple[str, Optional[str]]:
-    chat_req = ChatRequest(
-        message=transcript,
-        user_id=user_id,
-        conversation_id=conversation_id,
-        language=language,
-        website_context=website_context,
-    )
-    chat_resp = await chat(chat_req)
-    return chat_resp.reply, chat_resp.conversation_id
-
-
 @app.post("/voice-chat", response_model=VoiceChatResponse)
 async def voice_chat(
     audio: UploadFile = File(...),
@@ -7412,23 +7660,35 @@ async def voice_chat(
 
     suffix = Path(audio.filename or "").suffix.lower() or ".wav"
     input_audio_path = STATIC_AUDIO_DIR / f"input_{uuid.uuid4().hex}{suffix}"
+    voice_chat_payload: Optional[ChatResponse] = None
 
     try:
         with input_audio_path.open("wb") as out_file:
             shutil.copyfileobj(audio.file, out_file)
+
+        async def voice_responder(
+            transcript: str,
+            voice_language: str,
+            voice_user_id: Optional[str],
+            voice_conversation_id: Optional[str],
+        ) -> tuple[str, Optional[str]]:
+            nonlocal voice_chat_payload
+            chat_req = ChatRequest(
+                message=transcript,
+                user_id=voice_user_id,
+                conversation_id=voice_conversation_id,
+                language=voice_language,
+                website_context=parsed_website_context,
+            )
+            voice_chat_payload = await chat(chat_req)
+            return voice_chat_payload.reply, voice_chat_payload.conversation_id
 
         result: VoicePipelineResult = await VOICE_PIPELINE.run(
             audio_path=input_audio_path,
             language=lang,
             user_id=uid,
             conversation_id=conv_id,
-            llm_responder=lambda transcript, voice_language, voice_user_id, voice_conversation_id: _voice_llm_responder(
-                transcript,
-                voice_language,
-                voice_user_id,
-                voice_conversation_id,
-                parsed_website_context,
-            ),
+            llm_responder=voice_responder,
         )
 
         return VoiceChatResponse(
@@ -7437,6 +7697,8 @@ async def voice_chat(
             audio_path=result.audio_url,
             conversation_id=result.conversation_id or conv_id,
             language=lang,
+            action=voice_chat_payload.action if voice_chat_payload else None,
+            data=voice_chat_payload.data if voice_chat_payload else None,
         )
     except VoicePipelineError as exc:
         logger.warning("VOICE_CHAT_PIPELINE_ERROR user=%s conv=%s msg=%s", uid, conv_id, str(exc))
@@ -7453,6 +7715,28 @@ async def voice_chat(
             input_audio_path.unlink(missing_ok=True)
         except Exception:
             pass
+
+
+@app.post("/tts/speak", response_model=TextToSpeechResponse)
+async def tts_speak(request: TextToSpeechRequest) -> TextToSpeechResponse:
+    text = _repair_mojibake((request.text or "").strip())
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required for TTS.")
+
+    lang = "ar" if (request.language or "").lower().startswith("ar") else "en"
+
+    try:
+        audio_output_path = await asyncio.to_thread(VOICE_TTS.synthesize, text, lang)
+    except TTSError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("TTS_SPEAK_UNKNOWN_ERROR lang=%s", lang)
+        raise HTTPException(status_code=500, detail="Text-to-speech failed unexpectedly.") from exc
+
+    return TextToSpeechResponse(
+        audio_path=f"/static/audio/{audio_output_path.name}",
+        language=lang,
+    )
 
 
 @app.post("/plans/{plan_id}/approve")

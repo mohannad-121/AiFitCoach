@@ -82,6 +82,7 @@ interface DailyLogRow {
 
 const AI_BACKEND_URL = import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002';
 const NUTRITION_PREFIX = '\u{1F37D}\uFE0F';
+const BACKEND_ARABIC_VOICE_ID = '__backend_arabic_ai__';
 const WEEK_TEMPLATE = [
   { day: 'Saturday', dayAr: 'السبت' },
   { day: 'Sunday', dayAr: 'الأحد' },
@@ -223,6 +224,7 @@ const ONBOARDING_FLOW = [
 const getConversationsStorageKey = (userId: string) => `fitcoach_conversations_${userId}`;
 const getCurrentConversationStorageKey = (userId: string) => `fitcoach_current_conversation_${userId}`;
 const getLocalPlansStorageKey = (userId: string) => `fitcoach_schedule_plans_${userId}`;
+const getVoiceStorageKey = (language: 'en' | 'ar') => `fitcoach_voice_${language}`;
 
 const readLocalConversations = (userId: string): { conversations: Conversation[]; currentId: string | null } => {
   try {
@@ -272,7 +274,7 @@ export function CoachPage() {
   const [ragDebugLoading, setRagDebugLoading] = useState(false);
   const [ragDebugError, setRagDebugError] = useState('');
   const [selectedVoice, setSelectedVoice] = useState<string>(() => {
-    return localStorage.getItem('fitcoach_voice') || '';
+    return localStorage.getItem(getVoiceStorageKey(language)) || localStorage.getItem('fitcoach_voice') || '';
   });
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
@@ -435,11 +437,43 @@ export function CoachPage() {
     return () => window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices);
   }, []);
 
+  useEffect(() => {
+    const savedVoice = localStorage.getItem(getVoiceStorageKey(language)) || '';
+    setSelectedVoice(savedVoice);
+  }, [language]);
+
   // Filter voices by language
   const filteredVoices = availableVoices.filter(v => {
-    if (language === 'ar') return v.lang.startsWith('ar');
-    return v.lang.startsWith('en');
+    const voiceLang = (v.lang || '').toLowerCase();
+    if (language === 'ar') return voiceLang.startsWith('ar');
+    return voiceLang.startsWith('en');
   });
+
+  const isVoiceCompatibleWithLanguage = useCallback((voice: SpeechSynthesisVoice, targetLanguage: 'en' | 'ar') => {
+    const voiceLang = (voice.lang || '').toLowerCase();
+    return targetLanguage === 'ar' ? voiceLang.startsWith('ar') : voiceLang.startsWith('en');
+  }, []);
+
+  const resolvePreferredVoice = useCallback(() => {
+    if (selectedVoice === BACKEND_ARABIC_VOICE_ID) {
+      return undefined;
+    }
+
+    const selected = selectedVoice ? availableVoices.find((voice) => voice.name === selectedVoice) : undefined;
+    if (selected && isVoiceCompatibleWithLanguage(selected, language)) {
+      return selected;
+    }
+
+    const rankedVoices = [...filteredVoices].sort((left, right) => {
+      const leftLang = (left.lang || '').toLowerCase();
+      const rightLang = (right.lang || '').toLowerCase();
+      const leftScore = Number(leftLang === 'ar-sa' || leftLang === 'en-us') + Number(left.localService);
+      const rightScore = Number(rightLang === 'ar-sa' || rightLang === 'en-us') + Number(right.localService);
+      return rightScore - leftScore;
+    });
+
+    return rankedVoices[0];
+  }, [availableVoices, filteredVoices, isVoiceCompatibleWithLanguage, language, selectedVoice]);
 
   const handleVoiceBackendResponse = useCallback(async (payload: VoiceChatApiResponse) => {
     setPendingVoiceResponse(payload);
@@ -484,42 +518,6 @@ export function CoachPage() {
     window.speechSynthesis?.cancel();
     setIsAssistantSpeaking(false);
   }, [cancelVoiceRequest]);
-
-  const speakWithVoice = useCallback((text: string) => {
-    if (!('speechSynthesis' in window)) return;
-    const cleanText = text
-      .replace(/[#*_~`>]/g, '')
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      .replace(/```[\s\S]*?```/g, '')
-      .replace(/\n+/g, '. ')
-      .trim();
-
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-
-    if (selectedVoice && selectedVoice !== 'default') {
-      const voice = availableVoices.find(v => v.name === selectedVoice);
-      if (voice) utterance.voice = voice;
-    } else {
-      const langVoices = availableVoices.filter(v =>
-        language === 'ar' ? v.lang.startsWith('ar') : v.lang.startsWith('en')
-      );
-      if (langVoices.length > 0) utterance.voice = langVoices[0];
-      utterance.lang = language === 'ar' ? 'ar-SA' : 'en-US';
-    }
-
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.onstart = () => setIsAssistantSpeaking(true);
-    utterance.onend = () => {
-      setIsAssistantSpeaking(false);
-      if (voiceModeRef.current) {
-        window.setTimeout(() => startListeningIfPossible(), 250);
-      }
-    };
-    utterance.onerror = () => setIsAssistantSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  }, [language, selectedVoice, availableVoices, startListeningIfPossible]);
 
   const playBackendAudio = useCallback((relativePath?: string) => {
     if (!relativePath) {
@@ -567,6 +565,74 @@ export function CoachPage() {
       }
     }
   }, [startListeningIfPossible]);
+
+  const speakWithBackendTts = useCallback(async (text: string) => {
+    const response = await fetch(`${AI_BACKEND_URL}/tts/speak`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify({
+        text,
+        language,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`TTS request failed: ${response.status}`);
+    }
+
+    const payload = await response.json() as { audio_path?: string };
+    if (!payload.audio_path) {
+      throw new Error('TTS response did not include audio_path.');
+    }
+
+    playBackendAudio(payload.audio_path);
+  }, [language, playBackendAudio]);
+
+  const speakWithVoice = useCallback(async (text: string) => {
+    if (!('speechSynthesis' in window)) return;
+    const cleanText = text
+      .replace(/[#*_~`>]/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\n+/g, '. ')
+      .trim();
+
+    if (!cleanText) return;
+
+    const resolvedVoice = resolvePreferredVoice();
+
+    if (language === 'ar' && !resolvedVoice) {
+      try {
+        await speakWithBackendTts(cleanText);
+        return;
+      } catch (error) {
+        console.error('Arabic backend TTS fallback failed:', error);
+      }
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = language === 'ar' ? 'ar-SA' : 'en-US';
+
+    if (resolvedVoice) {
+      utterance.voice = resolvedVoice;
+      utterance.lang = resolvedVoice.lang || utterance.lang;
+    }
+
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.onstart = () => setIsAssistantSpeaking(true);
+    utterance.onend = () => {
+      setIsAssistantSpeaking(false);
+      if (voiceModeRef.current) {
+        window.setTimeout(() => startListeningIfPossible(), 250);
+      }
+    };
+    utterance.onerror = () => setIsAssistantSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  }, [language, resolvePreferredVoice, speakWithBackendTts, startListeningIfPossible]);
 
   const toggleVoiceMode = useCallback(() => {
     if (voiceModeRef.current) {
@@ -725,6 +791,23 @@ export function CoachPage() {
         }
       }
 
+      const pendingFromApi = extractPendingPlanFromResponse(pendingVoiceResponse);
+      if (pendingFromApi) {
+        setPendingPlan(pendingFromApi);
+      }
+
+      const approvedFromApi = extractApprovedPlanFromResponse(pendingVoiceResponse);
+      if (approvedFromApi) {
+        try {
+          await persistApprovedPlan(pendingVoiceResponse);
+        } catch (error) {
+          console.error('Failed saving approved voice plan to Supabase', error);
+        } finally {
+          setPendingPlan(null);
+          goToSchedule();
+        }
+      }
+
       if (reply && (voiceModeRef.current || autoSpeak)) {
         playBackendAudio(pendingVoiceResponse.audio_path);
       } else if (voiceModeRef.current) {
@@ -744,6 +827,7 @@ export function CoachPage() {
     autoSpeak,
     currentId,
     currentMessages,
+    goToSchedule,
     pendingVoiceResponse,
     playBackendAudio,
     focusInput,
@@ -1648,6 +1732,7 @@ export function CoachPage() {
 
   const handleVoiceSelect = (voiceName: string) => {
     setSelectedVoice(voiceName);
+    localStorage.setItem(getVoiceStorageKey(language), voiceName);
     localStorage.setItem('fitcoach_voice', voiceName);
   };
 
@@ -1805,6 +1890,11 @@ export function CoachPage() {
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
                       <SelectItem value="default">{language === 'ar' ? 'افتراضي' : 'Default'}</SelectItem>
+                      {language === 'ar' && (
+                        <SelectItem value={BACKEND_ARABIC_VOICE_ID}>
+                          {language === 'ar' ? 'الصوت العربي الذكي' : 'Arabic AI Voice'}
+                        </SelectItem>
+                      )}
                       {filteredVoices.length > 0 && (
                         <>
                           <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
