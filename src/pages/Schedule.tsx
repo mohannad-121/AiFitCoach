@@ -110,6 +110,26 @@ function planDayHasItems(day: PlanDay | null | undefined): boolean {
   return exercises + meals > 0;
 }
 
+function getPlanWindowStart(createdAt: string): Date | null {
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return null;
+  created.setHours(0, 0, 0, 0);
+  const saturdayOffset = (created.getDay() + 1) % 7;
+  const weekStart = new Date(created);
+  weekStart.setDate(created.getDate() - saturdayOffset);
+  return weekStart;
+}
+
+function planAppliesToDate(plan: WorkoutPlan, date: Date): boolean {
+  const start = getPlanWindowStart(plan.created_at);
+  if (!start) return true;
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  return target >= start && target <= end;
+}
+
 function getWeekDates(weekOffset: number): Date[] {
   const today = new Date();
   const currentDay = today.getDay(); // 0=Sun
@@ -268,6 +288,7 @@ export function SchedulePage() {
   // Find which plan day matches the selected calendar day
   const getMatchingPlanDay = (plan: WorkoutPlan | null, date: Date): { day: PlanDay; index: number } | null => {
     if (!plan) return null;
+    if (!planAppliesToDate(plan, date)) return null;
     const jsDay = date.getDay(); // 0=Sun...6=Sat
     for (let i = 0; i < plan.plan_data.length; i++) {
       if (!planDayHasItems(plan.plan_data[i])) continue;

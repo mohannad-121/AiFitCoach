@@ -7,6 +7,7 @@ import json
 import uuid
 import shutil
 import asyncio
+import math
 from functools import lru_cache
 from copy import deepcopy
 from datetime import datetime
@@ -20,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
 from ai_engine import AIEngine
+from data_catalog import DataCatalog
 from domain_router import DomainRouter
 from dataset_registry import DatasetRegistry
 from knowledge_engine import KnowledgeEngine
@@ -29,7 +31,8 @@ from memory_system import MemorySystem
 from moderation_layer import ModerationLayer
 from predict import predict_goal, predict_plan_intent, predict_success
 from response_datasets import ResponseDatasets
-from dataset_paths import resolve_dataset_root
+from dataset_paths import resolve_dataset_root, resolve_derived_root
+from rag_context import RagContextBuilder
 from voice.stt import WhisperSTT
 from voice.tts import LocalTTS
 from voice.voice_pipeline import VoicePipeline, VoicePipelineError, VoicePipelineResult
@@ -238,6 +241,8 @@ ROUTER = DomainRouter(threshold=0.42, enable_semantic=False)
 MODERATION = ModerationLayer()
 LLM = LLMClient()
 AI_ENGINE = AIEngine(Path(__file__).resolve().parent / "exercises.json")
+CATEGORY_DATA = DataCatalog(resolve_dataset_root(), resolve_derived_root())
+RAG_CONTEXT_BUILDER = RagContextBuilder(CATEGORY_DATA)
 NUTRITION_KB = KnowledgeEngine(Path(__file__).resolve().parent / "knowledge" / "dataforproject.txt")
 RESPONSE_DATASET_DIR = _resolve_response_dataset_dir()
 RESPONSE_DATASETS = ResponseDatasets(RESPONSE_DATASET_DIR)
@@ -248,7 +253,7 @@ def _resolve_chat_response_mode() -> str:
     if configured in {'dataset_only', 'hybrid', 'llm', 'smart'}:
         return configured
     if configured == 'auto':
-        return 'hybrid' if getattr(LLM, 'has_openai_key', False) else 'dataset_only'
+        return 'hybrid' if getattr(LLM, 'active_provider', '') in {'openai', 'ollama'} else 'dataset_only'
     return 'dataset_only'
 
 
@@ -257,6 +262,10 @@ CHAT_RESPONSE_MODE = _resolve_chat_response_mode()
 
 def _conversation_replies_should_use_llm() -> bool:
     return CHAT_RESPONSE_MODE in {'llm', 'smart'}
+
+
+PLAN_OPTION_PAGE_SIZE = 5
+PLAN_OPTION_POOL_TARGET = 500
 
 
 def _dataset_short_reply_allowed(user_input: str) -> bool:
@@ -3671,26 +3680,32 @@ def _generate_nutrition_plan(profile: dict[str, Any], language: str) -> dict[str
 def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) -> str:
     if plan_type == "workout":
         workout_days = [d for d in plan.get("days", []) if d.get("exercises")]
-        rest_days = [d.get("day") for d in plan.get("days", []) if not d.get("exercises")]
+        workout_day_names = [str(d.get("day") or "") for d in workout_days if d.get("day")]
+        rest_days = list(plan.get("rest_days") or [d.get("day") for d in plan.get("days", []) if not d.get("exercises")])
         sample = workout_days[0]["exercises"][:3] if workout_days else []
         sample_text = "\n".join([f"- {x['name']} ({x['sets']}x{x['reps']})" for x in sample])
+        training_days_count = len(workout_days)
+        workout_days_line = " · ".join(workout_day_names) if workout_day_names else "Not specified"
 
         if language == "en":
             return (
-                f"I prepared a 7-day workout plan for your goal.\n"
+                f"I prepared a {training_days_count}-day workout plan for your goal.\n"
+                f"Training days: {workout_days_line}\n"
                 f"Rest days: {', '.join(rest_days) if rest_days else 'None'}\n"
                 f"Sample day:\n{sample_text}\n\n"
                 "Do you want to approve this plan and add it to your schedule page?"
             )
         if language == "ar_fusha":
             return (
-                f"أعددت لك خطة تمارين لمدة 7 أيام حسب هدفك.\n"
+                f"أعددت لك خطة تمارين لمدة {training_days_count} أيام حسب هدفك.\n"
+                f"أيام التمرين: {workout_days_line}\n"
                 f"أيام الراحة: {', '.join(rest_days) if rest_days else 'لا يوجد'}\n"
                 f"مثال ليوم تدريبي:\n{sample_text}\n\n"
                 "هل تريد اعتماد هذه الخطة وإضافتها إلى صفحة الجدول؟"
             )
         return (
-            f"جهزتلك خطة تمارين 7 أيام حسب هدفك.\n"
+            f"جهزتلك خطة تمارين {training_days_count} أيام حسب هدفك.\n"
+            f"أيام التمرين: {workout_days_line}\n"
             f"أيام الراحة: {', '.join(rest_days) if rest_days else 'ما في'}\n"
             f"مثال يوم تدريبي:\n{sample_text}\n\n"
             "بدك تعتمد الخطة وتنزل مباشرة بصفحة الجدول؟"
@@ -3721,158 +3736,427 @@ def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) ->
 
 
 def _generate_workout_plan_options(profile: dict[str, Any], language: str, count: int = 5) -> list[dict[str, Any]]:
-    count = max(3, min(4, int(count or 4)))
-    options: list[dict[str, Any]] = []
-    training_options = _generate_workout_plan_options_from_training(profile, language, count)
-    if training_options:
-        options.extend(training_options)
+    target_count = max(PLAN_OPTION_PAGE_SIZE, min(PLAN_OPTION_POOL_TARGET, int(count or PLAN_OPTION_PAGE_SIZE)))
+    base_options: list[dict[str, Any]] = []
 
-    remaining = max(0, count - len(options))
+    training_options = _generate_workout_plan_options_from_training(profile, language, min(24, target_count))
+    if training_options:
+        base_options.extend(training_options)
+
+    remaining = max(0, min(120, target_count) - len(base_options))
     if remaining:
         dataset_options = _generate_workout_plan_options_from_dataset(profile, language, remaining)
-        options.extend(dataset_options)
+        base_options.extend(dataset_options)
 
-    if not options:
-        options = [_generate_workout_plan(profile, language)]
+    if not base_options:
+        base_options = [_generate_workout_plan(profile, language)]
 
-    return options[:count]
-
-    variants = [
-        {
-            "key": "balanced_strength",
-            "title": "Balanced Strength Split",
-            "title_ar": "خطة قوة متوازنة",
-            "focus_cycle": ["legs", "chest", "back", "shoulders", "core"],
-            "sets": "4",
-            "reps": "8-12",
-            "rest_seconds": 90,
-            "exercise_count": 5,
-        },
-        {
-            "key": "upper_lower",
-            "title": "Upper / Lower Split",
-            "title_ar": "خطة علوي وسفلي",
-            "focus_cycle": ["chest", "legs", "back", "legs", "shoulders"],
-            "sets": "4",
-            "reps": "6-10",
-            "rest_seconds": 120,
-            "exercise_count": 4,
-        },
-        {
-            "key": "hypertrophy_volume",
-            "title": "Hypertrophy Volume",
-            "title_ar": "خطة تضخيم حجم",
-            "focus_cycle": ["chest", "back", "legs", "shoulders", "arms"],
-            "sets": "5",
-            "reps": "10-15",
-            "rest_seconds": 75,
-            "exercise_count": 5,
-        },
-        {
-            "key": "fat_loss_circuit",
-            "title": "Fat Loss Circuit",
-            "title_ar": "خطة حرق دهون دائرية",
-            "focus_cycle": ["legs", "core", "back", "chest", "full body"],
-            "sets": "3",
-            "reps": "12-20",
-            "rest_seconds": 45,
-            "exercise_count": 6,
-        },
-        {
-            "key": "beginner_foundation",
-            "title": "Beginner Foundation",
-            "title_ar": "خطة تأسيس للمبتدئ",
-            "focus_cycle": ["full body", "legs", "back", "chest", "core"],
-            "sets": "3",
-            "reps": "10-12",
-            "rest_seconds": 75,
-            "exercise_count": 4,
-        },
-        {
-            "key": "athletic_performance",
-            "title": "Athletic Performance",
-            "title_ar": "خطة أداء رياضي",
-            "focus_cycle": ["legs", "back", "core", "shoulders", "full body"],
-            "sets": "4",
-            "reps": "6-10",
-            "rest_seconds": 90,
-            "exercise_count": 5,
-        },
-    ]
-
-    if str(profile.get("fitness_level", "")).lower() == "beginner":
-        variants = sorted(variants, key=lambda v: 0 if v["key"] == "beginner_foundation" else 1)
-    if str(profile.get("goal", "")).lower() == "fat_loss":
-        variants = sorted(variants, key=lambda v: 0 if v["key"] == "fat_loss_circuit" else 1)
-
-    selected_variants = variants[: max(1, min(count, len(variants)))]
-    rest_days = [d for d in profile.get("rest_days", ["Friday"]) if isinstance(d, str)]
-    difficulty = str(profile.get("fitness_level", "beginner")).lower()
-
-    options: list[dict[str, Any]] = []
-    for variant in selected_variants:
-        plan = _generate_workout_plan(profile, language)
-        plan["id"] = f"workout_{uuid.uuid4().hex[:10]}"
-        plan["title"] = variant["title"]
-        plan["title_ar"] = variant["title_ar"]
-        plan["rest_days"] = rest_days
-        plan_days: list[dict[str, Any]] = []
-        focus_index = 0
-
-        for english_day, arabic_day in WEEK_DAYS:
-            if english_day in rest_days:
-                plan_days.append({"day": english_day, "dayAr": arabic_day, "focus": "Rest", "exercises": []})
-                continue
-
-            focus = variant["focus_cycle"][focus_index % len(variant["focus_cycle"])]
-            focus_index += 1
-            exercise_items = _select_exercises(focus, difficulty, max_items=int(variant["exercise_count"]))
-            exercises = [
-                {
-                    "name": str(item.get("exercise", "Exercise")),
-                    "nameAr": str(item.get("exercise", "Exercise")),
-                    "sets": variant["sets"],
-                    "reps": variant["reps"],
-                    "rest_seconds": int(variant["rest_seconds"]),
-                    "notes": str(item.get("description", "")),
-                }
-                for item in exercise_items
-            ]
-            plan_days.append({"day": english_day, "dayAr": arabic_day, "focus": focus, "exercises": exercises})
-
-        plan["days"] = plan_days
-        plan["variant_key"] = variant["key"]
-        options.append(plan)
-    return options
+    return _expand_workout_option_pool(base_options, profile, language, target_count)
 
 
 def _generate_nutrition_plan_options(profile: dict[str, Any], language: str, count: int = 5) -> list[dict[str, Any]]:
-    count = max(3, min(4, int(count or 4)))
-    options: list[dict[str, Any]] = []
-    training_options = _generate_nutrition_plan_options_from_training(profile, language, count)
-    if training_options:
-        options.extend(training_options)
+    target_count = max(PLAN_OPTION_PAGE_SIZE, min(PLAN_OPTION_POOL_TARGET, int(count or PLAN_OPTION_PAGE_SIZE)))
+    base_options: list[dict[str, Any]] = []
 
-    remaining = max(0, count - len(options))
+    training_options = _generate_nutrition_plan_options_from_training(profile, language, min(24, target_count))
+    if training_options:
+        base_options.extend(training_options)
+
+    remaining = max(0, min(160, target_count) - len(base_options))
     if remaining:
         dataset_options = _generate_nutrition_plan_options_from_dataset(profile, language, remaining)
-        options.extend(dataset_options)
+        base_options.extend(dataset_options)
 
-    if not options:
-        options = [_generate_nutrition_plan(profile, language)]
+    if not base_options:
+        base_options = [_generate_nutrition_plan(profile, language)]
 
-    return options[:count]
+    return _expand_nutrition_option_pool(base_options, profile, language, target_count)
 
-    styles = [
-        {"key": "balanced", "title": "Balanced Daily Nutrition", "title_ar": "خطة تغذية متوازنة", "calorie_shift": 0, "protein_mul": 1.00, "carb_mul": 1.00, "fat_mul": 1.00},
-        {"key": "high_protein", "title": "High Protein Plan", "title_ar": "خطة بروتين عالي", "calorie_shift": 80, "protein_mul": 1.20, "carb_mul": 0.90, "fat_mul": 0.95},
-        {"key": "cutting_lean", "title": "Lean Cutting Plan", "title_ar": "خطة تنشيف", "calorie_shift": -180, "protein_mul": 1.15, "carb_mul": 0.80, "fat_mul": 0.90},
-        {"key": "mass_gain", "title": "Mass Gain Plan", "title_ar": "خطة زيادة كتلة", "calorie_shift": 220, "protein_mul": 1.10, "carb_mul": 1.20, "fat_mul": 1.05},
-        {"key": "low_gi", "title": "Low GI Plan", "title_ar": "خطة مؤشر سكري منخفض", "calorie_shift": -60, "protein_mul": 1.05, "carb_mul": 0.85, "fat_mul": 1.00},
-        {"key": "budget", "title": "Budget Friendly Plan", "title_ar": "خطة اقتصادية", "calorie_shift": 0, "protein_mul": 1.00, "carb_mul": 1.05, "fat_mul": 0.95},
+
+def _preferred_training_days(profile: dict[str, Any], fallback: int = 3) -> int:
+    raw = profile.get("training_days_per_week") or profile.get("trainingDaysPerWeek") or fallback
+    try:
+        days = int(float(raw))
+    except (TypeError, ValueError):
+        days = fallback
+    return max(1, min(7, days))
+
+
+def _rotated_training_day_names(days_per_week: int, rotation: int) -> list[str]:
+    base_patterns = {
+        1: [0],
+        2: [0, 3],
+        3: [0, 2, 4],
+        4: [0, 1, 3, 5],
+        5: [0, 1, 2, 4, 6],
+        6: [0, 1, 2, 3, 4, 6],
+        7: [0, 1, 2, 3, 4, 5, 6],
+    }
+    days_per_week = max(1, min(7, days_per_week))
+    rotated = sorted({(index + rotation) % 7 for index in base_patterns[days_per_week]})
+    if len(rotated) < days_per_week:
+        for index in range(7):
+            if index not in rotated:
+                rotated.append(index)
+            if len(rotated) >= days_per_week:
+                break
+        rotated.sort()
+    return [WEEK_DAYS[index][0] for index in rotated[:days_per_week]]
+
+
+def _workout_option_signature(plan: dict[str, Any]) -> str:
+    days = []
+    for day in plan.get("days", []):
+        days.append(
+            {
+                "day": day.get("day"),
+                "focus": day.get("focus"),
+                "exercises": [
+                    {
+                        "name": ex.get("name"),
+                        "sets": ex.get("sets"),
+                        "reps": ex.get("reps"),
+                    }
+                    for ex in day.get("exercises", [])
+                ],
+            }
+        )
+    return json.dumps(days, ensure_ascii=False, sort_keys=True)
+
+
+def _nutrition_option_signature(plan: dict[str, Any]) -> str:
+    days = []
+    for day in plan.get("days", []):
+        days.append(
+            {
+                "day": day.get("day"),
+                "meals": [
+                    {
+                        "name": meal.get("name"),
+                        "calories": meal.get("calories"),
+                    }
+                    for meal in day.get("meals", [])
+                ],
+            }
+        )
+    summary = {
+        "daily_calories": plan.get("daily_calories"),
+        "estimated_protein": plan.get("estimated_protein"),
+        "days": days,
+    }
+    return json.dumps(summary, ensure_ascii=False, sort_keys=True)
+
+
+def _build_workout_exercise_pool(profile: dict[str, Any], limit: int = 120) -> list[dict[str, Any]]:
+    pool: list[dict[str, Any]] = []
+    seen_names: set[str] = set()
+
+    def _push(items: list[dict[str, Any]]) -> None:
+        for item in items:
+            name = str(item.get("exercise") or item.get("name") or "").strip()
+            if not name or name in seen_names:
+                continue
+            seen_names.add(name)
+            pool.append(item)
+            if len(pool) >= limit:
+                break
+
+    if _training_pipeline_ready():
+        try:
+            _push(training_pipeline.get_personalized_exercises(profile, limit=limit))
+        except Exception as exc:
+            logger.warning("Workout exercise pool retrieval failed: %s", exc)
+
+    difficulty = str(profile.get("fitness_level") or profile.get("fitnessLevel") or "").lower() or None
+    for focus in _focus_keywords_for_goal(str(profile.get("goal") or "general_fitness")) + ["full body", "cardio", "core"]:
+        if len(pool) >= limit:
+            break
+        _push(CATEGORY_DATA.search_exercises(focus, difficulty=difficulty, limit=max(8, limit // 6)))
+
+    if len(pool) < limit:
+        _push(AI_ENGINE.exercises[:limit])
+
+    return pool[:limit]
+
+
+def _build_mutated_workout_exercises(
+    base_day: dict[str, Any],
+    exercise_pool: list[dict[str, Any]],
+    focus: str,
+    scheme: dict[str, Any],
+    variant_index: int,
+) -> list[dict[str, Any]]:
+    base_exercises = [item for item in base_day.get("exercises", []) if isinstance(item, dict)]
+    target_count = max(3, min(6, int(scheme.get("exercise_count", len(base_exercises) or 4))))
+    focus_norm = normalize_text(focus)
+
+    matching_pool = [
+        item
+        for item in exercise_pool
+        if focus_norm in normalize_text(
+            " ".join(
+                [
+                    str(item.get("exercise") or item.get("name") or ""),
+                    str(item.get("muscle") or item.get("type") or ""),
+                ]
+            )
+        )
+    ]
+    candidates = matching_pool or exercise_pool
+    if not candidates and not base_exercises:
+        return []
+
+    offset = variant_index % max(1, len(candidates) or 1)
+    mutated: list[dict[str, Any]] = []
+    used_names: set[str] = set()
+    for index in range(target_count):
+        use_candidate = bool(candidates) and (not base_exercises or ((index + variant_index) % 2 == 1 or index >= len(base_exercises)))
+        if use_candidate:
+            candidate = candidates[(offset + index) % len(candidates)]
+            name = str(candidate.get("exercise") or candidate.get("name") or "Exercise")
+            notes = str(candidate.get("description") or candidate.get("why_recommended") or "")
+            exercise = {
+                "name": name,
+                "nameAr": name,
+                "sets": str(scheme.get("sets", "4")),
+                "reps": str(scheme.get("reps", "8-12")),
+                "rest_seconds": int(scheme.get("rest_seconds", 75)),
+                "notes": notes,
+            }
+        else:
+            source = base_exercises[(index + variant_index) % len(base_exercises)]
+            exercise = {
+                **source,
+                "sets": str(scheme.get("sets", source.get("sets") or "4")),
+                "reps": str(scheme.get("reps", source.get("reps") or "8-12")),
+                "rest_seconds": int(scheme.get("rest_seconds", source.get("rest_seconds") or 75)),
+            }
+
+        exercise_name = str(exercise.get("name") or "Exercise").strip()
+        if not exercise_name or exercise_name in used_names:
+            continue
+        used_names.add(exercise_name)
+        mutated.append(exercise)
+
+    if mutated:
+        return mutated
+    return base_exercises[:target_count]
+
+
+def _expand_workout_option_pool(
+    base_options: list[dict[str, Any]],
+    profile: dict[str, Any],
+    language: str,
+    target_count: int,
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    seen_signatures: set[str] = set()
+
+    for option in base_options:
+        signature = _workout_option_signature(option)
+        if signature in seen_signatures:
+            continue
+        seen_signatures.add(signature)
+        results.append(option)
+        if len(results) >= target_count:
+            return results[:target_count]
+
+    training_days = _preferred_training_days(
+        profile,
+        fallback=max((len([d for d in option.get("days", []) if d.get("exercises")]) for option in base_options), default=3),
+    )
+    exercise_pool = _build_workout_exercise_pool(profile)
+    schemes = [
+        {"key": "strength", "label_en": "Strength Focus", "label_ar": "تركيز قوة", "sets": "5", "reps": "5-8", "rest_seconds": 120, "exercise_count": 4},
+        {"key": "hypertrophy", "label_en": "Hypertrophy", "label_ar": "تضخيم", "sets": "4", "reps": "8-12", "rest_seconds": 75, "exercise_count": 5},
+        {"key": "conditioning", "label_en": "Conditioning", "label_ar": "تكييف", "sets": "3", "reps": "12-18", "rest_seconds": 45, "exercise_count": 5},
+        {"key": "volume", "label_en": "Volume Build", "label_ar": "بناء حجم", "sets": "5", "reps": "10-15", "rest_seconds": 60, "exercise_count": 6},
+        {"key": "power", "label_en": "Power Emphasis", "label_ar": "تركيز قدرة", "sets": "4", "reps": "4-6", "rest_seconds": 135, "exercise_count": 4},
+        {"key": "lean", "label_en": "Lean Burn", "label_ar": "حرق رشيق", "sets": "3", "reps": "15-20", "rest_seconds": 40, "exercise_count": 5},
+        {"key": "balanced", "label_en": "Balanced Week", "label_ar": "أسبوع متوازن", "sets": "4", "reps": "8-10", "rest_seconds": 80, "exercise_count": 5},
+        {"key": "efficient", "label_en": "Efficient Split", "label_ar": "تقسيم فعال", "sets": "3", "reps": "10-12", "rest_seconds": 60, "exercise_count": 4},
+        {"key": "athletic", "label_en": "Athletic Performance", "label_ar": "أداء رياضي", "sets": "4", "reps": "6-10", "rest_seconds": 90, "exercise_count": 5},
+        {"key": "recovery", "label_en": "Recovery-Friendly", "label_ar": "مراعية للتعافي", "sets": "3", "reps": "8-12", "rest_seconds": 75, "exercise_count": 4},
     ]
 
-    goal = str(profile.get("goal", "")).lower()
+    variant_index = 0
+    max_attempts = target_count * 12
+    while len(results) < target_count and variant_index < max_attempts:
+        base = base_options[variant_index % len(base_options)]
+        scheme = schemes[(variant_index // max(1, len(base_options))) % len(schemes)]
+        day_rotation = (variant_index // max(1, len(base_options) * len(schemes))) % 7
+        active_names = _rotated_training_day_names(training_days, day_rotation)
+        active_days = [day for day in base.get("days", []) if day.get("exercises")]
+        if not active_days:
+            active_days = [{"focus": focus, "exercises": []} for focus in _focus_keywords_for_goal(str(profile.get("goal") or "general_fitness"))]
+
+        remapped_days: list[dict[str, Any]] = []
+        for day_index, day_name in enumerate(active_names):
+            base_day = active_days[day_index % len(active_days)]
+            day_ar = next((arabic for english, arabic in WEEK_DAYS if english == day_name), day_name)
+            focus = str(base_day.get("focus") or _focus_keywords_for_goal(str(profile.get("goal") or "general_fitness"))[day_index % len(_focus_keywords_for_goal(str(profile.get("goal") or "general_fitness")))])
+            exercises = _build_mutated_workout_exercises(base_day, exercise_pool, focus, scheme, variant_index + day_index)
+            if not exercises:
+                continue
+            remapped_days.append({
+                "day": day_name,
+                "dayAr": day_ar,
+                "focus": focus,
+                "exercises": exercises,
+            })
+
+        if not remapped_days:
+            variant_index += 1
+            continue
+
+        plan = deepcopy(base)
+        label_en = scheme["label_en"]
+        label_ar = scheme["label_ar"]
+        plan["id"] = f"workout_{uuid.uuid4().hex[:10]}"
+        plan["title"] = f"{str(base.get('title') or 'Workout Plan')} - {label_en} {variant_index + 1}"
+        plan["title_ar"] = f"{str(base.get('title_ar') or base.get('title') or 'خطة تمارين')} - {label_ar} {variant_index + 1}"
+        plan["days"] = remapped_days
+        plan["rest_days"] = [day_en for day_en, _ in WEEK_DAYS if day_en not in {day['day'] for day in remapped_days}]
+        plan["training_days_per_week"] = len(remapped_days)
+        plan["source"] = f"{base.get('source', 'dataset')}_expanded_pool"
+        plan["pool_variant"] = scheme["key"]
+        signature = _workout_option_signature(plan)
+        if signature not in seen_signatures:
+            seen_signatures.add(signature)
+            results.append(plan)
+        variant_index += 1
+
+    return results[:target_count]
+
+
+def _expand_nutrition_option_pool(
+    base_options: list[dict[str, Any]],
+    profile: dict[str, Any],
+    language: str,
+    target_count: int,
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    seen_signatures: set[str] = set()
+    styles = [
+        {"key": "balanced", "title_en": "Balanced", "title_ar": "متوازن", "calorie_shift": 0, "protein_mul": 1.00, "meal_shift": 0},
+        {"key": "high_protein", "title_en": "High Protein", "title_ar": "عالي البروتين", "calorie_shift": 90, "protein_mul": 1.20, "meal_shift": 1},
+        {"key": "cutting", "title_en": "Cutting", "title_ar": "تنشيف", "calorie_shift": -180, "protein_mul": 1.15, "meal_shift": 2},
+        {"key": "lean_bulk", "title_en": "Lean Bulk", "title_ar": "زيادة نظيفة", "calorie_shift": 220, "protein_mul": 1.10, "meal_shift": 3},
+        {"key": "performance", "title_en": "Performance Fuel", "title_ar": "وقود الأداء", "calorie_shift": 140, "protein_mul": 1.05, "meal_shift": 1},
+        {"key": "light", "title_en": "Light Daily", "title_ar": "خفيف يومي", "calorie_shift": -90, "protein_mul": 1.00, "meal_shift": 2},
+        {"key": "recovery", "title_en": "Recovery Support", "title_ar": "دعم التعافي", "calorie_shift": 70, "protein_mul": 1.18, "meal_shift": 0},
+        {"key": "budget", "title_en": "Budget Friendly", "title_ar": "اقتصادي", "calorie_shift": 0, "protein_mul": 1.00, "meal_shift": 4},
+        {"key": "mediterranean", "title_en": "Mediterranean Style", "title_ar": "أسلوب متوسطي", "calorie_shift": 30, "protein_mul": 1.02, "meal_shift": 1},
+        {"key": "steady", "title_en": "Steady Energy", "title_ar": "طاقة ثابتة", "calorie_shift": 40, "protein_mul": 1.06, "meal_shift": 2},
+    ]
+
+    for base in base_options:
+        signature = _nutrition_option_signature(base)
+        if signature in seen_signatures:
+            continue
+        seen_signatures.add(signature)
+        results.append(base)
+        if len(results) >= target_count:
+            return results[:target_count]
+
+    for base in base_options:
+        for style_index, style in enumerate(styles):
+            for meal_rotation in range(7):
+                if len(results) >= target_count:
+                    break
+                plan = deepcopy(base)
+                plan["id"] = f"nutrition_{uuid.uuid4().hex[:10]}"
+                rotation_label_en = "" if meal_rotation == 0 else f" Cycle {meal_rotation + 1}"
+                rotation_label_ar = "" if meal_rotation == 0 else f" دورة {meal_rotation + 1}"
+                plan["title"] = f"{str(base.get('title') or 'Nutrition Plan')} - {style['title_en']}{rotation_label_en}"
+                plan["title_ar"] = f"{str(base.get('title_ar') or base.get('title') or 'خطة تغذية')} - {style['title_ar']}{rotation_label_ar}"
+                plan["daily_calories"] = max(1200, int(_to_float(base.get("daily_calories")) or 2000) + int(style["calorie_shift"]) + (meal_rotation * 20))
+                plan["estimated_protein"] = max(80, int(round(((_to_float(base.get("estimated_protein")) or 140) * float(style["protein_mul"])) + (meal_rotation * 3))))
+                remapped_days: list[dict[str, Any]] = []
+                for day in plan.get("days", []):
+                    meals = [meal for meal in day.get("meals", []) if isinstance(meal, dict)]
+                    if meals:
+                        shift = (style["meal_shift"] + style_index + meal_rotation) % len(meals)
+                        meals = meals[shift:] + meals[:shift]
+                    updated_meals = []
+                    for meal_index, meal in enumerate(meals):
+                        meal_calories = max(100, int(round((_to_float(meal.get("calories")) or 350) + (style["calorie_shift"] / max(1, len(meals) or 1)) + (meal_rotation * 8))))
+                        updated_meals.append({
+                            **meal,
+                            "calories": str(meal_calories),
+                            "time": str(meal.get("time") or f"meal_{meal_index + 1}"),
+                        })
+                    remapped_days.append({**day, "meals": updated_meals})
+                plan["days"] = remapped_days
+                plan["source"] = f"{base.get('source', 'dataset')}_expanded_pool"
+                plan["pool_variant"] = f"{style['key']}_{meal_rotation}"
+                signature = _nutrition_option_signature(plan)
+                if signature in seen_signatures:
+                    continue
+                seen_signatures.add(signature)
+                results.append(plan)
+            if len(results) >= target_count:
+                break
+        if len(results) >= target_count:
+            break
+
+    return results[:target_count]
+
+
+def _build_pending_plan_options_state(
+    plan_type: str,
+    all_options: list[dict[str, Any]],
+    conversation_id: str,
+    page: int = 0,
+) -> dict[str, Any]:
+    cleaned_options = [deepcopy(option) for option in all_options if isinstance(option, dict)]
+    total_options = len(cleaned_options)
+    total_pages = max(1, math.ceil(total_options / PLAN_OPTION_PAGE_SIZE))
+    normalized_page = page % total_pages if total_options else 0
+    start = normalized_page * PLAN_OPTION_PAGE_SIZE
+    visible_options = cleaned_options[start:start + PLAN_OPTION_PAGE_SIZE]
+    return {
+        "plan_type": plan_type,
+        "all_options": cleaned_options,
+        "options": visible_options,
+        "page": normalized_page,
+        "page_size": PLAN_OPTION_PAGE_SIZE,
+        "total_options": total_options,
+        "total_pages": total_pages,
+        "conversation_id": conversation_id,
+    }
+
+
+def _build_general_rag_context(
+    user_message: str,
+    profile: dict[str, Any],
+    short_query: bool = False,
+) -> str:
+    blocks: list[str] = []
+    max_chars = 900 if short_query else 2400
+
+    try:
+        lightweight_context = RAG_CONTEXT_BUILDER.build(user_message, profile, top_k=2 if short_query else 5)
+        if lightweight_context:
+            blocks.append(f"Catalog retrieval:\n{lightweight_context}")
+    except Exception as exc:
+        logger.warning("Catalog RAG context build failed: %s", exc)
+
+    if _training_pipeline_ready():
+        try:
+            training_context = training_pipeline.build_rag_context(user_message, profile)
+            if training_context:
+                blocks.append(f"Trained dataset retrieval:\n{training_context}")
+        except Exception as exc:
+            logger.warning("Training RAG context build failed: %s", exc)
+
+    if not blocks:
+        return ""
+
+    combined = "\n\n".join(blocks)
+    if len(combined) > max_chars:
+        combined = combined[:max_chars].rstrip() + "..."
+    return combined
     if goal == "fat_loss":
         styles = sorted(styles, key=lambda s: 0 if s["key"] == "cutting_lean" else 1)
     elif goal == "muscle_gain":
@@ -3912,7 +4196,14 @@ def _generate_nutrition_plan_options(profile: dict[str, Any], language: str, cou
     return options
 
 
-def _format_plan_options_preview(plan_type: str, options: list[dict[str, Any]], language: str) -> str:
+def _format_plan_options_preview(
+    plan_type: str,
+    options: list[dict[str, Any]],
+    language: str,
+    page: int = 0,
+    total_pages: int = 1,
+    total_options: Optional[int] = None,
+) -> str:
     if not options:
         if language == "en":
             return "I could not generate options right now. Please retry."
@@ -3954,22 +4245,25 @@ def _format_plan_options_preview(plan_type: str, options: list[dict[str, Any]], 
             )
 
     options_text = "\n".join(lines)
+    header_suffix_en = f" Page {page + 1}/{max(1, total_pages)}" if total_pages > 1 else ""
+    header_suffix_ar = f" صفحة {page + 1}/{max(1, total_pages)}" if total_pages > 1 else ""
+    total_options = total_options if total_options is not None else len(options)
     if language == "en":
         return (
-            "I prepared multiple options for you:\n"
+            f"I prepared multiple options for you ({total_options} total).{header_suffix_en}\n"
             f"{options_text}\n\n"
-            "Reply with the option number you want (for example: 1)."
+            "Reply with the option number you want (for example: 1). Say 'more options' to see the next page."
         )
     if language == "ar_fusha":
         return (
-            "أعددت لك عدة خيارات:\n"
+            f"أعددت لك عدة خيارات ({total_options} إجمالًا).{header_suffix_ar}\n"
             f"{options_text}\n\n"
-            "أرسل رقم الخيار الذي تريده (مثال: 1)."
+            "أرسل رقم الخيار الذي تريده (مثال: 1). ويمكنك قول: خيارات أكثر لعرض الصفحة التالية."
         )
     return (
-        "جهزتلك كذا خيار:\n"
+        f"جهزتلك كذا خيار ({total_options} بالمجموع).{header_suffix_ar}\n"
         f"{options_text}\n\n"
-        "ابعت رقم الخيار اللي بدك ياه (مثال: 1)."
+        "ابعت رقم الخيار اللي بدك ياه (مثال: 1). وإذا بدك صفحة ثانية احكي: خيارات أكثر."
     )
 
 
@@ -5399,6 +5693,7 @@ def _general_llm_reply(
     nutrition_kb_context = _nutrition_kb_context(user_message, profile, top_k=3)
     normalized_message = normalize_text(user_message)
     short_query = len(normalized_message.split()) <= 8 and len(user_message.strip()) <= 80
+    rag_context = _build_general_rag_context(user_message, profile, short_query=short_query)
 
     profile_summary = {
         "name": display_name or "Unknown",
@@ -5457,6 +5752,7 @@ def _general_llm_reply(
         "Compare recent data against the goal, calculate the rate of progress, classify status (On track / Ahead / Behind), and estimate weeks remaining when data is sufficient.\n"
         "Never guess missing metrics; explicitly ask for the exact missing fields.\n"
         "When nutrition knowledge snippets are provided in context, prioritize them over generic advice.\n"
+        "When RAG retrieval snippets are provided, treat them as primary evidence and do not contradict them unless the user gives newer direct data.\n"
         "If progress is weak or user reports no body change, ask about sleep, hydration, meal adherence, and workout execution before giving final advice.\n"
         "When user asks about exercises, guide them and mention they can use /workouts for muscle-specific exercise explorer.\n"
         "Ground your advice in the provided dataset context, nutrition snippets, and recent messages.\n"
@@ -5480,6 +5776,8 @@ def _general_llm_reply(
     if nutrition_kb_context:
         context_lines.append("Nutrition reference snippets (from DATAFORPROJECT.pdf):")
         context_lines.append("\n".join(nutrition_kb_context.splitlines()[: nutrition_context_limit * 4]))
+    if rag_context:
+        context_lines.append(f"Retrieved RAG context:\n{rag_context}")
     if website_context_text:
         context_lines.append(f"Website/app context (JSON): {website_context_text}")
     messages = [{"role": "system", "content": system_prompt + '\n'.join(context_lines)}]
@@ -5839,7 +6137,11 @@ async def chat(req: ChatRequest) -> ChatResponse:
             pending_options_payload = None
     if pending_options_payload:
         pending_options = pending_options_payload.get("options", [])
+        pending_all_options = pending_options_payload.get("all_options", pending_options)
         pending_options_type = str(pending_options_payload.get("plan_type", "workout"))
+        pending_page = int(pending_options_payload.get("page", 0) or 0)
+        pending_total_pages = int(pending_options_payload.get("total_pages", 1) or 1)
+        pending_total_options = int(pending_options_payload.get("total_options", len(pending_all_options)) or len(pending_all_options))
         selected_idx = _extract_plan_choice_index(user_input, len(pending_options))
 
         if selected_idx is not None:
@@ -5868,34 +6170,57 @@ async def chat(req: ChatRequest) -> ChatResponse:
             )
 
         if _contains_any(routing_input, PLAN_REFRESH_KEYWORDS):
-            profile = _build_profile(req, state)
-            if pending_options_type == "nutrition":
-                refreshed_options = _generate_nutrition_plan_options(profile, language, count=5)
-            else:
-                refreshed_options = _generate_workout_plan_options(profile, language, count=5)
-            state["pending_plan_options"] = {
-                "plan_type": pending_options_type,
-                "options": refreshed_options,
-                "conversation_id": conversation_id,
-            }
-            reply = _format_plan_options_preview(pending_options_type, refreshed_options, language)
+            next_payload = _build_pending_plan_options_state(
+                pending_options_type,
+                pending_all_options,
+                conversation_id,
+                page=pending_page + 1,
+            )
+            state["pending_plan_options"] = next_payload
+            reply = _format_plan_options_preview(
+                pending_options_type,
+                next_payload["options"],
+                language,
+                page=next_payload["page"],
+                total_pages=next_payload["total_pages"],
+                total_options=next_payload["total_options"],
+            )
             memory.add_assistant_message(reply)
             return ChatResponse(
                 reply=reply,
                 conversation_id=conversation_id,
                 language=language,
                 action="choose_plan",
-                data={"plan_type": pending_options_type, "options_count": len(refreshed_options)},
+                data={
+                    "plan_type": pending_options_type,
+                    "options_count": len(next_payload["options"]),
+                    "total_options": next_payload["total_options"],
+                    "page": next_payload["page"],
+                    "total_pages": next_payload["total_pages"],
+                },
             )
 
-        reply = _format_plan_options_preview(pending_options_type, pending_options, language)
+        reply = _format_plan_options_preview(
+            pending_options_type,
+            pending_options,
+            language,
+            page=pending_page,
+            total_pages=pending_total_pages,
+            total_options=pending_total_options,
+        )
         memory.add_assistant_message(reply)
         return ChatResponse(
             reply=reply,
             conversation_id=conversation_id,
             language=language,
             action="choose_plan",
-            data={"plan_type": pending_options_type, "options_count": len(pending_options)},
+            data={
+                "plan_type": pending_options_type,
+                "options_count": len(pending_options),
+                "total_options": pending_total_options,
+                "page": pending_page,
+                "total_pages": pending_total_pages,
+            },
         )
 
     latest_plan_id = state.get("last_pending_plan_id")
@@ -5957,9 +6282,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
         plan_profile["goal"] = inferred_goal
 
         if requested_plan_type == "workout":
-            options = _generate_workout_plan_options(plan_profile, language, count=5)
+            options = _generate_workout_plan_options(plan_profile, language, count=PLAN_OPTION_POOL_TARGET)
         else:
-            options = _generate_nutrition_plan_options(plan_profile, language, count=5)
+            options = _generate_nutrition_plan_options(plan_profile, language, count=PLAN_OPTION_POOL_TARGET)
 
         if not options:
             reply = _dataset_intent_response("out_of_scope", language, seed=user_input) or _dataset_fallback_reply(
@@ -5968,15 +6293,19 @@ async def chat(req: ChatRequest) -> ChatResponse:
             memory.add_assistant_message(reply)
             return ChatResponse(reply=reply, conversation_id=conversation_id, language=language)
 
-        state["pending_plan_options"] = {
-            "plan_type": requested_plan_type,
-            "options": options,
-            "conversation_id": conversation_id,
-        }
+        pending_payload = _build_pending_plan_options_state(requested_plan_type, options, conversation_id)
+        state["pending_plan_options"] = pending_payload
         if inferred_by_ml:
             state["inferred_goal"] = inferred_goal
 
-        reply = _format_plan_options_preview(requested_plan_type, options, language)
+        reply = _format_plan_options_preview(
+            requested_plan_type,
+            pending_payload["options"],
+            language,
+            page=pending_payload["page"],
+            total_pages=pending_payload["total_pages"],
+            total_options=pending_payload["total_options"],
+        )
 
         info_lines: list[str] = []
         if inferred_by_ml:
@@ -6024,7 +6353,10 @@ async def chat(req: ChatRequest) -> ChatResponse:
             action="choose_plan",
             data={
                 "plan_type": requested_plan_type,
-                "options_count": len(options),
+                "options_count": len(pending_payload["options"]),
+                "total_options": pending_payload["total_options"],
+                "page": pending_payload["page"],
+                "total_pages": pending_payload["total_pages"],
                 "inferred_goal": inferred_goal,
                 "inferred_goal_confidence": inferred_confidence,
                 "plan_intent_prediction": plan_intent_meta or {},
@@ -6191,20 +6523,34 @@ async def chat(req: ChatRequest) -> ChatResponse:
                         data={"missing_field": missing[0], "plan_type": pending_plan_type},
                     )
                 if pending_plan_type == "workout":
-                    options = _generate_workout_plan_options(profile, language, count=5)
+                    options = _generate_workout_plan_options(profile, language, count=PLAN_OPTION_POOL_TARGET)
                 else:
-                    options = _generate_nutrition_plan_options(profile, language, count=5)
+                    options = _generate_nutrition_plan_options(profile, language, count=PLAN_OPTION_POOL_TARGET)
 
-                state["pending_plan_options"] = {"plan_type": pending_plan_type, "options": options}
+                pending_payload = _build_pending_plan_options_state(pending_plan_type, options, conversation_id)
+                state["pending_plan_options"] = pending_payload
                 state["pending_plan_type"] = None
-                reply = _format_plan_options_preview(pending_plan_type, options, language)
+                reply = _format_plan_options_preview(
+                    pending_plan_type,
+                    pending_payload["options"],
+                    language,
+                    page=pending_payload["page"],
+                    total_pages=pending_payload["total_pages"],
+                    total_options=pending_payload["total_options"],
+                )
                 memory.add_assistant_message(reply)
                 return ChatResponse(
                     reply=reply,
                     conversation_id=conversation_id,
                     language=language,
                     action="choose_plan",
-                    data={"plan_type": pending_plan_type, "options_count": len(options)},
+                    data={
+                        "plan_type": pending_plan_type,
+                        "options_count": len(pending_payload["options"]),
+                        "total_options": pending_payload["total_options"],
+                        "page": pending_payload["page"],
+                        "total_pages": pending_payload["total_pages"],
+                    },
                 )
         else:
             question = _missing_field_question(pending_field, language)
@@ -6392,17 +6738,31 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 data={"missing_field": missing[0], "plan_type": "workout"},
             )
 
-        options = _generate_workout_plan_options(profile, language, count=5)
-        state["pending_plan_options"] = {"plan_type": "workout", "options": options}
+        options = _generate_workout_plan_options(profile, language, count=PLAN_OPTION_POOL_TARGET)
+        pending_payload = _build_pending_plan_options_state("workout", options, conversation_id)
+        state["pending_plan_options"] = pending_payload
         state["pending_plan_type"] = None
-        reply = _format_plan_options_preview("workout", options, language)
+        reply = _format_plan_options_preview(
+            "workout",
+            pending_payload["options"],
+            language,
+            page=pending_payload["page"],
+            total_pages=pending_payload["total_pages"],
+            total_options=pending_payload["total_options"],
+        )
         memory.add_assistant_message(reply)
         return ChatResponse(
             reply=reply,
             conversation_id=conversation_id,
             language=language,
             action="choose_plan",
-            data={"plan_type": "workout", "options_count": len(options)},
+            data={
+                "plan_type": "workout",
+                "options_count": len(pending_payload["options"]),
+                "total_options": pending_payload["total_options"],
+                "page": pending_payload["page"],
+                "total_pages": pending_payload["total_pages"],
+            },
         )
 
     if _is_nutrition_plan_request(user_input):
@@ -6421,17 +6781,31 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 data={"missing_field": missing[0], "plan_type": "nutrition"},
             )
 
-        options = _generate_nutrition_plan_options(profile, language, count=5)
-        state["pending_plan_options"] = {"plan_type": "nutrition", "options": options}
+        options = _generate_nutrition_plan_options(profile, language, count=PLAN_OPTION_POOL_TARGET)
+        pending_payload = _build_pending_plan_options_state("nutrition", options, conversation_id)
+        state["pending_plan_options"] = pending_payload
         state["pending_plan_type"] = None
-        reply = _format_plan_options_preview("nutrition", options, language)
+        reply = _format_plan_options_preview(
+            "nutrition",
+            pending_payload["options"],
+            language,
+            page=pending_payload["page"],
+            total_pages=pending_payload["total_pages"],
+            total_options=pending_payload["total_options"],
+        )
         memory.add_assistant_message(reply)
         return ChatResponse(
             reply=reply,
             conversation_id=conversation_id,
             language=language,
             action="choose_plan",
-            data={"plan_type": "nutrition", "options_count": len(options)},
+            data={
+                "plan_type": "nutrition",
+                "options_count": len(pending_payload["options"]),
+                "total_options": pending_payload["total_options"],
+                "page": pending_payload["page"],
+                "total_pages": pending_payload["total_pages"],
+            },
         )
 
     if _contains_any(lowered, PROGRESS_KEYWORDS):
