@@ -411,6 +411,15 @@ def _build_user_rag_documents(
                 }
             )
 
+        for index, completion in enumerate((tracking_summary.get("recent_completed_exercises") or [])[:12]):
+            docs.append(
+                {
+                    "id": f"{user_id}_completed_exercise_{index}",
+                    "text": f"Recent completed exercise: {_json_text(completion)}",
+                    "metadata": {"kind": "recent_completed_exercise", "index": index},
+                }
+            )
+
     if plan_snapshot:
         docs.append(
             {

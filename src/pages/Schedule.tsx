@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Check, ChevronLeft, ChevronRight, Dumbbell, Loader2, Trash2, UtensilsCrossed } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, ChevronRight, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,6 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface WorkoutExercise {
   name: string;
@@ -49,6 +50,7 @@ interface Completion {
   day_index: number;
   exercise_index: number;
   log_date: string;
+  completed_at?: string;
 }
 
 interface DailyLog {
@@ -158,6 +160,7 @@ export function SchedulePage() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
   const [completions, setCompletions] = useState<Completion[]>([]);
@@ -215,7 +218,7 @@ export function SchedulePage() {
 
       const { data: compData } = await supabase
         .from('workout_completions')
-        .select('id,plan_id,day_index,exercise_index,log_date')
+        .select('id,plan_id,day_index,exercise_index,log_date,completed_at')
         .eq('user_id', user.id);
       setCompletions((compData && compData.length > 0) ? compData : localCompletions);
 
@@ -331,6 +334,48 @@ export function SchedulePage() {
     return { total, completed, percent };
   }, [matchingDay, currentPlan, completions, selectedLogDate]);
 
+  const completedExercisesToday = useMemo(() => {
+    if (!matchingDay || !currentPlan) return [] as string[];
+
+    return completions
+      .filter(
+        (completion) =>
+          completion.plan_id === currentPlan.id &&
+          completion.day_index === matchingDay.index &&
+          completion.log_date === selectedLogDate &&
+          typeof completion.exercise_index === 'number'
+      )
+      .map((completion) => {
+        const exercises = Array.isArray(matchingDay.day.exercises) ? matchingDay.day.exercises : [];
+        const mealsOffset = exercises.length;
+        if (completion.exercise_index >= mealsOffset) {
+          return '';
+        }
+        return exercises[completion.exercise_index]?.name || '';
+      })
+      .filter(Boolean);
+  }, [completions, currentPlan, matchingDay, selectedLogDate]);
+
+  const requestCoachProgressFeedback = () => {
+    if (!currentPlan || !dailyProgress) return;
+
+    const completedNames = completedExercisesToday.length > 0
+      ? completedExercisesToday.join(', ')
+      : (language === 'ar' ? 'تم إنجاز بعض التمارين اليوم' : 'I completed some exercises today');
+    const planPercent = planProgress?.percent ?? 0;
+    const prompt = language === 'ar'
+      ? `حلل تقدمي في التمارين اليوم واعطني ملاحظات واضحة. التاريخ: ${selectedLogDate}. الخطة: ${currentPlan.title_ar || currentPlan.title}. التمارين المكتملة اليوم: ${completedNames}. تقدم اليوم: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). التقدم الكلي في الخطة: ${planPercent}%.`
+      : `Analyze my exercise progress today and give me clear feedback. Date: ${selectedLogDate}. Plan: ${currentPlan.title}. Completed exercises today: ${completedNames}. Daily progress: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). Overall plan progress: ${planPercent}%.`;
+
+    navigate('/coach', {
+      state: {
+        coachPrompt: prompt,
+        coachPromptId: `${Date.now()}-${selectedLogDate}`,
+        autoSendCoachPrompt: true,
+      },
+    });
+  };
+
   const currentDailyLog = useMemo(() => {
     return dailyLogs.find((log) => log.log_date === selectedLogDate) || null;
   }, [dailyLogs, selectedLogDate]);
@@ -376,6 +421,7 @@ export function SchedulePage() {
         day_index: dayIndex,
         exercise_index: exerciseIndex,
         log_date: selectedLogDate,
+        completed_at: new Date().toISOString(),
       };
       const next = [...completions, localRecord];
       setCompletions(next);
@@ -387,6 +433,7 @@ export function SchedulePage() {
           day_index: dayIndex,
           exercise_index: exerciseIndex,
           log_date: selectedLogDate,
+          completed_at: localRecord.completed_at,
         }).select().single();
         if (data) {
           const synced = next.map(item => item.id === localRecord.id ? data : item);
@@ -623,6 +670,25 @@ export function SchedulePage() {
                       ? `تاريخ اليوم: ${selectedLogDate}`
                       : `Today: ${selectedLogDate}`}
                   </div>
+                </div>
+              )}
+
+              {viewTab === 'workout' && dailyProgress && dailyProgress.completed > 0 && (
+                <div className="mb-5 rounded-2xl border border-primary/25 bg-primary/8 p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {language === 'ar' ? 'جاهز تاخذ ملاحظات من المدرب؟' : 'Ready for AI coach feedback?'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {language === 'ar'
+                        ? 'بعد ما علّمت التمارين كمكتملة، اضغط الزر والمدرب راح يقرأ تقدمك ويعطيك ملاحظات.'
+                        : 'Now that you checked off exercises, send today\'s progress to the AI Coach for feedback.'}
+                    </p>
+                  </div>
+                  <Button onClick={requestCoachProgressFeedback} className="gap-2 self-start md:self-auto">
+                    <MessageSquareText className="w-4 h-4" />
+                    {language === 'ar' ? 'حلل تقدمي الآن' : 'Analyze My Progress'}
+                  </Button>
                 </div>
               )}
 

@@ -93,6 +93,29 @@ const WEEK_TEMPLATE = [
   { day: 'Friday', dayAr: 'الجمعة' },
 ];
 
+interface CoachNavigationState {
+  coachPrompt?: string;
+  coachPromptId?: string;
+  autoSendCoachPrompt?: boolean;
+}
+
+const DAY_NAME_TO_INDEX: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+  'الأحد': 0,
+  'الاثنين': 1,
+  'الثلاثاء': 2,
+  'الأربعاء': 3,
+  'الخميس': 4,
+  'الجمعة': 5,
+  'السبت': 6,
+};
+
 const buildWorkoutDayIndexes = (daysPerWeek: number) => {
   const clamped = Math.max(1, Math.min(7, daysPerWeek));
   const patterns: Record<number, number[]> = {
@@ -114,6 +137,49 @@ const toIsoDay = (value?: string | null) => {
     return value.length >= 10 ? value.slice(0, 10) : value;
   }
   return date.toISOString().slice(0, 10);
+};
+
+const formatIsoLocalDay = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPlanDayIndex = (dayStr?: string | null) => {
+  const normalized = String(dayStr || '').toLowerCase().split(' - ')[0].split(' – ')[0].trim();
+  return DAY_NAME_TO_INDEX[normalized] ?? -1;
+};
+
+const getPlanWindowStart = (createdAt?: string | null) => {
+  if (!createdAt) return null;
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return null;
+  created.setHours(0, 0, 0, 0);
+  return created;
+};
+
+const planAppliesToDate = (createdAt: string | undefined, date: Date) => {
+  const start = getPlanWindowStart(createdAt);
+  if (!start) return true;
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  return target >= start && target <= end;
+};
+
+const countDateStreak = (dates: Set<string>, fromDate = new Date()) => {
+  const cursor = new Date(fromDate);
+  cursor.setHours(0, 0, 0, 0);
+  let streak = 0;
+
+  while (dates.has(formatIsoLocalDay(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
 };
 
 const cleanNote = (value?: string | null) => (value || '').replace(/\s+/g, ' ').trim();
@@ -285,6 +351,8 @@ export function CoachPage() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const voiceModeRef = useRef(false);
   const assistantAudioRef = useRef<HTMLAudioElement | null>(null);
+  const processedCoachPromptRef = useRef<string | null>(null);
+  const coachNavigationState = (location.state as CoachNavigationState | null) || null;
 
   const focusInput = useCallback(() => {
     window.setTimeout(() => {
@@ -1247,6 +1315,14 @@ export function CoachPage() {
       const completions = (completionsData || []) as CompletionRow[];
       const dailyLogs = (logsData || []) as DailyLogRow[];
       const plansById = new Map(plans.map((plan) => [plan.id, plan]));
+      const completionTimeline = completions
+        .map((row) => {
+          const sourceDate = row.completed_at || row.log_date || null;
+          const timestamp = sourceDate ? new Date(sourceDate).getTime() : Number.NaN;
+          return { row, sourceDate, timestamp };
+        })
+        .filter((entry) => entry.sourceDate && !Number.isNaN(entry.timestamp))
+        .sort((a, b) => b.timestamp - a.timestamp);
 
       let totalTasks = 0;
       let totalWorkoutTasks = 0;
@@ -1266,21 +1342,35 @@ export function CoachPage() {
       }
 
       const completedTasks = completions.length;
+      let completedWorkoutTasks = 0;
+      let completedNutritionTasks = 0;
+      for (const row of completions) {
+        const plan = plansById.get(row.plan_id);
+        if (plan && (plan.title || '').startsWith(NUTRITION_PREFIX)) {
+          completedNutritionTasks += 1;
+        } else {
+          completedWorkoutTasks += 1;
+        }
+      }
       const adherence = totalTasks > 0 ? Math.min(1, completedTasks / totalTasks) : 0;
       const workoutPlans = plans.filter((plan) => !(plan.title || '').startsWith(NUTRITION_PREFIX));
       const nutritionPlans = plans.filter((plan) => (plan.title || '').startsWith(NUTRITION_PREFIX));
       const activeWorkoutPlans = workoutPlans.filter((plan) => plan.is_active).length || workoutPlans.length;
       const activeNutritionPlans = nutritionPlans.filter((plan) => plan.is_active).length || nutritionPlans.length;
 
-      const sortedByDate = [...completions]
-        .filter((row) => row.completed_at)
-        .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
-      const lastCompletionAt = sortedByDate[0]?.completed_at || null;
+      const lastCompletionAt = completionTimeline[0]?.sourceDate || null;
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
       const completionsLast7Days = completions.filter((row) => {
         const sourceDate = row.completed_at || row.log_date;
         if (!sourceDate) return false;
         return new Date(sourceDate).getTime() >= sevenDaysAgo;
+      });
+      const completionsPrevious7Days = completions.filter((row) => {
+        const sourceDate = row.completed_at || row.log_date;
+        if (!sourceDate) return false;
+        const timestamp = new Date(sourceDate).getTime();
+        return timestamp >= fourteenDaysAgo && timestamp < sevenDaysAgo;
       });
       const completedLast7Days = completionsLast7Days.length;
 
@@ -1325,7 +1415,50 @@ export function CoachPage() {
           .filter(Boolean) as string[]
       );
 
-      const recentExerciseCompletions = sortedByDate.slice(0, 12).map((row) => {
+      const plannedWorkoutTasksLast7Days = (() => {
+        const activeWorkoutPlanRows = workoutPlans.filter((plan) => plan.is_active);
+        const plansToInspect = activeWorkoutPlanRows.length ? activeWorkoutPlanRows : workoutPlans;
+        const dates = Array.from({ length: 7 }, (_, index) => {
+          const date = new Date();
+          date.setHours(0, 0, 0, 0);
+          date.setDate(date.getDate() - index);
+          return date;
+        });
+
+        let total = 0;
+        for (const date of dates) {
+          const jsDay = date.getDay();
+          for (const plan of plansToInspect) {
+            if (!planAppliesToDate(plan.created_at, date)) continue;
+            const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
+            for (const day of days) {
+              const planDayIndex = getPlanDayIndex(day?.day) !== -1 ? getPlanDayIndex(day?.day) : getPlanDayIndex(day?.dayAr);
+              if (planDayIndex !== jsDay) continue;
+              total += Array.isArray(day?.exercises) ? day.exercises.length : 0;
+            }
+          }
+        }
+        return total;
+      })();
+
+      const workoutStreakDays = countDateStreak(completionDaySet);
+      const loggingDaySet = new Set(
+        dailyLogs
+          .map((row) => toIsoDay(row.log_date || null))
+          .filter(Boolean) as string[]
+      );
+      const loggingStreakDays = countDateStreak(loggingDaySet);
+      const loggingConsistencyPercent = Math.min(100, Math.round((logsLast7Days.length / 7) * 100));
+      const priorCompletedTasks = completionsPrevious7Days.length;
+      const completionDelta = completedLast7Days - priorCompletedTasks;
+      const workoutAdherencePercent = plannedWorkoutTasksLast7Days > 0
+        ? Math.min(100, Math.round((completedLast7Days / plannedWorkoutTasksLast7Days) * 100))
+        : completedLast7Days > 0
+          ? 100
+          : 0;
+      const trend = completionDelta > 0 ? 'up' : completionDelta < 0 ? 'down' : 'flat';
+
+      const recentExerciseCompletions = completionTimeline.slice(0, 12).map(({ row, sourceDate }) => {
         const plan = plansById.get(row.plan_id);
         const days = Array.isArray(plan?.plan_data) ? plan?.plan_data : [];
         const day = typeof row.day_index === 'number' ? days[row.day_index] : null;
@@ -1333,24 +1466,50 @@ export function CoachPage() {
           ? day.exercises[row.exercise_index]
           : null;
         return {
-          date: toIsoDay(row.log_date || row.completed_at || null),
+          date: toIsoDay(sourceDate),
           plan_title: plan?.title || '',
           day: day?.day || day?.dayAr || '',
           exercise_name: exercise?.name || exercise?.nameAr || 'Exercise completed',
         };
       });
 
-      const recentActivity = logsLast7Days
-        .map((row) => {
-          const day = toIsoDay(row.log_date || null);
-          return {
-            date: day,
-            completed_exercises: day ? completionsLast7Days.filter((item) => toIsoDay(item.log_date || item.completed_at || null) === day).length : 0,
-            workout_notes: cleanNote(row.workout_notes),
-            nutrition_notes: cleanNote(row.nutrition_notes),
-            mood: cleanNote(row.mood),
-          };
-        })
+      const recentActivityMap = new Map<string, {
+        date: string | null;
+        completed_exercises: number;
+        workout_notes: string;
+        nutrition_notes: string;
+        mood: string;
+      }>();
+
+      for (const row of logsLast7Days) {
+        const day = toIsoDay(row.log_date || null);
+        if (!day) continue;
+        recentActivityMap.set(day, {
+          date: day,
+          completed_exercises: recentActivityMap.get(day)?.completed_exercises || 0,
+          workout_notes: cleanNote(row.workout_notes),
+          nutrition_notes: cleanNote(row.nutrition_notes),
+          mood: cleanNote(row.mood),
+        });
+      }
+
+      for (const row of completionsLast7Days) {
+        const day = toIsoDay(row.log_date || row.completed_at || null);
+        if (!day) continue;
+        const existing = recentActivityMap.get(day) || {
+          date: day,
+          completed_exercises: 0,
+          workout_notes: '',
+          nutrition_notes: '',
+          mood: '',
+        };
+        recentActivityMap.set(day, {
+          ...existing,
+          completed_exercises: existing.completed_exercises + 1,
+        });
+      }
+
+      const recentActivity = Array.from(recentActivityMap.values())
         .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
         .slice(0, 7);
 
@@ -1378,7 +1537,8 @@ export function CoachPage() {
         completed_tasks: completedTasks,
         total_tasks: totalTasks,
         adherence_score: adherence,
-        completed_workout_tasks: completedTasks,
+        completed_workout_tasks: completedWorkoutTasks,
+        completed_nutrition_tasks: completedNutritionTasks,
         total_workout_tasks: totalWorkoutTasks,
         total_nutrition_tasks: totalNutritionTasks,
         active_workout_plans: activeWorkoutPlans,
@@ -1393,6 +1553,17 @@ export function CoachPage() {
         recent_moods: recentMoods,
         recent_activity: recentActivity,
         active_plan_details: activePlanDetails,
+        progress_metrics: {
+          recent_completed_tasks: completedLast7Days,
+          prior_completed_tasks: priorCompletedTasks,
+          completion_delta: completionDelta,
+          workout_adherence_percent: workoutAdherencePercent,
+          logging_consistency_percent: loggingConsistencyPercent,
+          current_workout_streak_days: workoutStreakDays,
+          current_logging_streak_days: loggingStreakDays,
+          planned_workout_tasks_last_7_days: plannedWorkoutTasksLast7Days,
+          trend,
+        },
         weekly_stats: {
           workout_days: completionDaySet.size,
           planned_days: plannedWorkoutDays.size,
@@ -1400,6 +1571,13 @@ export function CoachPage() {
           workout_log_days: workoutLogDaysSet.size,
           nutrition_log_days: nutritionLogDaysSet.size,
           completed_workouts: completedLast7Days,
+          recent_completed_tasks: completedLast7Days,
+          previous_completed_tasks: priorCompletedTasks,
+          completion_delta: completionDelta,
+          workout_adherence_percent: workoutAdherencePercent,
+          logging_consistency_percent: loggingConsistencyPercent,
+          current_workout_streak_days: workoutStreakDays,
+          current_logging_streak_days: loggingStreakDays,
           recent_exercise_names: recentExerciseCompletions.map((item) => item.exercise_name).filter(Boolean).slice(0, 8),
         },
         monthly_stats: {
@@ -1613,6 +1791,25 @@ export function CoachPage() {
   };
 
   const sendMessage = () => sendMessageWithText(input);
+
+  useEffect(() => {
+    const prompt = coachNavigationState?.coachPrompt?.trim();
+    const promptId = coachNavigationState?.coachPromptId || null;
+    if (!coachNavigationState?.autoSendCoachPrompt || !prompt || !promptId) return;
+    if (!user || loadingConvs || isBusy) return;
+    if (processedCoachPromptRef.current === promptId) return;
+
+    processedCoachPromptRef.current = promptId;
+    setInput(prompt);
+
+    void (async () => {
+      try {
+        await sendMessageWithText(prompt);
+      } finally {
+        navigate(location.pathname, { replace: true, state: null });
+      }
+    })();
+  }, [coachNavigationState, isBusy, loadingConvs, location.pathname, navigate, user]);
 
   const appendAssistantMessage = async (content: string) => {
     const aiMessage: ChatMessage = { role: 'assistant', content, timestamp: Date.now() };
