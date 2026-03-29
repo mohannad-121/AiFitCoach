@@ -62,9 +62,10 @@ app.add_middleware(
 
 logger = logging.getLogger(__name__)
 
-load_dotenv(override=True)
-
 BACKEND_DIR = Path(__file__).resolve().parent
+load_dotenv(BACKEND_DIR.parent / ".env", override=True)
+load_dotenv(BACKEND_DIR / ".env", override=True)
+load_dotenv(override=True)
 STATIC_DIR = BACKEND_DIR / "static"
 STATIC_AUDIO_DIR = STATIC_DIR / "audio"
 STATIC_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
