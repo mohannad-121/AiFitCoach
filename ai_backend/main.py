@@ -4135,16 +4135,40 @@ def _detect_generated_plan_type(reply_text: str) -> Optional[str]:
         if _contains_any(normalized, {normalize_text(day_en), normalize_text(day_ar)})
     )
     numbered_sections = len(re.findall(r"\bday\s*[1-7]\b|\bmeal\s*[1-7]\b|\bاليوم\s*[1-7]\b|\bوجبة\s*[1-7]\b", normalized))
-    if day_mentions < 2 and numbered_sections < 2:
-        return None
 
     workout_markers = WORKOUT_REQUEST_TERMS | {"sets", "reps", "rest", "warmup", "إحماء", "عدة", "تكرار"}
     nutrition_markers = NUTRITION_REQUEST_TERMS | {"kcal", "macro", "macros", "سناك", "فطور", "غداء", "عشاء"}
     workout_score = int(_contains_any(normalized, workout_markers)) + int(_contains_any(normalized, WORKOUT_PLAN_TERMS))
     nutrition_score = int(_contains_any(normalized, nutrition_markers)) + int(_contains_any(normalized, NUTRITION_PLAN_TERMS))
 
+    workout_structure_hits = sum(
+        1
+        for marker in {"sets", "reps", "rest", "push", "pull", "legs", "تمارين", "عدة", "تكرار", "راحة"}
+        if marker in normalized
+    )
+    nutrition_structure_hits = sum(
+        1
+        for marker in {"kcal", "protein", "carbs", "fat", "calories", "فطور", "غداء", "عشاء", "وجبة", "بروتين", "كارب", "دهون", "سعرات"}
+        if marker in normalized
+    )
+
+    if nutrition_score == 0 and nutrition_structure_hits >= 3 and _contains_any(
+        normalized,
+        NUTRITION_PLAN_TERMS | {"diet", "meal", "meals", "nutrition", "خطة", "تغذية", "وجبات"},
+    ):
+        nutrition_score = 2
+    if workout_score == 0 and workout_structure_hits >= 3 and _contains_any(
+        normalized,
+        WORKOUT_PLAN_TERMS | {"workout", "training", "exercise", "خطة", "تمرين", "تمارين"},
+    ):
+        workout_score = 2
+
     if workout_score == 0 and nutrition_score == 0:
         return None
+    if day_mentions < 2 and numbered_sections < 2 and workout_structure_hits < 3 and nutrition_structure_hits < 3:
+        return None
+    if nutrition_structure_hits != workout_structure_hits and max(nutrition_structure_hits, workout_structure_hits) >= 3:
+        return "nutrition" if nutrition_structure_hits > workout_structure_hits else "workout"
     return "workout" if workout_score >= nutrition_score else "nutrition"
 
 
@@ -4805,6 +4829,65 @@ def _format_plan_options_preview(
         f"{options_text}\n\n"
         "ابعت رقم الخيار اللي بدك ياه (مثال: 1). وإذا بدك صفحة ثانية احكي: خيارات أكثر."
     )
+
+
+def _build_plan_option_cards(
+    plan_type: str,
+    options: list[dict[str, Any]],
+    language: str,
+) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    for i, plan in enumerate(options, start=1):
+        default_title = (
+            f"Workout Plan Option {i}"
+            if plan_type == "workout" and language == "en"
+            else (
+                f"Nutrition Plan Option {i}"
+                if plan_type != "workout" and language == "en"
+                else (f"خيار تمارين {i}" if plan_type == "workout" else f"خيار تغذية {i}")
+            )
+        )
+        title = _clean_language_text(
+            plan.get("title") if language == "en" else (plan.get("title_ar") or plan.get("title")),
+            language,
+            default_title,
+        )
+        if language == "en" and title in {"Workout Plan", "Nutrition Plan"}:
+            title = default_title
+
+        if plan_type == "workout":
+            rest_days = ", ".join(plan.get("rest_days", [])) or "None"
+            focus = _clean_language_text(
+                next((d.get("focus") for d in plan.get("days", []) if d.get("exercises")), "general"),
+                language,
+                "training" if language == "en" else "تدريب",
+            )
+            summary = f"focus: {focus} | rest: {rest_days}"
+        else:
+            summary = f"{plan.get('daily_calories', 0)} kcal/day | {plan.get('meals_per_day', 4)} meals/day"
+
+        cards.append({"index": i, "title": title, "summary": summary})
+
+    return cards
+
+
+def _build_choose_plan_data(
+    plan_type: str,
+    pending_payload: dict[str, Any],
+    language: str,
+    extra: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    data = {
+        "plan_type": plan_type,
+        "options_count": len(pending_payload["options"]),
+        "total_options": pending_payload["total_options"],
+        "page": pending_payload["page"],
+        "total_pages": pending_payload["total_pages"],
+        "options": _build_plan_option_cards(plan_type, pending_payload["options"], language),
+    }
+    if extra:
+        data.update(extra)
+    return data
 
 
 def _extract_plan_choice_index(user_input: str, options_count: int) -> int | None:
@@ -6936,13 +7019,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 conversation_id=conversation_id,
                 language=language,
                 action="choose_plan",
-                data={
-                    "plan_type": pending_options_type,
-                    "options_count": len(next_payload["options"]),
-                    "total_options": next_payload["total_options"],
-                    "page": next_payload["page"],
-                    "total_pages": next_payload["total_pages"],
-                },
+                data=_build_choose_plan_data(pending_options_type, next_payload, language),
             )
 
         reply = _format_plan_options_preview(
@@ -6965,6 +7042,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 "total_options": pending_total_options,
                 "page": pending_page,
                 "total_pages": pending_total_pages,
+                "options": _build_plan_option_cards(pending_options_type, pending_options, language),
             },
         )
 
@@ -7104,16 +7182,16 @@ async def chat(req: ChatRequest) -> ChatResponse:
             conversation_id=conversation_id,
             language=language,
             action="choose_plan",
-            data={
-                "plan_type": requested_plan_type,
-                "options_count": len(pending_payload["options"]),
-                "total_options": pending_payload["total_options"],
-                "page": pending_payload["page"],
-                "total_pages": pending_payload["total_pages"],
-                "inferred_goal": inferred_goal,
-                "inferred_goal_confidence": inferred_confidence,
-                "plan_intent_prediction": plan_intent_meta or {},
-            },
+            data=_build_choose_plan_data(
+                requested_plan_type,
+                pending_payload,
+                language,
+                extra={
+                    "inferred_goal": inferred_goal,
+                    "inferred_goal_confidence": inferred_confidence,
+                    "plan_intent_prediction": plan_intent_meta or {},
+                },
+            ),
         )
 
     if CHAT_RESPONSE_MODE == "dataset_only":
@@ -7325,13 +7403,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                     conversation_id=conversation_id,
                     language=language,
                     action="choose_plan",
-                    data={
-                        "plan_type": pending_plan_type,
-                        "options_count": len(pending_payload["options"]),
-                        "total_options": pending_payload["total_options"],
-                        "page": pending_payload["page"],
-                        "total_pages": pending_payload["total_pages"],
-                    },
+                    data=_build_choose_plan_data(pending_plan_type, pending_payload, language),
                 )
         else:
             question = _missing_field_question(pending_field, language)
@@ -7538,13 +7610,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             conversation_id=conversation_id,
             language=language,
             action="choose_plan",
-            data={
-                "plan_type": "workout",
-                "options_count": len(pending_payload["options"]),
-                "total_options": pending_payload["total_options"],
-                "page": pending_payload["page"],
-                "total_pages": pending_payload["total_pages"],
-            },
+            data=_build_choose_plan_data("workout", pending_payload, language),
         )
 
     if _is_nutrition_plan_request(user_input):
@@ -7581,13 +7647,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             conversation_id=conversation_id,
             language=language,
             action="choose_plan",
-            data={
-                "plan_type": "nutrition",
-                "options_count": len(pending_payload["options"]),
-                "total_options": pending_payload["total_options"],
-                "page": pending_payload["page"],
-                "total_pages": pending_payload["total_pages"],
-            },
+            data=_build_choose_plan_data("nutrition", pending_payload, language),
         )
 
     if _contains_any(lowered, PROGRESS_KEYWORDS):
@@ -7646,6 +7706,18 @@ async def chat(req: ChatRequest) -> ChatResponse:
             "Local AI model is temporarily unavailable. Please make sure Ollama is running, then try again.",
             "نموذج الذكاء المحلي غير متاح مؤقتًا. تأكد من تشغيل Ollama ثم أعد المحاولة.",
             "نموذج الذكاء المحلي واقف مؤقتًا. شغّل Ollama وارجع جرّب.",
+        )
+    llm_plan_type = _detect_generated_plan_type(llm_reply)
+    if llm_plan_type:
+        return _build_pending_plan_response(
+            llm_plan_type,
+            profile,
+            tracking_summary,
+            language,
+            user_id,
+            conversation_id,
+            state,
+            memory,
         )
     filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
     memory.add_assistant_message(filtered_reply)

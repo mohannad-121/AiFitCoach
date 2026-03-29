@@ -334,38 +334,131 @@ export function SchedulePage() {
     return { total, completed, percent };
   }, [matchingDay, currentPlan, completions, selectedLogDate]);
 
-  const completedExercisesToday = useMemo(() => {
-    if (!matchingDay || !currentPlan) return [] as string[];
+  const dayExercises = useMemo(() => {
+    return Array.isArray(matchingDay?.day.exercises) ? matchingDay.day.exercises : [];
+  }, [matchingDay]);
 
-    return completions
-      .filter(
-        (completion) =>
-          completion.plan_id === currentPlan.id &&
-          completion.day_index === matchingDay.index &&
-          completion.log_date === selectedLogDate &&
-          typeof completion.exercise_index === 'number'
-      )
-      .map((completion) => {
-        const exercises = Array.isArray(matchingDay.day.exercises) ? matchingDay.day.exercises : [];
-        const mealsOffset = exercises.length;
-        if (completion.exercise_index >= mealsOffset) {
-          return '';
-        }
-        return exercises[completion.exercise_index]?.name || '';
-      })
+  const dayMeals = useMemo(() => {
+    return Array.isArray(matchingDay?.day.meals) ? matchingDay.day.meals : [];
+  }, [matchingDay]);
+
+  const completedExerciseIndexesToday = useMemo(() => {
+    if (!matchingDay || !currentPlan) return new Set<number>();
+
+    return new Set(
+      completions
+        .filter(
+          (completion) =>
+            completion.plan_id === currentPlan.id &&
+            completion.day_index === matchingDay.index &&
+            completion.log_date === selectedLogDate &&
+            typeof completion.exercise_index === 'number' &&
+            completion.exercise_index < dayExercises.length
+        )
+        .map((completion) => completion.exercise_index)
+    );
+  }, [completions, currentPlan, dayExercises.length, matchingDay, selectedLogDate]);
+
+  const completedMealIndexesToday = useMemo(() => {
+    if (!matchingDay || !currentPlan) return new Set<number>();
+
+    return new Set(
+      completions
+        .filter(
+          (completion) =>
+            completion.plan_id === currentPlan.id &&
+            completion.day_index === matchingDay.index &&
+            completion.log_date === selectedLogDate &&
+            typeof completion.exercise_index === 'number' &&
+            completion.exercise_index >= dayExercises.length
+        )
+        .map((completion) => completion.exercise_index - dayExercises.length)
+    );
+  }, [completions, currentPlan, dayExercises.length, matchingDay, selectedLogDate]);
+
+  const completedExercisesToday = useMemo(() => {
+    return dayExercises
+      .filter((_, index) => completedExerciseIndexesToday.has(index))
+      .map((exercise) => language === 'ar' ? exercise.nameAr || exercise.name : exercise.name)
       .filter(Boolean);
-  }, [completions, currentPlan, matchingDay, selectedLogDate]);
+  }, [completedExerciseIndexesToday, dayExercises, language]);
+
+  const missingExercisesToday = useMemo(() => {
+    return dayExercises
+      .filter((_, index) => !completedExerciseIndexesToday.has(index))
+      .map((exercise) => language === 'ar' ? exercise.nameAr || exercise.name : exercise.name)
+      .filter(Boolean);
+  }, [completedExerciseIndexesToday, dayExercises, language]);
+
+  const completedMealsToday = useMemo(() => {
+    return dayMeals
+      .filter((_, index) => completedMealIndexesToday.has(index))
+      .map((meal) => language === 'ar' ? meal.nameAr || meal.name : meal.name)
+      .filter(Boolean);
+  }, [completedMealIndexesToday, dayMeals, language]);
+
+  const missingMealsToday = useMemo(() => {
+    return dayMeals
+      .filter((_, index) => !completedMealIndexesToday.has(index))
+      .map((meal) => language === 'ar' ? meal.nameAr || meal.name : meal.name)
+      .filter(Boolean);
+  }, [completedMealIndexesToday, dayMeals, language]);
+
+  const overallMissingPlanItems = useMemo(() => {
+    if (!currentPlan) return [] as string[];
+
+    const completedKeys = new Set(
+      completions
+        .filter((completion) => completion.plan_id === currentPlan.id)
+        .map((completion) => `${completion.day_index}:${completion.exercise_index}`)
+    );
+
+    const missingItems: string[] = [];
+    currentPlan.plan_data.forEach((day, dayIndex) => {
+      const exercises = Array.isArray(day.exercises) ? day.exercises : [];
+      const meals = Array.isArray(day.meals) ? day.meals : [];
+
+      if (viewTab === 'workout') {
+        exercises.forEach((exercise, exerciseIndex) => {
+          if (!completedKeys.has(`${dayIndex}:${exerciseIndex}`)) {
+            missingItems.push(language === 'ar' ? exercise.nameAr || exercise.name : exercise.name);
+          }
+        });
+        return;
+      }
+
+      meals.forEach((meal, mealIndex) => {
+        const completionIndex = exercises.length + mealIndex;
+        if (!completedKeys.has(`${dayIndex}:${completionIndex}`)) {
+          missingItems.push(language === 'ar' ? meal.nameAr || meal.name : meal.name);
+        }
+      });
+    });
+
+    return missingItems.filter(Boolean);
+  }, [completions, currentPlan, language, viewTab]);
 
   const requestCoachProgressFeedback = () => {
     if (!currentPlan || !dailyProgress) return;
 
-    const completedNames = completedExercisesToday.length > 0
-      ? completedExercisesToday.join(', ')
-      : (language === 'ar' ? 'تم إنجاز بعض التمارين اليوم' : 'I completed some exercises today');
     const planPercent = planProgress?.percent ?? 0;
-    const prompt = language === 'ar'
-      ? `حلل تقدمي في التمارين اليوم واعطني ملاحظات واضحة فقط بدون إنشاء خطة جديدة. التاريخ: ${selectedLogDate}. اسم التمرين الحالي: ${currentPlan.title_ar || currentPlan.title}. التمارين المكتملة اليوم: ${completedNames}. تقدم اليوم: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). التقدم الكلي في الجدول الحالي: ${planPercent}%.`
-      : `Analyze my exercise progress today and give me clear feedback only, without creating a new plan. Date: ${selectedLogDate}. Current workout title: ${currentPlan.title}. Completed exercises today: ${completedNames}. Daily progress: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). Overall progress in my current schedule: ${planPercent}%.`;
+    const overallCompletedCount = planProgress?.completedItems ?? 0;
+    const overallTotalCount = planProgress?.totalItems ?? 0;
+    const overallMissingNames = overallMissingPlanItems.length > 0
+      ? overallMissingPlanItems.join(', ')
+      : (language === 'ar' ? 'لا يوجد عناصر ناقصة' : 'No missing items');
+
+    const prompt = viewTab === 'nutrition'
+      ? (
+          language === 'ar'
+            ? `حلل تقدمي الغذائي اليوم واعطني ملاحظات واضحة فقط بدون إنشاء خطة جديدة. اذكر بوضوح عدد الوجبات التي أكملتها وما هي الوجبات الناقصة بالاسم. التاريخ: ${selectedLogDate}. اسم الخطة الغذائية الحالية: ${currentPlan.title_ar || currentPlan.title}. الوجبات المكتملة اليوم: ${completedMealsToday.length > 0 ? completedMealsToday.join(', ') : 'لم أكمل أي وجبة بعد'}. الوجبات الناقصة اليوم: ${missingMealsToday.length > 0 ? missingMealsToday.join(', ') : 'لا يوجد وجبات ناقصة اليوم'}. تقدم اليوم الغذائي: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). التقدم الكلي في الخطة الغذائية الحالية: ${overallCompletedCount}/${overallTotalCount} (${planPercent}%). العناصر الغذائية الناقصة في الخطة الحالية: ${overallMissingNames}.`
+            : `Analyze my nutrition progress today and give me clear feedback only, without creating a new plan. Explicitly tell me how many meals I completed and which meals are still missing by name. Date: ${selectedLogDate}. Current nutrition plan title: ${currentPlan.title}. Completed meals today: ${completedMealsToday.length > 0 ? completedMealsToday.join(', ') : 'I have not completed any meals yet'}. Missing meals today: ${missingMealsToday.length > 0 ? missingMealsToday.join(', ') : 'No missing meals today'}. Daily nutrition progress: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). Overall progress in my current nutrition plan: ${overallCompletedCount}/${overallTotalCount} (${planPercent}%). Missing items in my current nutrition plan: ${overallMissingNames}.`
+        )
+      : (
+          language === 'ar'
+            ? `حلل تقدمي في التمارين اليوم واعطني ملاحظات واضحة فقط بدون إنشاء خطة جديدة. التاريخ: ${selectedLogDate}. اسم التمرين الحالي: ${currentPlan.title_ar || currentPlan.title}. التمارين المكتملة اليوم: ${completedExercisesToday.length > 0 ? completedExercisesToday.join(', ') : 'لم أكمل أي تمرين بعد'}. التمارين الناقصة اليوم: ${missingExercisesToday.length > 0 ? missingExercisesToday.join(', ') : 'لا يوجد تمارين ناقصة اليوم'}. تقدم اليوم: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). التقدم الكلي في الجدول الحالي: ${overallCompletedCount}/${overallTotalCount} (${planPercent}%). العناصر الناقصة في الجدول الحالي: ${overallMissingNames}.`
+            : `Analyze my exercise progress today and give me clear feedback only, without creating a new plan. Date: ${selectedLogDate}. Current workout title: ${currentPlan.title}. Completed exercises today: ${completedExercisesToday.length > 0 ? completedExercisesToday.join(', ') : 'I have not completed any exercises yet'}. Missing exercises today: ${missingExercisesToday.length > 0 ? missingExercisesToday.join(', ') : 'No missing exercises today'}. Daily progress: ${dailyProgress.completed}/${dailyProgress.total} (${dailyProgress.percent}%). Overall progress in my current schedule: ${overallCompletedCount}/${overallTotalCount} (${planPercent}%). Missing items in my current schedule: ${overallMissingNames}.`
+        );
 
     navigate('/coach', {
       state: {
@@ -673,21 +766,33 @@ export function SchedulePage() {
                 </div>
               )}
 
-              {viewTab === 'workout' && dailyProgress && dailyProgress.completed > 0 && (
+              {dailyProgress && dailyProgress.completed > 0 && (
                 <div className="mb-5 rounded-2xl border border-primary/25 bg-primary/8 p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-foreground">
-                      {language === 'ar' ? 'جاهز تاخذ ملاحظات من المدرب؟' : 'Ready for AI coach feedback?'}
+                      {language === 'ar'
+                        ? (viewTab === 'nutrition' ? 'جاهز تاخذ ملاحظات غذائية من المدرب؟' : 'جاهز تاخذ ملاحظات من المدرب؟')
+                        : (viewTab === 'nutrition' ? 'Ready for AI nutrition feedback?' : 'Ready for AI coach feedback?')}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {language === 'ar'
-                        ? 'بعد ما علّمت التمارين كمكتملة، اضغط الزر والمدرب راح يقرأ تقدمك ويعطيك ملاحظات.'
-                        : 'Now that you checked off exercises, send today\'s progress to the AI Coach for feedback.'}
+                        ? (
+                            viewTab === 'nutrition'
+                              ? 'بعد ما علّمت الوجبات كمكتملة، اضغط الزر والمدرب راح يقرأ تقدمك الغذائي ويعطيك ملاحظات ويذكر لك شو ناقص.'
+                              : 'بعد ما علّمت التمارين كمكتملة، اضغط الزر والمدرب راح يقرأ تقدمك ويعطيك ملاحظات.'
+                          )
+                        : (
+                            viewTab === 'nutrition'
+                              ? 'Now that you checked off meals, send today\'s nutrition progress to the AI Coach for feedback and missing-item recommendations.'
+                              : 'Now that you checked off exercises, send today\'s progress to the AI Coach for feedback.'
+                          )}
                     </p>
                   </div>
                   <Button onClick={requestCoachProgressFeedback} className="gap-2 self-start md:self-auto">
                     <MessageSquareText className="w-4 h-4" />
-                    {language === 'ar' ? 'حلل تقدمي الآن' : 'Analyze My Progress'}
+                    {language === 'ar'
+                      ? (viewTab === 'nutrition' ? 'حلل تقدمي الغذائي الآن' : 'حلل تقدمي الآن')
+                      : (viewTab === 'nutrition' ? 'Analyze My Nutrition Progress' : 'Analyze My Progress')}
                   </Button>
                 </div>
               )}

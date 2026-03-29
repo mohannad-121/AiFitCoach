@@ -49,6 +49,8 @@ BAD_PATTERNS = [
     re.compile(r"b\W*i\W*t\W*c\W*h", re.IGNORECASE),
 ]
 
+MIN_FUZZY_BAD_WORD_LENGTH = 5
+
 
 class ModerationLayer:
     """Arabic + English profanity detection and masking."""
@@ -77,6 +79,10 @@ class ModerationLayer:
         # Fuzzy match to catch small spelling variations.
         for token in tokens:
             for candidate in self.bad_words:
+                if len(candidate) < MIN_FUZZY_BAD_WORD_LENGTH:
+                    continue
+                if abs(len(token) - len(candidate)) > 1:
+                    continue
                 if fuzzy_token_match(token, candidate):
                     return True
 

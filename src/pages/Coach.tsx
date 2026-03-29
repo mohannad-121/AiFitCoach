@@ -35,6 +35,19 @@ interface PendingPlanState {
   plan: any;
 }
 
+interface PlanChoiceOption {
+  index: number;
+  title: string;
+  summary: string;
+}
+
+interface PendingPlanOptionsState {
+  type: 'workout' | 'nutrition';
+  options: PlanChoiceOption[];
+  page: number;
+  totalPages: number;
+}
+
 interface RagDebugHit {
   namespace?: string;
   id?: string;
@@ -345,6 +358,7 @@ export function CoachPage() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PendingPlanState | null>(null);
+  const [pendingPlanOptions, setPendingPlanOptions] = useState<PendingPlanOptionsState | null>(null);
   const [showRagDebug, setShowRagDebug] = useState(false);
   const [ragDebugData, setRagDebugData] = useState<RagDebugData | null>(null);
   const [ragDebugLoading, setRagDebugLoading] = useState(false);
@@ -356,8 +370,7 @@ export function CoachPage() {
   const [voiceMode, setVoiceMode] = useState(false);
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const [pendingVoiceResponse, setPendingVoiceResponse] = useState<VoiceChatApiResponse | null>(null);
-        const localPlans = readLocalPlans(user.id);
-        const localCompletions = readLocalCompletions(user.id);
+
 
   const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -887,7 +900,14 @@ export function CoachPage() {
 
       const pendingFromApi = extractPendingPlanFromResponse(pendingVoiceResponse);
       if (pendingFromApi) {
+        setPendingPlanOptions(null);
         setPendingPlan(pendingFromApi);
+      }
+
+      const planOptionsFromApi = extractPlanOptionsFromResponse(pendingVoiceResponse);
+      if (planOptionsFromApi) {
+        setPendingPlan(null);
+        setPendingPlanOptions(planOptionsFromApi);
       }
 
       const approvedFromApi = extractApprovedPlanFromResponse(pendingVoiceResponse);
@@ -898,6 +918,7 @@ export function CoachPage() {
           console.error('Failed saving approved voice plan to Supabase', error);
         } finally {
           setPendingPlan(null);
+          setPendingPlanOptions(null);
           goToSchedule();
         }
       }
@@ -1024,6 +1045,8 @@ export function CoachPage() {
     setConversations(prev => [newConv, ...prev]);
     setCurrentId(id);
     setCurrentMessages([]);
+    setPendingPlan(null);
+    setPendingPlanOptions(null);
     return id;
   };
 
@@ -1040,6 +1063,7 @@ export function CoachPage() {
       setCurrentId(id);
       setCurrentMessages(conv.messages);
       setPendingPlan(null);
+      setPendingPlanOptions(null);
     }
     setSidebarOpen(false);
   };
@@ -1167,6 +1191,25 @@ export function CoachPage() {
     }
 
     return null;
+  };
+
+  const extractPlanOptionsFromResponse = (responseData: any): PendingPlanOptionsState | null => {
+    if (responseData?.action !== 'choose_plan' || !Array.isArray(responseData?.data?.options)) {
+      return null;
+    }
+
+    return {
+      type: responseData.data.plan_type === 'nutrition' ? 'nutrition' : 'workout',
+      options: responseData.data.options
+        .filter((option: any) => typeof option?.index === 'number')
+        .map((option: any) => ({
+          index: Number(option.index),
+          title: String(option.title || ''),
+          summary: String(option.summary || ''),
+        })),
+      page: Number(responseData.data.page || 0),
+      totalPages: Number(responseData.data.total_pages || 1),
+    };
   };
 
   const persistApprovedPlan = async (approvedPayload: any) => {
@@ -1322,6 +1365,9 @@ export function CoachPage() {
     if (!user) return null;
 
     try {
+      const localPlans = readLocalPlans(user.id);
+      const localCompletions = readLocalCompletions(user.id);
+
       const { data: plansData } = await supabase
         .from('workout_plans')
         .select('id,title,title_ar,plan_data,is_active')
@@ -1779,7 +1825,14 @@ export function CoachPage() {
 
       const pendingFromApi = extractPendingPlanFromResponse(data);
       if (pendingFromApi) {
+        setPendingPlanOptions(null);
         setPendingPlan(pendingFromApi);
+      }
+
+      const planOptionsFromApi = extractPlanOptionsFromResponse(data);
+      if (planOptionsFromApi) {
+        setPendingPlan(null);
+        setPendingPlanOptions(planOptionsFromApi);
       }
 
       const approvedFromApi = extractApprovedPlanFromResponse(data);
@@ -1790,6 +1843,7 @@ export function CoachPage() {
           console.error('Failed saving approved plan to Supabase', e);
         } finally {
           setPendingPlan(null);
+          setPendingPlanOptions(null);
           goToSchedule();
         }
       }
@@ -1825,6 +1879,15 @@ export function CoachPage() {
   };
 
   const sendMessage = () => sendMessageWithText(input);
+
+  const choosePlanOption = (optionIndex: number) => {
+    setPendingPlanOptions(null);
+    void sendMessageWithText(String(optionIndex));
+  };
+
+  const loadMorePlanOptions = () => {
+    void sendMessageWithText(language === 'ar' ? 'خيارات أكثر' : 'more options');
+  };
 
   useEffect(() => {
     const prompt = coachNavigationState?.coachPrompt?.trim();
@@ -1891,6 +1954,7 @@ export function CoachPage() {
       console.error('Failed saving approved plan to Supabase', error);
     }
     setPendingPlan(null);
+    setPendingPlanOptions(null);
 
     const successText = language === 'ar'
       ? 'تم اعتماد الخطة وحفظها في صفحة الجدول.'
@@ -1914,6 +1978,7 @@ export function CoachPage() {
     });
 
     setPendingPlan(null);
+    setPendingPlanOptions(null);
     const rejectText = language === 'ar'
       ? 'تم رفض الخطة. اكتب لي التعديلات التي تريدها وسأعيد بناء خطة جديدة.'
       : 'Plan rejected. Tell me what to change and I will regenerate it.';
@@ -2282,6 +2347,39 @@ export function CoachPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {pendingPlanOptions && pendingPlanOptions.options.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  {language === 'ar' ? 'اختر الخطة التي تريدها' : 'Choose the plan you want'}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {language === 'ar'
+                    ? 'بعد اختيار الخطة سيظهر لك زر الاعتماد أو الرفض مباشرة.'
+                    : 'After choosing an option, you will get direct Approve and Reject buttons.'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                {pendingPlanOptions.options.map((option) => (
+                  <button
+                    key={`${pendingPlanOptions.type}-${option.index}`}
+                    type="button"
+                    onClick={() => choosePlanOption(option.index)}
+                    className="w-full rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-left hover:bg-secondary/40 transition-colors"
+                  >
+                    <div className="text-sm font-medium text-foreground">{option.index}. {option.title}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{option.summary}</div>
+                  </button>
+                ))}
+              </div>
+              {pendingPlanOptions.page + 1 < pendingPlanOptions.totalPages && (
+                <Button variant="outline" onClick={loadMorePlanOptions} disabled={isBusy}>
+                  {language === 'ar' ? 'خيارات أكثر' : 'More options'}
+                </Button>
+              )}
             </div>
           )}
 
