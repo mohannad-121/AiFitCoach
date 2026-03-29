@@ -424,6 +424,58 @@ def _build_user_rag_documents(
                 }
             )
 
+        fitbit_data = tracking_summary.get("fitbit") if isinstance(tracking_summary.get("fitbit"), dict) else {}
+        if fitbit_data:
+            docs.append(
+                {
+                    "id": f"{user_id}_fitbit_summary",
+                    "text": f"Fitbit summary: {_json_text(fitbit_data)}",
+                    "metadata": {"kind": "fitbit_summary"},
+                }
+            )
+            coach_summary = fitbit_data.get("coach_summary") if isinstance(fitbit_data.get("coach_summary"), dict) else {}
+            if coach_summary:
+                docs.append(
+                    {
+                        "id": f"{user_id}_fitbit_coach_summary",
+                        "text": f"Fitbit coach summary: {_json_text(coach_summary)}",
+                        "metadata": {"kind": "fitbit_coach_summary"},
+                    }
+                )
+            today_summary = fitbit_data.get("today_summary") if isinstance(fitbit_data.get("today_summary"), dict) else {}
+            if today_summary:
+                docs.append(
+                    {
+                        "id": f"{user_id}_fitbit_today",
+                        "text": f"Fitbit today summary: {_json_text(today_summary)}",
+                        "metadata": {"kind": "fitbit_today_summary"},
+                    }
+                )
+            for index, activity in enumerate((fitbit_data.get("activity_history") or [])[:7]):
+                docs.append(
+                    {
+                        "id": f"{user_id}_fitbit_activity_{index}",
+                        "text": f"Fitbit activity history: {_json_text(activity)}",
+                        "metadata": {"kind": "fitbit_activity_history", "index": index},
+                    }
+                )
+            for index, sleep in enumerate((fitbit_data.get("sleep_history") or [])[:7]):
+                docs.append(
+                    {
+                        "id": f"{user_id}_fitbit_sleep_{index}",
+                        "text": f"Fitbit sleep history: {_json_text(sleep)}",
+                        "metadata": {"kind": "fitbit_sleep_history", "index": index},
+                    }
+                )
+            for index, heart in enumerate((fitbit_data.get("heart_history") or [])[:7]):
+                docs.append(
+                    {
+                        "id": f"{user_id}_fitbit_heart_{index}",
+                        "text": f"Fitbit heart history: {_json_text(heart)}",
+                        "metadata": {"kind": "fitbit_heart_history", "index": index},
+                    }
+                )
+
     if plan_snapshot:
         docs.append(
             {
@@ -6457,6 +6509,12 @@ def _general_llm_reply(
         "recent_workout_notes": (tracking_summary or {}).get("recent_workout_notes"),
         "recent_nutrition_notes": (tracking_summary or {}).get("recent_nutrition_notes"),
         "recent_moods": (tracking_summary or {}).get("recent_moods"),
+        "fitbit": {
+            "connected": ((tracking_summary or {}).get("fitbit") or {}).get("connected") if isinstance((tracking_summary or {}).get("fitbit"), dict) else None,
+            "last_sync_at": ((tracking_summary or {}).get("fitbit") or {}).get("last_sync_at") if isinstance((tracking_summary or {}).get("fitbit"), dict) else None,
+            "coach_summary": ((tracking_summary or {}).get("fitbit") or {}).get("coach_summary") if isinstance((tracking_summary or {}).get("fitbit"), dict) else None,
+            "today_summary": ((tracking_summary or {}).get("fitbit") or {}).get("today_summary") if isinstance((tracking_summary or {}).get("fitbit"), dict) else None,
+        },
     }
     compact_plan_snapshot = {
         "active_workout_plans": (plan_snapshot or {}).get("active_workout_plans"),
@@ -6903,6 +6961,12 @@ async def chat(req: ChatRequest) -> ChatResponse:
         state["last_progress_summary"] = _merge_tracking_summaries(
             state.get("last_progress_summary"),
             req.tracking_summary,
+        )
+    fitbit_tracking_summary = FITBIT.get_coach_tracking_summary(user_id)
+    if fitbit_tracking_summary:
+        state["last_progress_summary"] = _merge_tracking_summaries(
+            state.get("last_progress_summary"),
+            fitbit_tracking_summary,
         )
     db_plan_snapshot = database_context.get("plan_snapshot") if isinstance(database_context.get("plan_snapshot"), dict) else None
     if db_plan_snapshot:

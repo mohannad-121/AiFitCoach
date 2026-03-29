@@ -24,8 +24,12 @@ FITBIT_REVOKE_URL = "https://api.fitbit.com/oauth2/revoke"
 FITBIT_PROFILE_URL = "https://api.fitbit.com/1/user/-/profile.json"
 FITBIT_ACTIVITY_BY_DATE_URL = "https://api.fitbit.com/1/user/-/activities/date/{day}.json"
 FITBIT_HEART_BY_DATE_URL = "https://api.fitbit.com/1/user/-/activities/heart/date/{day}/1d.json"
+FITBIT_SLEEP_BY_DATE_URL = "https://api.fitbit.com/1.2/user/-/sleep/date/{day}.json"
+FITBIT_SERIES_URL = "https://api.fitbit.com/1/user/-/{resource_path}/date/today/{period}.json"
 DEFAULT_SCOPES = "activity heartrate profile sleep"
 STATE_TTL_MINUTES = 15
+AUTO_SYNC_INTERVAL_MINUTES = 30
+DEFAULT_HISTORY_DAYS = 7
 
 
 def _utc_now() -> datetime:
@@ -213,7 +217,7 @@ class FitbitIntegration:
         try:
             token_payload = self._exchange_code(code)
             profile_payload = self._fetch_profile(token_payload["access_token"])
-            daily_summary = self._fetch_today_summary(token_payload["access_token"])
+            sync_payload = self._fetch_sync_payload(token_payload["access_token"])
             expires_at = (_utc_now() + timedelta(seconds=max(0, int(token_payload.get("expires_in") or 0)))).isoformat()
             self.store.upsert(
                 str(payload.get("user_id") or ""),
@@ -225,7 +229,7 @@ class FitbitIntegration:
                     "expires_at": expires_at,
                     "fitbit_user_id": token_payload.get("user_id") or profile_payload.get("encodedId") or "",
                     "profile_data": self._normalize_profile(profile_payload),
-                    "last_sync_data": daily_summary,
+                    "last_sync_data": sync_payload,
                     "last_sync_at": _utc_now().isoformat(),
                 },
             )
@@ -244,6 +248,22 @@ class FitbitIntegration:
 
         return self._status_payload(record)
 
+    def get_coach_tracking_summary(self, user_id: str) -> Optional[dict[str, Any]]:
+        if not self.configured:
+            return None
+
+        record = self.store.get(user_id)
+        if not record:
+            return {"fitbit": self._coach_payload(None)}
+
+        try:
+            if self._should_auto_sync(record):
+                record = self._sync_record(user_id, record)
+        except Exception:
+            logger.warning("Failed auto-syncing Fitbit coach context", exc_info=True)
+
+        return {"fitbit": self._coach_payload(record)}
+
     def sync(self, user_id: str) -> dict[str, Any]:
         if not self.configured:
             raise ValueError("Fitbit integration is not configured on the backend")
@@ -252,19 +272,7 @@ class FitbitIntegration:
         if not record:
             raise ValueError("No Fitbit connection found for this user")
 
-        record = self._refresh_if_needed(record)
-        profile_payload = self._fetch_profile(record["access_token"])
-        daily_summary = self._fetch_today_summary(record["access_token"])
-        updated = self.store.upsert(
-            user_id,
-            {
-                **record,
-                "fitbit_user_id": record.get("fitbit_user_id") or profile_payload.get("encodedId") or "",
-                "profile_data": self._normalize_profile(profile_payload),
-                "last_sync_data": daily_summary,
-                "last_sync_at": _utc_now().isoformat(),
-            },
-        )
+        updated = self._sync_record(user_id, record)
         return self._status_payload(updated)
 
     def disconnect(self, user_id: str) -> None:
@@ -353,6 +361,30 @@ class FitbitIntegration:
         }
         return self.store.upsert(str(record.get("user_id") or ""), updated)
 
+    def _sync_record(self, user_id: str, record: dict[str, Any]) -> dict[str, Any]:
+        record = self._refresh_if_needed(record)
+        profile_payload = self._fetch_profile(record["access_token"])
+        sync_payload = self._fetch_sync_payload(record["access_token"])
+        return self.store.upsert(
+            user_id,
+            {
+                **record,
+                "fitbit_user_id": record.get("fitbit_user_id") or profile_payload.get("encodedId") or "",
+                "profile_data": self._normalize_profile(profile_payload),
+                "last_sync_data": sync_payload,
+                "last_sync_at": _utc_now().isoformat(),
+            },
+        )
+
+    def _should_auto_sync(self, record: dict[str, Any]) -> bool:
+        last_sync_at = _parse_iso_datetime(record.get("last_sync_at"))
+        last_sync_data = record.get("last_sync_data") if isinstance(record.get("last_sync_data"), dict) else {}
+        if not last_sync_data:
+            return True
+        if last_sync_at is None:
+            return True
+        return (_utc_now() - last_sync_at) >= timedelta(minutes=AUTO_SYNC_INTERVAL_MINUTES)
+
     def _fetch_profile(self, access_token: str) -> dict[str, Any]:
         response = requests.get(FITBIT_PROFILE_URL, headers=self._bearer_headers(access_token), timeout=20)
         payload = self._parse_fitbit_response(response)
@@ -360,6 +392,19 @@ class FitbitIntegration:
         if not user_payload:
             raise ValueError("Fitbit profile data is missing")
         return user_payload
+
+    def _fetch_sync_payload(self, access_token: str) -> dict[str, Any]:
+        today_summary = self._fetch_today_summary(access_token)
+        activity_history = self._fetch_activity_history(access_token)
+        heart_history = self._fetch_heart_history(access_token)
+        sleep_history = self._fetch_sleep_history(access_token)
+        return {
+            "synced_at": _utc_now().isoformat(),
+            "today_summary": today_summary,
+            "activity_history": activity_history,
+            "heart_history": heart_history,
+            "sleep_history": sleep_history,
+        }
 
     def _fetch_today_summary(self, access_token: str) -> dict[str, Any]:
         today = date.today().isoformat()
@@ -406,6 +451,124 @@ class FitbitIntegration:
             "resting_heart_rate": int(resting_heart_rate) if resting_heart_rate else None,
         }
 
+    def _fetch_activity_history(self, access_token: str) -> list[dict[str, Any]]:
+        metric_specs = {
+            "steps": ("activities/steps", int),
+            "calories_out": ("activities/calories", int),
+            "distance_km": ("activities/distance", float),
+            "very_active_minutes": ("activities/minutesVeryActive", int),
+            "fairly_active_minutes": ("activities/minutesFairlyActive", int),
+            "lightly_active_minutes": ("activities/minutesLightlyActive", int),
+            "sedentary_minutes": ("activities/minutesSedentary", int),
+        }
+        by_date: dict[str, dict[str, Any]] = {}
+
+        for metric_name, (resource_path, parser) in metric_specs.items():
+            response = requests.get(
+                FITBIT_SERIES_URL.format(resource_path=resource_path, period=f"{DEFAULT_HISTORY_DAYS}d"),
+                headers=self._bearer_headers(access_token),
+                timeout=20,
+            )
+            payload = self._parse_fitbit_response(response)
+            series = next((value for value in payload.values() if isinstance(value, list)), [])
+            for item in series:
+                if not isinstance(item, dict):
+                    continue
+                day = str(item.get("dateTime") or "").strip()
+                if not day:
+                    continue
+                entry = by_date.setdefault(day, {"date": day})
+                raw_value = item.get("value")
+                try:
+                    parsed_value = parser(raw_value or 0)
+                except (TypeError, ValueError):
+                    parsed_value = 0.0 if parser is float else 0
+                if metric_name == "distance_km":
+                    entry[metric_name] = round(float(parsed_value), 2)
+                else:
+                    entry[metric_name] = int(parsed_value)
+
+        return [by_date[key] for key in sorted(by_date.keys())]
+
+    def _fetch_heart_history(self, access_token: str) -> list[dict[str, Any]]:
+        response = requests.get(
+            FITBIT_SERIES_URL.format(resource_path="activities/heart", period=f"{DEFAULT_HISTORY_DAYS}d"),
+            headers=self._bearer_headers(access_token),
+            timeout=20,
+        )
+        payload = self._parse_fitbit_response(response)
+        series = payload.get("activities-heart") if isinstance(payload.get("activities-heart"), list) else []
+        history: list[dict[str, Any]] = []
+        for item in series:
+            if not isinstance(item, dict):
+                continue
+            value = item.get("value") if isinstance(item.get("value"), dict) else {}
+            zones = value.get("heartRateZones") if isinstance(value.get("heartRateZones"), list) else []
+            history.append(
+                {
+                    "date": item.get("dateTime"),
+                    "resting_heart_rate": value.get("restingHeartRate"),
+                    "heart_rate_zones": [zone for zone in zones if isinstance(zone, dict)],
+                }
+            )
+        return history
+
+    def _fetch_sleep_history(self, access_token: str) -> list[dict[str, Any]]:
+        history: list[dict[str, Any]] = []
+        for offset in range(DEFAULT_HISTORY_DAYS - 1, -1, -1):
+            day = (date.today() - timedelta(days=offset)).isoformat()
+            response = requests.get(
+                FITBIT_SLEEP_BY_DATE_URL.format(day=day),
+                headers=self._bearer_headers(access_token),
+                timeout=20,
+            )
+            payload = self._parse_fitbit_response(response)
+            history.append(self._normalize_sleep_day(day, payload))
+        return history
+
+    def _normalize_sleep_day(self, day: str, payload: dict[str, Any]) -> dict[str, Any]:
+        sleep_entries = payload.get("sleep") if isinstance(payload.get("sleep"), list) else []
+        summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+        main_sleep = next(
+            (
+                entry
+                for entry in sleep_entries
+                if isinstance(entry, dict) and entry.get("isMainSleep")
+            ),
+            sleep_entries[0] if sleep_entries and isinstance(sleep_entries[0], dict) else {},
+        )
+        levels = main_sleep.get("levels") if isinstance(main_sleep.get("levels"), dict) else {}
+        level_summary = levels.get("summary") if isinstance(levels.get("summary"), dict) else {}
+
+        def _stage_minutes(stage_name: str) -> int:
+            stage_payload = level_summary.get(stage_name) if isinstance(level_summary.get(stage_name), dict) else {}
+            try:
+                return int(stage_payload.get("minutes") or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        try:
+            minutes_asleep = int(summary.get("totalMinutesAsleep") or 0)
+        except (TypeError, ValueError):
+            minutes_asleep = 0
+        try:
+            time_in_bed = int(summary.get("totalTimeInBed") or 0)
+        except (TypeError, ValueError):
+            time_in_bed = 0
+
+        return {
+            "date": day,
+            "minutes_asleep": minutes_asleep,
+            "time_in_bed": time_in_bed,
+            "efficiency": main_sleep.get("efficiency") or summary.get("efficiency"),
+            "start_time": main_sleep.get("startTime"),
+            "end_time": main_sleep.get("endTime"),
+            "minutes_awake": _stage_minutes("wake"),
+            "minutes_deep": _stage_minutes("deep"),
+            "minutes_light": _stage_minutes("light"),
+            "minutes_rem": _stage_minutes("rem"),
+        }
+
     def _revoke_token(self, access_token: str) -> None:
         requests.post(
             FITBIT_REVOKE_URL,
@@ -447,11 +610,15 @@ class FitbitIntegration:
             "member_since": profile_payload.get("memberSince") or "",
             "age": profile_payload.get("age"),
             "gender": profile_payload.get("gender") or "",
+            "height_cm": profile_payload.get("height"),
+            "weight_kg": profile_payload.get("weight"),
+            "timezone": profile_payload.get("timezone") or "",
         }
 
     def _status_payload(self, record: dict[str, Any]) -> dict[str, Any]:
         profile_data = record.get("profile_data") if isinstance(record.get("profile_data"), dict) else {}
         last_sync_data = record.get("last_sync_data") if isinstance(record.get("last_sync_data"), dict) else {}
+        today_summary = last_sync_data.get("today_summary") if isinstance(last_sync_data.get("today_summary"), dict) else last_sync_data
         return {
             "configured": True,
             "connected": True,
@@ -460,7 +627,64 @@ class FitbitIntegration:
             "expires_at": record.get("expires_at"),
             "last_sync_at": record.get("last_sync_at"),
             "profile": profile_data,
-            "today_summary": last_sync_data,
+            "today_summary": today_summary,
+            "fitbit_data": last_sync_data,
+        }
+
+    def _coach_payload(self, record: Optional[dict[str, Any]]) -> dict[str, Any]:
+        if not record:
+            return {
+                "configured": True,
+                "connected": False,
+                "scope": [],
+                "last_sync_at": None,
+                "profile": {},
+                "today_summary": {},
+                "activity_history": [],
+                "heart_history": [],
+                "sleep_history": [],
+                "coach_summary": {},
+            }
+
+        profile_data = record.get("profile_data") if isinstance(record.get("profile_data"), dict) else {}
+        sync_data = record.get("last_sync_data") if isinstance(record.get("last_sync_data"), dict) else {}
+        activity_history = sync_data.get("activity_history") if isinstance(sync_data.get("activity_history"), list) else []
+        heart_history = sync_data.get("heart_history") if isinstance(sync_data.get("heart_history"), list) else []
+        sleep_history = sync_data.get("sleep_history") if isinstance(sync_data.get("sleep_history"), list) else []
+        today_summary = sync_data.get("today_summary") if isinstance(sync_data.get("today_summary"), dict) else {}
+
+        def _avg(values: list[float]) -> Optional[float]:
+            return round(sum(values) / len(values), 2) if values else None
+
+        steps_values = [float(item.get("steps") or 0) for item in activity_history if isinstance(item, dict)]
+        calories_values = [float(item.get("calories_out") or 0) for item in activity_history if isinstance(item, dict)]
+        sleep_values = [float(item.get("minutes_asleep") or 0) for item in sleep_history if isinstance(item, dict) and item.get("minutes_asleep") is not None]
+        resting_hr_values = [
+            float(item.get("resting_heart_rate"))
+            for item in heart_history
+            if isinstance(item, dict) and item.get("resting_heart_rate") is not None
+        ]
+        very_active_total = sum(int(item.get("very_active_minutes") or 0) for item in activity_history if isinstance(item, dict))
+        fairly_active_total = sum(int(item.get("fairly_active_minutes") or 0) for item in activity_history if isinstance(item, dict))
+
+        return {
+            "configured": True,
+            "connected": True,
+            "scope": [part for part in str(record.get("scope") or "").split() if part],
+            "last_sync_at": record.get("last_sync_at"),
+            "profile": profile_data,
+            "today_summary": today_summary,
+            "activity_history": activity_history,
+            "heart_history": heart_history,
+            "sleep_history": sleep_history,
+            "coach_summary": {
+                "avg_steps_7d": _avg(steps_values),
+                "avg_calories_out_7d": _avg(calories_values),
+                "avg_sleep_hours_7d": round((_avg(sleep_values) or 0) / 60, 2) if sleep_values else None,
+                "avg_resting_heart_rate_7d": _avg(resting_hr_values),
+                "total_very_active_minutes_7d": very_active_total,
+                "total_fairly_active_minutes_7d": fairly_active_total,
+            },
         }
 
     def _append_query(self, url: str, **params: str) -> str:
