@@ -3,23 +3,112 @@ import { motion } from 'framer-motion';
 import { User, Ruler, Weight, Target, MapPin, Edit, LogOut, Calendar } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+
+type FitbitStatus = {
+  configured: boolean;
+  connected: boolean;
+  fitbit_user_id?: string;
+  expires_at?: string | null;
+  last_sync_at?: string | null;
+  scope?: string[];
+  profile?: {
+    display_name?: string;
+    avatar_url?: string;
+    member_since?: string;
+  };
+  today_summary?: {
+    date?: string;
+    steps?: number;
+    calories_out?: number;
+    distance_km?: number;
+    resting_heart_rate?: number | null;
+    very_active_minutes?: number;
+  };
+};
+
+const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
 
 export function ProfilePage() {
   const { t, language } = useLanguage();
   const { profile, updateProfile } = useUser();
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<typeof profile>>(profile || {});
+  const [fitbitStatus, setFitbitStatus] = useState<FitbitStatus | null>(null);
+  const [fitbitLoading, setFitbitLoading] = useState(false);
+  const [fitbitBusyAction, setFitbitBusyAction] = useState<'connect' | 'sync' | 'disconnect' | null>(null);
+
+  const currentUserId = user?.id || '';
+
+  const fetchFitbitStatus = async (targetUserId: string) => {
+    if (!targetUserId) {
+      setFitbitStatus(null);
+      return;
+    }
+
+    setFitbitLoading(true);
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/integrations/fitbit/status?user_id=${encodeURIComponent(targetUserId)}`);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.detail || 'Failed loading Fitbit status');
+      }
+      setFitbitStatus(payload as FitbitStatus);
+    } catch (error) {
+      console.warn('Failed loading Fitbit status:', error);
+      setFitbitStatus({ configured: false, connected: false });
+    } finally {
+      setFitbitLoading(false);
+    }
+  };
 
   useEffect(() => {
     setEditData(profile || {});
   }, [profile]);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setFitbitStatus(null);
+      return;
+    }
+    fetchFitbitStatus(currentUserId);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const fitbitResult = params.get('fitbit');
+    const fitbitMessage = params.get('fitbit_message');
+    if (!fitbitResult) {
+      return;
+    }
+
+    if (fitbitResult === 'connected') {
+      toast({
+        title: language === 'ar' ? 'تم ربط Fitbit' : 'Fitbit connected',
+        description: language === 'ar' ? 'تم ربط حساب Fitbit بنجاح.' : 'Your Fitbit account is now connected.',
+      });
+      if (currentUserId) {
+        fetchFitbitStatus(currentUserId);
+      }
+    } else {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'فشل ربط Fitbit' : 'Fitbit connection failed',
+        description: fitbitMessage || (language === 'ar' ? 'تعذر إكمال ربط Fitbit.' : 'Could not complete the Fitbit connection.'),
+      });
+    }
+
+    navigate('/profile', { replace: true });
+  }, [location.search, navigate, toast, language, currentUserId]);
 
   // Sync profile from DB on mount
   useEffect(() => {
@@ -80,6 +169,90 @@ export function ProfilePage() {
   const bmi = profile.weight / Math.pow(profile.height / 100, 2);
   const bmiCategory = bmi < 18.5 ? (language === 'ar' ? 'نقص وزن' : 'Underweight') : bmi < 25 ? (language === 'ar' ? 'طبيعي' : 'Normal') : bmi < 30 ? (language === 'ar' ? 'زيادة وزن' : 'Overweight') : (language === 'ar' ? 'سمنة' : 'Obese');
 
+  const handleFitbitConnect = () => {
+    if (!currentUserId) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'لا يوجد مستخدم' : 'No user found',
+        description: language === 'ar' ? 'سجل الدخول أولاً قبل ربط Fitbit.' : 'Sign in before connecting Fitbit.',
+      });
+      return;
+    }
+
+    if (!fitbitStatus?.configured) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'Fitbit غير مهيأ' : 'Fitbit not configured',
+        description: language === 'ar' ? 'أكمل إعداد Fitbit في الخادم أولاً.' : 'Complete the backend Fitbit configuration first.',
+      });
+      return;
+    }
+
+    setFitbitBusyAction('connect');
+    const frontendRedirect = `${window.location.origin}/profile`;
+    window.location.href = `${AI_BACKEND_URL}/integrations/fitbit/connect?user_id=${encodeURIComponent(currentUserId)}&frontend_redirect=${encodeURIComponent(frontendRedirect)}`;
+  };
+
+  const handleFitbitSync = async () => {
+    if (!currentUserId) {
+      return;
+    }
+
+    setFitbitBusyAction('sync');
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/integrations/fitbit/sync?user_id=${encodeURIComponent(currentUserId)}`, {
+        method: 'POST',
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.detail || 'Failed syncing Fitbit');
+      }
+      setFitbitStatus(payload as FitbitStatus);
+      toast({
+        title: language === 'ar' ? 'تم تحديث Fitbit' : 'Fitbit synced',
+        description: language === 'ar' ? 'تم جلب أحدث بيانات Fitbit.' : 'Fetched the latest Fitbit data.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'فشل التحديث' : 'Sync failed',
+        description: error instanceof Error ? error.message : (language === 'ar' ? 'تعذر تحديث Fitbit.' : 'Could not sync Fitbit.'),
+      });
+    } finally {
+      setFitbitBusyAction(null);
+    }
+  };
+
+  const handleFitbitDisconnect = async () => {
+    if (!currentUserId) {
+      return;
+    }
+
+    setFitbitBusyAction('disconnect');
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/integrations/fitbit/connection?user_id=${encodeURIComponent(currentUserId)}`, {
+        method: 'DELETE',
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.detail || 'Failed disconnecting Fitbit');
+      }
+      setFitbitStatus(payload as FitbitStatus);
+      toast({
+        title: language === 'ar' ? 'تم فصل Fitbit' : 'Fitbit disconnected',
+        description: language === 'ar' ? 'تم حذف الربط مع Fitbit.' : 'The Fitbit connection was removed.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'فشل الفصل' : 'Disconnect failed',
+        description: error instanceof Error ? error.message : (language === 'ar' ? 'تعذر فصل Fitbit.' : 'Could not disconnect Fitbit.'),
+      });
+    } finally {
+      setFitbitBusyAction(null);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-24 md:pb-8">
       <Navbar />
@@ -127,6 +300,108 @@ export function ProfilePage() {
               </div>
             ))}
           </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+          className="glass-card rounded-2xl p-6 mb-6"
+        >
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Fitbit</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {language === 'ar'
+                  ? 'اربط Fitbit لسحب الخطوات، السعرات، ومعدل النبض اليومي.'
+                  : 'Connect Fitbit to pull daily steps, calories, and heart-rate data.'}
+              </p>
+            </div>
+            <div className={`text-xs px-3 py-1 rounded-full ${fitbitStatus?.connected ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+              {fitbitStatus?.connected
+                ? (language === 'ar' ? 'متصل' : 'Connected')
+                : (language === 'ar' ? 'غير متصل' : 'Not connected')}
+            </div>
+          </div>
+
+          {fitbitLoading ? (
+            <p className="text-sm text-muted-foreground">
+              {language === 'ar' ? 'جاري تحميل حالة Fitbit...' : 'Loading Fitbit status...'}
+            </p>
+          ) : !fitbitStatus?.configured ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {language === 'ar'
+                  ? 'يجب إعداد متغيرات Fitbit في الخادم أولاً، ثم تغيير Redirect URL في لوحة Fitbit إلى رابط callback الخاص بالباك إند.'
+                  : 'Set the Fitbit environment variables on the backend first, then change the Fitbit app Redirect URL to the backend callback URL.'}
+              </p>
+              <code className="block text-xs rounded-lg bg-secondary/50 px-3 py-2 break-all">
+                {AI_BACKEND_URL}/integrations/fitbit/callback
+              </code>
+            </div>
+          ) : fitbitStatus.connected ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الخطوات اليوم' : 'Steps today'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.steps ?? 0}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'السعرات المحروقة' : 'Calories out'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_out ?? 0}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'المسافة' : 'Distance'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.distance_km ?? 0} km</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبض الراحة' : 'Resting HR'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? '--'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {fitbitStatus.profile?.display_name && (
+                  <p>
+                    {language === 'ar' ? 'اسم حساب Fitbit:' : 'Fitbit account:'} <span className="text-foreground font-medium">{fitbitStatus.profile.display_name}</span>
+                  </p>
+                )}
+                {fitbitStatus.last_sync_at && (
+                  <p>
+                    {language === 'ar' ? 'آخر مزامنة:' : 'Last synced:'} <span className="text-foreground font-medium">{new Date(fitbitStatus.last_sync_at).toLocaleString()}</span>
+                  </p>
+                )}
+                {fitbitStatus.profile?.member_since && (
+                  <p>
+                    {language === 'ar' ? 'عضو منذ:' : 'Member since:'} <span className="text-foreground font-medium">{fitbitStatus.profile.member_since}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button variant="hero" onClick={handleFitbitSync} disabled={fitbitBusyAction !== null}>
+                  {fitbitBusyAction === 'sync'
+                    ? (language === 'ar' ? 'جاري التحديث...' : 'Syncing...')
+                    : (language === 'ar' ? 'تحديث البيانات' : 'Sync Data')}
+                </Button>
+                <Button variant="outline" onClick={handleFitbitDisconnect} disabled={fitbitBusyAction !== null}>
+                  {fitbitBusyAction === 'disconnect'
+                    ? (language === 'ar' ? 'جاري الفصل...' : 'Disconnecting...')
+                    : (language === 'ar' ? 'فصل Fitbit' : 'Disconnect Fitbit')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {language === 'ar'
+                  ? 'بعد الربط، سيستطيع التطبيق سحب بيانات نشاطك اليومي من Fitbit.'
+                  : 'After connecting, the app will be able to pull your daily activity data from Fitbit.'}
+              </p>
+              <Button variant="hero" onClick={handleFitbitConnect} disabled={fitbitBusyAction !== null}>
+                {fitbitBusyAction === 'connect'
+                  ? (language === 'ar' ? 'جاري التحويل...' : 'Redirecting...')
+                  : (language === 'ar' ? 'ربط Fitbit' : 'Connect Fitbit')}
+              </Button>
+            </div>
+          )}
         </motion.div>
 
         {(profile.chronicConditions || profile.allergies || profile.dietaryPreferences) && (

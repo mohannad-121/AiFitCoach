@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
@@ -33,6 +34,7 @@ from persistent_rag_store import PersistentRagStore
 from predict import predict_goal, predict_plan_intent, predict_success
 from response_datasets import ResponseDatasets
 from dataset_paths import resolve_dataset_root, resolve_derived_root
+from fitbit_integration import FitbitIntegration
 from rag_context import RagContextBuilder
 from supabase_context import SupabaseContextRepository
 from voice.stt import WhisperSTT
@@ -281,6 +283,7 @@ SUPABASE_CONTEXT = SupabaseContextRepository(
     os.getenv("VITE_SUPABASE_URL", ""),
     os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("VITE_SUPABASE_ANON_KEY", ""),
 )
+FITBIT = FitbitIntegration(SUPABASE_CONTEXT, BACKEND_DIR / "data" / "fitbit_connections.json")
 NUTRITION_KB = KnowledgeEngine(Path(__file__).resolve().parent / "knowledge" / "dataforproject.txt")
 RESPONSE_DATASET_DIR = _resolve_response_dataset_dir()
 RESPONSE_DATASETS = ResponseDatasets(RESPONSE_DATASET_DIR)
@@ -7891,3 +7894,49 @@ def get_progress(user_id: str) -> dict[str, Any]:
         "date": datetime.utcnow().isoformat(),
         "summary": state.get("last_progress_summary", {}),
     }
+
+
+@app.get("/integrations/fitbit/connect")
+def connect_fitbit(
+    user_id: str = Query(..., min_length=1),
+    frontend_redirect: Optional[str] = Query(default=None),
+) -> RedirectResponse:
+    try:
+        authorization_url = FITBIT.begin_auth(_normalize_user_id(user_id), frontend_redirect)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return RedirectResponse(url=authorization_url, status_code=302)
+
+
+@app.get("/integrations/fitbit/callback")
+def fitbit_callback(
+    code: Optional[str] = Query(default=None),
+    state: Optional[str] = Query(default=None),
+    error: Optional[str] = Query(default=None),
+) -> RedirectResponse:
+    try:
+        redirect_url = FITBIT.handle_callback(code=code, state=state, error=error)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return RedirectResponse(url=redirect_url, status_code=302)
+
+
+@app.get("/integrations/fitbit/status")
+def fitbit_status(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
+    return FITBIT.get_status(_normalize_user_id(user_id))
+
+
+@app.post("/integrations/fitbit/sync")
+def sync_fitbit(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
+    try:
+        return FITBIT.sync(_normalize_user_id(user_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.delete("/integrations/fitbit/connection")
+def disconnect_fitbit(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
+    FITBIT.disconnect(_normalize_user_id(user_id))
+    return {"configured": FITBIT.configured, "connected": False}
