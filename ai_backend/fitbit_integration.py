@@ -25,8 +25,11 @@ FITBIT_PROFILE_URL = "https://api.fitbit.com/1/user/-/profile.json"
 FITBIT_ACTIVITY_BY_DATE_URL = "https://api.fitbit.com/1/user/-/activities/date/{day}.json"
 FITBIT_HEART_BY_DATE_URL = "https://api.fitbit.com/1/user/-/activities/heart/date/{day}/1d.json"
 FITBIT_SLEEP_BY_DATE_URL = "https://api.fitbit.com/1.2/user/-/sleep/date/{day}.json"
+FITBIT_WEIGHT_BY_DATE_URL = "https://api.fitbit.com/1/user/-/body/log/weight/date/{day}.json"
+FITBIT_FOODS_BY_DATE_URL = "https://api.fitbit.com/1/user/-/foods/log/date/{day}.json"
+FITBIT_WATER_BY_DATE_URL = "https://api.fitbit.com/1/user/-/foods/log/water/date/{day}.json"
 FITBIT_SERIES_URL = "https://api.fitbit.com/1/user/-/{resource_path}/date/today/{period}.json"
-DEFAULT_SCOPES = "activity heartrate profile sleep"
+DEFAULT_SCOPES = "activity heartrate nutrition profile sleep weight"
 STATE_TTL_MINUTES = 15
 AUTO_SYNC_INTERVAL_MINUTES = 30
 DEFAULT_HISTORY_DAYS = 7
@@ -394,16 +397,27 @@ class FitbitIntegration:
         return user_payload
 
     def _fetch_sync_payload(self, access_token: str) -> dict[str, Any]:
-        today_summary = self._fetch_today_summary(access_token)
         activity_history = self._fetch_activity_history(access_token)
         heart_history = self._fetch_heart_history(access_token)
         sleep_history = self._fetch_sleep_history(access_token)
+        weight_history = self._fetch_weight_history(access_token)
+        food_history = self._fetch_food_history(access_token)
+        water_history = self._fetch_water_history(access_token)
+        today_summary = self._merge_today_summary(
+            self._fetch_today_summary(access_token),
+            weight_history,
+            food_history,
+            water_history,
+        )
         return {
             "synced_at": _utc_now().isoformat(),
             "today_summary": today_summary,
             "activity_history": activity_history,
             "heart_history": heart_history,
             "sleep_history": sleep_history,
+            "weight_history": weight_history,
+            "food_history": food_history,
+            "water_history": water_history,
         }
 
     def _fetch_today_summary(self, access_token: str) -> dict[str, Any]:
@@ -526,6 +540,160 @@ class FitbitIntegration:
             history.append(self._normalize_sleep_day(day, payload))
         return history
 
+    def _fetch_weight_history(self, access_token: str) -> list[dict[str, Any]]:
+        history: list[dict[str, Any]] = []
+        for day in self._history_days():
+            response = requests.get(
+                FITBIT_WEIGHT_BY_DATE_URL.format(day=day),
+                headers=self._bearer_headers(access_token),
+                timeout=20,
+            )
+            payload = self._parse_fitbit_response(response)
+            entries = payload.get("weight") if isinstance(payload.get("weight"), list) else []
+            latest_entry = entries[-1] if entries and isinstance(entries[-1], dict) else {}
+
+            weight_kg = self._safe_float(latest_entry.get("weight"))
+            bmi = self._safe_float(latest_entry.get("bmi"))
+            history.append(
+                {
+                    "date": day,
+                    "weight_kg": weight_kg,
+                    "bmi": bmi,
+                    "source": latest_entry.get("source") or "",
+                    "log_id": latest_entry.get("logId"),
+                }
+            )
+        return history
+
+    def _fetch_food_history(self, access_token: str) -> list[dict[str, Any]]:
+        history: list[dict[str, Any]] = []
+        for day in self._history_days():
+            response = requests.get(
+                FITBIT_FOODS_BY_DATE_URL.format(day=day),
+                headers=self._bearer_headers(access_token),
+                timeout=20,
+            )
+            payload = self._parse_fitbit_response(response)
+            foods = payload.get("foods") if isinstance(payload.get("foods"), list) else []
+            calories_in = 0.0
+            protein_g = 0.0
+            carbs_g = 0.0
+            fat_g = 0.0
+            fiber_g = 0.0
+            sodium_mg = 0.0
+            food_names: list[str] = []
+
+            for item in foods:
+                if not isinstance(item, dict):
+                    continue
+                nutritional_values = item.get("nutritionalValues") if isinstance(item.get("nutritionalValues"), dict) else {}
+                logged_food = item.get("loggedFood") if isinstance(item.get("loggedFood"), dict) else {}
+                calories_in += self._safe_float(nutritional_values.get("calories")) or self._safe_float(logged_food.get("calories")) or 0.0
+                protein_g += self._safe_float(nutritional_values.get("protein")) or 0.0
+                carbs_g += self._safe_float(nutritional_values.get("carbs")) or 0.0
+                fat_g += self._safe_float(nutritional_values.get("fat")) or 0.0
+                fiber_g += self._safe_float(nutritional_values.get("fiber")) or 0.0
+                sodium_mg += self._safe_float(nutritional_values.get("sodium")) or 0.0
+                food_name = str(logged_food.get("name") or "").strip()
+                if food_name:
+                    food_names.append(food_name)
+
+            history.append(
+                {
+                    "date": day,
+                    "foods_logged": len(foods),
+                    "calories_in": int(round(calories_in)),
+                    "protein_g": round(protein_g, 1),
+                    "carbs_g": round(carbs_g, 1),
+                    "fat_g": round(fat_g, 1),
+                    "fiber_g": round(fiber_g, 1),
+                    "sodium_mg": round(sodium_mg, 1),
+                    "food_names": food_names[:8],
+                }
+            )
+        return history
+
+    def _fetch_water_history(self, access_token: str) -> list[dict[str, Any]]:
+        history: list[dict[str, Any]] = []
+        for day in self._history_days():
+            response = requests.get(
+                FITBIT_WATER_BY_DATE_URL.format(day=day),
+                headers=self._bearer_headers(access_token),
+                timeout=20,
+            )
+            payload = self._parse_fitbit_response(response)
+            summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+            history.append(
+                {
+                    "date": day,
+                    "water_ml": int(round(self._safe_float(summary.get("water")) or 0)),
+                }
+            )
+        return history
+
+    def _merge_today_summary(
+        self,
+        today_summary: dict[str, Any],
+        weight_history: list[dict[str, Any]],
+        food_history: list[dict[str, Any]],
+        water_history: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        merged = dict(today_summary)
+        today = str(merged.get("date") or date.today().isoformat())
+
+        latest_weight_entry = next(
+            (
+                item
+                for item in reversed(weight_history)
+                if isinstance(item, dict) and item.get("weight_kg") is not None
+            ),
+            None,
+        )
+        today_weight_entry = next(
+            (item for item in weight_history if isinstance(item, dict) and item.get("date") == today),
+            latest_weight_entry,
+        )
+        today_food_entry = next(
+            (item for item in food_history if isinstance(item, dict) and item.get("date") == today),
+            {},
+        )
+        today_water_entry = next(
+            (item for item in water_history if isinstance(item, dict) and item.get("date") == today),
+            {},
+        )
+
+        if isinstance(today_weight_entry, dict):
+            merged["weight_kg"] = today_weight_entry.get("weight_kg")
+            merged["latest_weight_kg"] = today_weight_entry.get("weight_kg")
+            merged["bmi"] = today_weight_entry.get("bmi")
+        if isinstance(latest_weight_entry, dict) and latest_weight_entry.get("weight_kg") is not None:
+            merged["latest_weight_kg"] = latest_weight_entry.get("weight_kg")
+        if isinstance(today_food_entry, dict):
+            merged["foods_logged"] = int(today_food_entry.get("foods_logged") or 0)
+            merged["calories_in"] = int(today_food_entry.get("calories_in") or 0)
+            merged["protein_g"] = today_food_entry.get("protein_g")
+            merged["carbs_g"] = today_food_entry.get("carbs_g")
+            merged["fat_g"] = today_food_entry.get("fat_g")
+            merged["food_names"] = today_food_entry.get("food_names") or []
+        if isinstance(today_water_entry, dict):
+            merged["water_ml"] = int(today_water_entry.get("water_ml") or 0)
+
+        return merged
+
+    def _history_days(self) -> list[str]:
+        return [
+            (date.today() - timedelta(days=offset)).isoformat()
+            for offset in range(DEFAULT_HISTORY_DAYS - 1, -1, -1)
+        ]
+
+    def _safe_float(self, value: Any) -> Optional[float]:
+        try:
+            if value in (None, ""):
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
     def _normalize_sleep_day(self, day: str, payload: dict[str, Any]) -> dict[str, Any]:
         sleep_entries = payload.get("sleep") if isinstance(payload.get("sleep"), list) else []
         summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
@@ -643,6 +811,9 @@ class FitbitIntegration:
                 "activity_history": [],
                 "heart_history": [],
                 "sleep_history": [],
+                "weight_history": [],
+                "food_history": [],
+                "water_history": [],
                 "coach_summary": {},
             }
 
@@ -651,6 +822,9 @@ class FitbitIntegration:
         activity_history = sync_data.get("activity_history") if isinstance(sync_data.get("activity_history"), list) else []
         heart_history = sync_data.get("heart_history") if isinstance(sync_data.get("heart_history"), list) else []
         sleep_history = sync_data.get("sleep_history") if isinstance(sync_data.get("sleep_history"), list) else []
+        weight_history = sync_data.get("weight_history") if isinstance(sync_data.get("weight_history"), list) else []
+        food_history = sync_data.get("food_history") if isinstance(sync_data.get("food_history"), list) else []
+        water_history = sync_data.get("water_history") if isinstance(sync_data.get("water_history"), list) else []
         today_summary = sync_data.get("today_summary") if isinstance(sync_data.get("today_summary"), dict) else {}
 
         def _avg(values: list[float]) -> Optional[float]:
@@ -658,14 +832,23 @@ class FitbitIntegration:
 
         steps_values = [float(item.get("steps") or 0) for item in activity_history if isinstance(item, dict)]
         calories_values = [float(item.get("calories_out") or 0) for item in activity_history if isinstance(item, dict)]
+        calories_in_values = [float(item.get("calories_in") or 0) for item in food_history if isinstance(item, dict)]
         sleep_values = [float(item.get("minutes_asleep") or 0) for item in sleep_history if isinstance(item, dict) and item.get("minutes_asleep") is not None]
         resting_hr_values = [
             float(item.get("resting_heart_rate"))
             for item in heart_history
             if isinstance(item, dict) and item.get("resting_heart_rate") is not None
         ]
+        weight_values = [
+            float(item.get("weight_kg"))
+            for item in weight_history
+            if isinstance(item, dict) and item.get("weight_kg") is not None
+        ]
+        water_values = [float(item.get("water_ml") or 0) for item in water_history if isinstance(item, dict)]
+        foods_logged_total = sum(int(item.get("foods_logged") or 0) for item in food_history if isinstance(item, dict))
         very_active_total = sum(int(item.get("very_active_minutes") or 0) for item in activity_history if isinstance(item, dict))
         fairly_active_total = sum(int(item.get("fairly_active_minutes") or 0) for item in activity_history if isinstance(item, dict))
+        weight_change_7d = round(weight_values[-1] - weight_values[0], 2) if len(weight_values) >= 2 else None
 
         return {
             "configured": True,
@@ -677,11 +860,20 @@ class FitbitIntegration:
             "activity_history": activity_history,
             "heart_history": heart_history,
             "sleep_history": sleep_history,
+            "weight_history": weight_history,
+            "food_history": food_history,
+            "water_history": water_history,
             "coach_summary": {
                 "avg_steps_7d": _avg(steps_values),
                 "avg_calories_out_7d": _avg(calories_values),
+                "avg_calories_in_7d": _avg(calories_in_values),
                 "avg_sleep_hours_7d": round((_avg(sleep_values) or 0) / 60, 2) if sleep_values else None,
                 "avg_resting_heart_rate_7d": _avg(resting_hr_values),
+                "avg_weight_7d": _avg(weight_values),
+                "avg_water_ml_7d": _avg(water_values),
+                "latest_weight_kg": weight_values[-1] if weight_values else None,
+                "weight_change_7d": weight_change_7d,
+                "foods_logged_7d": foods_logged_total,
                 "total_very_active_minutes_7d": very_active_total,
                 "total_fairly_active_minutes_7d": fairly_active_total,
             },

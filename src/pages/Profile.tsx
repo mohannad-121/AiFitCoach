@@ -21,14 +21,25 @@ type FitbitStatus = {
     display_name?: string;
     avatar_url?: string;
     member_since?: string;
+    weight_kg?: number | null;
   };
   today_summary?: {
     date?: string;
     steps?: number;
     calories_out?: number;
+    calories_in?: number;
     distance_km?: number;
     resting_heart_rate?: number | null;
     very_active_minutes?: number;
+    weight_kg?: number | null;
+    latest_weight_kg?: number | null;
+    bmi?: number | null;
+    water_ml?: number;
+    foods_logged?: number;
+    protein_g?: number | null;
+    carbs_g?: number | null;
+    fat_g?: number | null;
+    food_names?: string[];
   };
 };
 
@@ -310,8 +321,8 @@ export function ProfilePage() {
               <h2 className="text-lg font-semibold">Fitbit</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {language === 'ar'
-                  ? 'اربط Fitbit لسحب الخطوات، السعرات، ومعدل النبض اليومي.'
-                  : 'Connect Fitbit to pull daily steps, calories, and heart-rate data.'}
+                  ? 'اربط Fitbit لسحب النشاط، الوزن، الطعام، والماء من حسابك.'
+                  : 'Connect Fitbit to pull activity, weight, food, and water data from your account.'}
               </p>
             </div>
             <div className={`text-xs px-3 py-1 rounded-full ${fitbitStatus?.connected ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'}`}>
@@ -355,6 +366,22 @@ export function ProfilePage() {
                   <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبض الراحة' : 'Resting HR'}</p>
                   <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? '--'}</p>
                 </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الوزن المتزامن' : 'Synced weight'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg ?? '--'}{(fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg) != null ? ' kg' : ''}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الماء اليوم' : 'Water today'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.water_ml ?? 0} ml</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'سعرات الطعام' : 'Calories in'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_in ?? 0}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الأطعمة المسجلة' : 'Foods logged'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.foods_logged ?? 0}</p>
+                </div>
               </div>
 
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -371,6 +398,11 @@ export function ProfilePage() {
                 {fitbitStatus.profile?.member_since && (
                   <p>
                     {language === 'ar' ? 'عضو منذ:' : 'Member since:'} <span className="text-foreground font-medium">{fitbitStatus.profile.member_since}</span>
+                  </p>
+                )}
+                {Array.isArray(fitbitStatus.today_summary?.food_names) && fitbitStatus.today_summary!.food_names!.length > 0 && (
+                  <p>
+                    {language === 'ar' ? 'طعام اليوم:' : 'Today\'s foods:'} <span className="text-foreground font-medium">{fitbitStatus.today_summary!.food_names!.join(', ')}</span>
                   </p>
                 )}
               </div>
@@ -392,8 +424,8 @@ export function ProfilePage() {
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 {language === 'ar'
-                  ? 'بعد الربط، سيستطيع التطبيق سحب بيانات نشاطك اليومي من Fitbit.'
-                  : 'After connecting, the app will be able to pull your daily activity data from Fitbit.'}
+                  ? 'بعد الربط، سيستطيع التطبيق سحب النشاط، الوزن، الطعام، والماء من Fitbit مع كل مزامنة.'
+                  : 'After connecting, the app will be able to pull activity, weight, food, and water data from Fitbit on every sync.'}
               </p>
               <Button variant="hero" onClick={handleFitbitConnect} disabled={fitbitBusyAction !== null}>
                 {fitbitBusyAction === 'connect'
