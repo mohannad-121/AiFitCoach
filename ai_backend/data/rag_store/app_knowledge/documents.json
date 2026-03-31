@@ -1,0 +1,98 @@
+[
+  {
+    "id": "page_home",
+    "text": "App page home: {\"purpose\": \"Main landing page and navigation hub for FitCoach.\", \"primary_actions\": [\"start onboarding\", \"open workouts\", \"open AI coach\", \"open schedule\", \"open profile\"]}",
+    "metadata": {
+      "kind": "app_page",
+      "page": "home"
+    }
+  },
+  {
+    "id": "page_workouts",
+    "text": "App page workouts: {\"purpose\": \"Exercise explorer that filters the exercise library by muscle group, goal, place, and gender.\", \"primary_actions\": [\"select muscles on anatomy map\", \"filter by goal\", \"filter by home or gym\", \"filter by gender\"]}",
+    "metadata": {
+      "kind": "app_page",
+      "page": "workouts"
+    }
+  },
+  {
+    "id": "page_coach",
+    "text": "App page coach: {\"purpose\": \"AI Coach page for text chat, voice chat, plan generation, plan approval, and chat history.\", \"primary_actions\": [\"ask questions\", \"use voice chat\", \"create workout plans\", \"create nutrition plans\", \"approve or reject plans\"]}",
+    "metadata": {
+      "kind": "app_page",
+      "page": "coach"
+    }
+  },
+  {
+    "id": "page_schedule",
+    "text": "App page schedule: {\"purpose\": \"Weekly schedule page for active workout plans, nutrition plans, completions, and daily logs.\", \"primary_actions\": [\"review plans by day\", \"mark exercises complete\", \"save daily workout notes\", \"save nutrition notes\", \"save mood or energy\"]}",
+    "metadata": {
+      "kind": "app_page",
+      "page": "schedule"
+    }
+  },
+  {
+    "id": "page_profile",
+    "text": "App page profile: {\"purpose\": \"Profile summary page for personal stats, BMI, health information, and training details.\", \"primary_actions\": [\"review BMI\", \"review health information\", \"review training details\", \"edit data\"]}",
+    "metadata": {
+      "kind": "app_page",
+      "page": "profile"
+    }
+  },
+  {
+    "id": "page_onboarding",
+    "text": "App page onboarding: {\"purpose\": \"Multi-step setup flow that collects the user profile used across the app and by the AI coach.\", \"primary_actions\": [\"complete profile basics\", \"record health status\", \"set goals\", \"set training details\", \"set workout location\"]}",
+    "metadata": {
+      "kind": "app_page",
+      "page": "onboarding"
+    }
+  },
+  {
+    "id": "page_auth",
+    "text": "App page auth: {\"purpose\": \"Authentication page for sign in and sign up.\", \"primary_actions\": [\"sign in\", \"sign up\", \"log out\"]}",
+    "metadata": {
+      "kind": "app_page",
+      "page": "auth"
+    }
+  },
+  {
+    "id": "app_onboarding_flow",
+    "text": "App knowledge onboarding_flow: [{\"key\": \"basic_info\", \"title_en\": \"Basic Info\", \"title_ar\": \"معلومات أساسية\", \"fields\": [\"name\", \"age\", \"gender\"], \"helper_notes\": []}, {\"key\": \"body_stats\", \"title_en\": \"Body Stats\", \"title_ar\": \"قياسات الجسم\", \"fields\": [\"weight_kg\", \"height_cm\"], \"helper_notes\": []}, {\"key\": \"health_status\", \"title_en\": \"Health Status\", \"title_ar\": \"الحالة الصحية\", \"fields\": [\"chronic_conditions\", \"allergies\", \"dietary_preferences\"], \"helper_notes\": [\"Chronic conditions can be selected from Diabetes, Blood Pressure, Heart, Asthma, Joints, and Back Pain, or typed manually.\", \"Allergies can be selected from Peanuts, Tree Nuts, Milk, Eggs, Wheat, and Shellfish, or typed manually.\", \"Dietary preferences can be selected from Vegetarian, Vegan, Halal, Keto, Gluten Free, and Lactose Free, or typed manually.\", \"The UI note says users can leave the field empty if they have no health issues, allergies, or dietary preferences.\"]}, {\"key\": \"goals\", \"title_en\": \"Your Goals\", \"title_ar\": \"أهدافك\", \"fields\": [\"goal\"], \"helper_notes\": [\"Goal options are Build Muscle, Lose Weight, and General Fitness.\"]}, {\"key\": \"training_details\", \"title_en\": \"Training Details\", \"title_ar\": \"تفاصيل التدريب\", \"fields\": [\"fitness_level\", \"training_days_per_week\", \"equipment\", \"injuries\", \"activity_level\"], \"helper_notes\": [\"Equipment is a free-text field with examples like dumbbells, barbell, and bands.\", \"Injuries or pain is a free-text field for any injury or pain notes.\", \"Daily activity level options are Low, Moderate, and High.\"]}, {\"key\": \"workout_preference\", \"title_en\": \"Workout Preference\", \"title_ar\": \"مكان التمرين\", \"fields\": [\"location\"], \"helper_notes\": [\"Location options are Home and Gym.\"]}]",
+    "metadata": {
+      "kind": "app_knowledge",
+      "section": "onboarding_flow"
+    }
+  },
+  {
+    "id": "app_profile_page",
+    "text": "App knowledge profile_page: {\"sections\": [\"profile header with name, gender, goal, and email\", \"body mass index card with BMI value and category\", \"stats cards for age, height, weight, goal, and location\", \"health information for chronic conditions, allergies, and dietary preferences\", \"training details for level, training days, activity level, equipment, and injuries\"]}",
+    "metadata": {
+      "kind": "app_knowledge",
+      "section": "profile_page"
+    }
+  },
+  {
+    "id": "app_workouts_page",
+    "text": "App knowledge workouts_page: {\"title_en\": \"Muscle Map\", \"title_ar\": \"خريطة العضلات\", \"anatomy_selector\": true, \"supported_muscles\": [\"abs\", \"back\", \"biceps\", \"calves\", \"chest\", \"glutes\", \"hamstrings\", \"quads\", \"shoulders\", \"triceps\"], \"supported_goals\": [\"all\", \"bulking\", \"cutting\", \"fitness\"], \"supported_locations\": [\"both\", \"gym\", \"home\"], \"supported_genders\": [\"all\", \"female\", \"male\"], \"exercise_count\": 62, \"result_card_fields\": [\"name\", \"localized name\", \"sets\", \"reps\", \"description\", \"video link if available\"]}",
+    "metadata": {
+      "kind": "app_knowledge",
+      "section": "workouts_page"
+    }
+  },
+  {
+    "id": "app_schedule_page",
+    "text": "App knowledge schedule_page: {\"supports_week_navigation\": true, \"tabs\": [\"workout\", \"nutrition\"], \"daily_log_fields\": [\"workout_notes\", \"nutrition_notes\", \"mood\"], \"daily_log_labels_en\": [\"What did you train today?\", \"How was your nutrition today?\", \"Mood / Energy\"], \"daily_log_labels_ar\": [\"شو تمرنت اليوم؟\", \"شو أكلت اليوم؟\", \"مزاجك/طاقتك اليوم\"], \"daily_log_help_en\": \"These notes help the AI coach track your daily progress.\", \"daily_log_help_ar\": \"هذه الملاحظات تساعد المدرب الذكي على فهم تقدمك اليومي.\", \"empty_state_workout_en\": \"No workout schedule. Ask AI Coach to create one!\", \"empty_state_nutrition_en\": \"No nutrition plan. Ask AI Coach to create one!\"}",
+    "metadata": {
+      "kind": "app_knowledge",
+      "section": "schedule_page"
+    }
+  },
+  {
+    "id": "app_ai_coach_capabilities",
+    "text": "App knowledge ai_coach_capabilities: [\"general chat\", \"fitness coaching\", \"nutrition guidance\", \"website and onboarding explanations\", \"workout plan suggestions\", \"nutrition plan suggestions\", \"voice chat\", \"plan approval workflow\", \"chat history\"]",
+    "metadata": {
+      "kind": "app_knowledge",
+      "section": "ai_coach_capabilities"
+    }
+  }
+]

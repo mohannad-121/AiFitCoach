@@ -1,0 +1,62 @@
+[
+  {
+    "id": "progress-test-user_profile",
+    "text": "User profile: {\"fitness_level\": \"intermediate\", \"goal\": \"muscle_gain\", \"id\": \"progress-test-user\", \"user_id\": \"progress-test-user\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "progress-test-user_tracking_summary",
+    "text": "Tracking summary: {\"weekly_stats\": {\"adherence_percent\": 63, \"total_workout_tasks\": 6, \"completed_workouts\": 4}, \"recent_activity\": [{\"date\": \"2026-03-27\", \"summary\": \"Completed 3 of 5 scheduled exercises\", \"type\": \"workout_completion\"}], \"completed_tasks\": 3, \"recent_completed_exercises\": [{\"date\": \"2026-03-27\", \"plan_title\": \"Upper Body Strength\", \"exercise_name\": \"Push-ups\", \"day\": \"Friday\"}, {\"date\": \"2026-03-27\", \"plan_title\": \"Upper Body Strength\", \"exercise_name\": \"Dumbbell Rows\", \"day\": \"Friday\"}, {\"date\": \"2026-03-27\", \"plan_title\": \"Upper Body Strength\", \"exercise_name\": \"Plank\", \"day\": \"Friday\"}], \"progress_metrics\": {\"workout_streak_days\": 2, \"workout_adherence_percent\": 63, \"completed_last_7_days\": 4, \"trend\": \"up\"}, \"adherence_score\": 63, \"total_tasks\": 5}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "progress-test-user_progress_metrics",
+    "text": "Progress metrics: {\"workout_streak_days\": 2, \"workout_adherence_percent\": 63, \"completed_last_7_days\": 4, \"trend\": \"up\"}",
+    "metadata": {
+      "kind": "progress_metrics"
+    }
+  },
+  {
+    "id": "progress-test-user_activity_0",
+    "text": "Recent activity: {\"date\": \"2026-03-27\", \"summary\": \"Completed 3 of 5 scheduled exercises\", \"type\": \"workout_completion\"}",
+    "metadata": {
+      "kind": "recent_activity",
+      "index": 0
+    }
+  },
+  {
+    "id": "progress-test-user_completed_exercise_0",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-27\", \"plan_title\": \"Upper Body Strength\", \"exercise_name\": \"Push-ups\", \"day\": \"Friday\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 0
+    }
+  },
+  {
+    "id": "progress-test-user_completed_exercise_1",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-27\", \"plan_title\": \"Upper Body Strength\", \"exercise_name\": \"Dumbbell Rows\", \"day\": \"Friday\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 1
+    }
+  },
+  {
+    "id": "progress-test-user_completed_exercise_2",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-27\", \"plan_title\": \"Upper Body Strength\", \"exercise_name\": \"Plank\", \"day\": \"Friday\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 2
+    }
+  },
+  {
+    "id": "progress-test-user_plan_snapshot",
+    "text": "Plan snapshot: {\"title\": \"Upper Body Strength\"}",
+    "metadata": {
+      "kind": "plan_snapshot"
+    }
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "compare-user_profile",
+    "text": "User profile: {\"id\": \"compare-user\", \"user_id\": \"compare-user\", \"goal\": \"\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "compare-user_tracking_summary",
+    "text": "Tracking summary: {\"fitbit\": {\"configured\": true, \"connected\": false, \"scope\": [], \"last_sync_at\": null, \"profile\": {}, \"today_summary\": {}, \"activity_history\": [], \"heart_history\": [], \"sleep_history\": [], \"weight_history\": [], \"food_history\": [], \"water_history\": [], \"coach_summary\": {}}}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "compare-user_fitbit_summary",
+    "text": "Fitbit summary: {\"configured\": true, \"connected\": false, \"scope\": [], \"last_sync_at\": null, \"profile\": {}, \"today_summary\": {}, \"activity_history\": [], \"heart_history\": [], \"sleep_history\": [], \"weight_history\": [], \"food_history\": [], \"water_history\": [], \"coach_summary\": {}}",
+    "metadata": {
+      "kind": "fitbit_summary"
+    }
+  }
+]

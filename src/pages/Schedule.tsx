@@ -11,7 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface WorkoutExercise {
   name: string;
@@ -136,6 +136,25 @@ function writeLocalCompletions(userId: string, completions: Completion[]) {
 
 const NUTRITION_PREFIXES = ['\u{1F37D}\uFE0F'];
 const isNutritionPlanTitle = (title: string) => NUTRITION_PREFIXES.some(prefix => title.startsWith(prefix));
+const WEEK_TEMPLATE = [
+  { day: 'Saturday', dayAr: 'السبت' },
+  { day: 'Sunday', dayAr: 'الأحد' },
+  { day: 'Monday', dayAr: 'الاثنين' },
+  { day: 'Tuesday', dayAr: 'الثلاثاء' },
+  { day: 'Wednesday', dayAr: 'الأربعاء' },
+  { day: 'Thursday', dayAr: 'الخميس' },
+  { day: 'Friday', dayAr: 'الجمعة' },
+] as const;
+const JS_WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+const LEGACY_WORKOUT_DAY_PATTERNS: Record<number, number[]> = {
+  1: [0],
+  2: [0, 3],
+  3: [0, 2, 4],
+  4: [0, 1, 3, 5],
+  5: [0, 1, 2, 4, 6],
+  6: [0, 1, 2, 3, 4, 6],
+  7: [0, 1, 2, 3, 4, 5, 6],
+};
 
 // Map plan day names to JS day numbers (0=Sun, 6=Sat)
 const dayNameToIndex: Record<string, number> = {
@@ -148,6 +167,56 @@ const dayNameToIndex: Record<string, number> = {
 function getPlanDayIndex(dayStr: string): number {
   const lower = dayStr.toLowerCase().split(' - ')[0].split(' – ')[0].trim();
   return dayNameToIndex[lower] ?? -1;
+}
+
+function buildAnchoredWorkoutDayNames(daysPerWeek: number, anchorDate?: string): string[] {
+  const clamped = Math.max(1, Math.min(7, daysPerWeek));
+  const parsedAnchor = anchorDate ? new Date(anchorDate) : new Date();
+  const safeAnchor = Number.isNaN(parsedAnchor.getTime()) ? new Date() : parsedAnchor;
+  const anchorJsDay = safeAnchor.getDay();
+  const jsDays = Array.from(new Set((LEGACY_WORKOUT_DAY_PATTERNS[clamped] || LEGACY_WORKOUT_DAY_PATTERNS[3]).map((offset) => (anchorJsDay + offset) % 7)));
+
+  jsDays.sort((left, right) => ((left + 1) % 7) - ((right + 1) % 7));
+  return jsDays.map((dayIndex) => JS_WEEKDAY_NAMES[dayIndex]);
+}
+
+function normalizeLegacyWorkoutPlan(plan: WorkoutPlan): WorkoutPlan {
+  if (isNutritionPlanTitle(plan.title)) return plan;
+
+  const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
+  if (days.length !== WEEK_TEMPLATE.length) return plan;
+
+  const activeDayIndexes = days
+    .map((day, index) => (Array.isArray(day.exercises) && day.exercises.length > 0 ? index : -1))
+    .filter((index) => index >= 0);
+  const trainingDays = activeDayIndexes.length;
+  const expectedIndexes = LEGACY_WORKOUT_DAY_PATTERNS[Math.max(1, Math.min(7, trainingDays))] || [];
+
+  if (trainingDays === 0 || expectedIndexes.length !== activeDayIndexes.length) return plan;
+  if (activeDayIndexes.some((index, position) => index !== expectedIndexes[position])) return plan;
+  if (!days.every((day, index) => {
+    const expectedDay = WEEK_TEMPLATE[index];
+    const expectedIndex = getPlanDayIndex(expectedDay.day);
+    return getPlanDayIndex(day.day) === expectedIndex || getPlanDayIndex(day.dayAr || '') === expectedIndex;
+  })) {
+    return plan;
+  }
+
+  const anchoredDayNames = buildAnchoredWorkoutDayNames(trainingDays, plan.created_at);
+  const activeDays = activeDayIndexes.map((index) => days[index]);
+  const repairedDays: PlanDay[] = WEEK_TEMPLATE.map((templateDay) => {
+    const slot = anchoredDayNames.indexOf(templateDay.day);
+    const sourceDay = slot >= 0 ? activeDays[slot] : null;
+    return {
+      day: templateDay.day,
+      dayAr: templateDay.dayAr,
+      exercises: sourceDay && Array.isArray(sourceDay.exercises) ? sourceDay.exercises : [],
+    };
+  });
+
+  return JSON.stringify(repairedDays) === JSON.stringify(days)
+    ? plan
+    : { ...plan, plan_data: repairedDays };
 }
 
 function planDayHasItems(day: PlanDay | null | undefined): boolean {
@@ -205,6 +274,7 @@ export function SchedulePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
   const [completions, setCompletions] = useState<Completion[]>([]);
@@ -227,6 +297,23 @@ export function SchedulePage() {
     const idx = weekDates.findIndex(d => d.getTime() === today.getTime());
     setSelectedDateIdx(idx >= 0 ? idx : 0);
   }, [weekDates]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('focusToday') !== '1') return;
+
+    const todayWeek = getWeekDates(0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const idx = todayWeek.findIndex(d => d.getTime() === today.getTime());
+
+    setWeekOffset(0);
+    if (idx >= 0) {
+      setSelectedDateIdx(idx);
+    }
+
+    navigate('/schedule', { replace: true });
+  }, [location.search, navigate]);
 
   const workoutPlans = plans.filter(p => !isNutritionPlanTitle(p.title));
   const nutritionPlans = plans.filter(p => isNutritionPlanTitle(p.title));
@@ -260,12 +347,33 @@ export function SchedulePage() {
         ...p,
         plan_data: (p.plan_data as any) as PlanDay[],
       }));
+      const normalizedRemotePlans = parsedRemotePlans.map(normalizeLegacyWorkoutPlan);
+      const normalizedLocalPlans = localPlans.map(normalizeLegacyWorkoutPlan);
 
       const mergedPlans = [
-        ...parsedRemotePlans,
-        ...localPlans.filter(localPlan => !parsedRemotePlans.some(remotePlan => remotePlan.id === localPlan.id)),
+        ...normalizedRemotePlans,
+        ...normalizedLocalPlans.filter(localPlan => !normalizedRemotePlans.some(remotePlan => remotePlan.id === localPlan.id)),
       ];
       setPlans(mergedPlans);
+
+      if (JSON.stringify(normalizedLocalPlans) !== JSON.stringify(localPlans)) {
+        writeLocalPlans(user.id, normalizedLocalPlans);
+      }
+
+      const repairedRemotePlans = normalizedRemotePlans.filter((plan, index) => (
+        JSON.stringify(plan.plan_data) !== JSON.stringify(parsedRemotePlans[index]?.plan_data || [])
+      ));
+      if (repairedRemotePlans.length > 0) {
+        await Promise.all(
+          repairedRemotePlans.map((plan) =>
+            supabase
+              .from('workout_plans')
+              .update({ plan_data: plan.plan_data })
+              .eq('id', plan.id)
+              .eq('user_id', user.id)
+          )
+        );
+      }
 
       const { data: compData } = await supabase
         .from('workout_completions')

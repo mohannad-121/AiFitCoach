@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Extend users_extended with full profile fields
 ALTER TABLE public.users_extended
   ADD COLUMN IF NOT EXISTS age INTEGER,
@@ -14,7 +16,7 @@ ALTER TABLE public.users_extended
 
 -- Exercise catalog table
 CREATE TABLE IF NOT EXISTS public.exercise_catalog (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   target_muscles TEXT[] DEFAULT ARRAY[]::TEXT[],
   difficulty TEXT,
@@ -31,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.exercise_catalog (
 
 -- Nutrition catalog table
 CREATE TABLE IF NOT EXISTS public.nutrition_catalog (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   category TEXT,
   calories INTEGER,
@@ -61,7 +63,7 @@ ALTER TABLE public.daily_tracking
 
 -- Performance reports
 CREATE TABLE IF NOT EXISTS public.performance_reports (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   report_date DATE NOT NULL,
   report_json JSONB NOT NULL,

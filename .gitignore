@@ -21,9 +21,13 @@ ai_backend/datasets/en.openfoodfacts.org.products.csv
 ai_backend/venv/
 venv/
 .venv/
+.venv311/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Local backup/worktree copies
+.pushrepo3/
 
 # Backend runtime logs
 ai_backend/ai_backend/logs/

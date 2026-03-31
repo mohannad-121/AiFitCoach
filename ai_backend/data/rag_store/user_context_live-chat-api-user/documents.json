@@ -1,0 +1,23 @@
+[
+  {
+    "id": "live-chat-api-user_profile",
+    "text": "User profile: {\"goal\": \"general_fitness\", \"trainingDaysPerWeek\": 3, \"location\": \"home\", \"training_days_per_week\": 3, \"id\": \"live-chat-api-user\", \"user_id\": \"live-chat-api-user\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "live-chat-api-user_tracking_summary",
+    "text": "Tracking summary: {\"fitbit\": {\"configured\": true, \"connected\": false, \"scope\": [], \"last_sync_at\": null, \"profile\": {}, \"today_summary\": {}, \"activity_history\": [], \"heart_history\": [], \"sleep_history\": [], \"weight_history\": [], \"food_history\": [], \"water_history\": [], \"coach_summary\": {}}}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "live-chat-api-user_fitbit_summary",
+    "text": "Fitbit summary: {\"configured\": true, \"connected\": false, \"scope\": [], \"last_sync_at\": null, \"profile\": {}, \"today_summary\": {}, \"activity_history\": [], \"heart_history\": [], \"sleep_history\": [], \"weight_history\": [], \"food_history\": [], \"water_history\": [], \"coach_summary\": {}}",
+    "metadata": {
+      "kind": "fitbit_summary"
+    }
+  }
+]

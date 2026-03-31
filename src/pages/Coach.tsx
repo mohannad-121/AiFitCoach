@@ -47,6 +47,18 @@ interface PendingPlanOptionsState {
   page: number;
   totalPages: number;
 }
+interface PendingProfileConfirmationState {
+  field: string;
+  fieldLabel: string;
+  displayValue: string;
+}
+
+interface ProfileUpdateFeedbackState {
+  field: string;
+  fieldLabel: string;
+  displayValue: string;
+  message: string;
+}
 
 interface RagDebugHit {
   namespace?: string;
@@ -105,6 +117,7 @@ const WEEK_TEMPLATE = [
   { day: 'Thursday', dayAr: 'الخميس' },
   { day: 'Friday', dayAr: 'الجمعة' },
 ];
+const JS_WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
 interface CoachNavigationState {
   coachPrompt?: string;
@@ -129,7 +142,7 @@ const DAY_NAME_TO_INDEX: Record<string, number> = {
   'السبت': 6,
 };
 
-const buildWorkoutDayIndexes = (daysPerWeek: number) => {
+const buildWorkoutDayNames = (daysPerWeek: number, anchorDate?: string | null) => {
   const clamped = Math.max(1, Math.min(7, daysPerWeek));
   const patterns: Record<number, number[]> = {
     1: [0],
@@ -140,7 +153,13 @@ const buildWorkoutDayIndexes = (daysPerWeek: number) => {
     6: [0, 1, 2, 3, 4, 6],
     7: [0, 1, 2, 3, 4, 5, 6],
   };
-  return patterns[clamped] || patterns[3];
+  const parsedAnchor = anchorDate ? new Date(anchorDate) : new Date();
+  const safeAnchor = Number.isNaN(parsedAnchor.getTime()) ? new Date() : parsedAnchor;
+  const anchorJsDay = safeAnchor.getDay();
+  const jsDays = Array.from(new Set((patterns[clamped] || patterns[3]).map((offset) => (anchorJsDay + offset) % 7)));
+
+  jsDays.sort((left, right) => ((left + 1) % 7) - ((right + 1) % 7));
+  return jsDays.map((dayIndex) => JS_WEEKDAY_NAMES[dayIndex]);
 };
 
 const toIsoDay = (value?: string | null) => {
@@ -343,7 +362,7 @@ const writeLocalPlans = (userId: string, plans: StoredSchedulePlan[]) => {
 export function CoachPage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
-  const { profile } = useUser();
+  const { profile, updateProfile } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -359,6 +378,8 @@ export function CoachPage() {
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PendingPlanState | null>(null);
   const [pendingPlanOptions, setPendingPlanOptions] = useState<PendingPlanOptionsState | null>(null);
+  const [pendingProfileConfirmation, setPendingProfileConfirmation] = useState<PendingProfileConfirmationState | null>(null);
+  const [profileUpdateFeedback, setProfileUpdateFeedback] = useState<ProfileUpdateFeedbackState | null>(null);
   const [showRagDebug, setShowRagDebug] = useState(false);
   const [ragDebugData, setRagDebugData] = useState<RagDebugData | null>(null);
   const [ragDebugLoading, setRagDebugLoading] = useState(false);
@@ -758,10 +779,10 @@ export function CoachPage() {
   };
 
   const goToSchedule = useCallback(() => {
-    navigate('/schedule');
+    navigate('/schedule?focusToday=1');
     window.setTimeout(() => {
       if (!window.location.pathname.startsWith('/schedule')) {
-        window.location.assign('/schedule');
+        window.location.assign('/schedule?focusToday=1');
       }
     }, 350);
   }, [navigate]);
@@ -903,6 +924,15 @@ export function CoachPage() {
         setPendingPlanOptions(null);
         setPendingPlan(pendingFromApi);
       }
+
+      const pendingProfileConfirmationFromVoice = extractPendingProfileConfirmation(pendingVoiceResponse);
+      if (pendingProfileConfirmationFromVoice) {
+        setPendingProfileConfirmation(pendingProfileConfirmationFromVoice);
+      } else if (pendingVoiceResponse?.action === 'profile_update_cancelled' || pendingVoiceResponse?.action === 'profile_updated') {
+        setPendingProfileConfirmation(null);
+      }
+
+      await persistProfileUpdate(pendingVoiceResponse);
 
       const planOptionsFromApi = extractPlanOptionsFromResponse(pendingVoiceResponse);
       if (planOptionsFromApi) {
@@ -1047,6 +1077,7 @@ export function CoachPage() {
     setCurrentMessages([]);
     setPendingPlan(null);
     setPendingPlanOptions(null);
+    setPendingProfileConfirmation(null);
     return id;
   };
 
@@ -1064,6 +1095,7 @@ export function CoachPage() {
       setCurrentMessages(conv.messages);
       setPendingPlan(null);
       setPendingPlanOptions(null);
+      setPendingProfileConfirmation(null);
     }
     setSidebarOpen(false);
   };
@@ -1115,15 +1147,15 @@ export function CoachPage() {
 
     const exercises = Array.isArray(plan?.exercises) ? plan.exercises : [];
     const requestedDays = Number(plan?.training_days_per_week ?? plan?.trainingDaysPerWeek ?? plan?.days_per_week ?? 3);
-    const workoutDayIndexes = buildWorkoutDayIndexes(Number.isFinite(requestedDays) ? requestedDays : 3);
-    const grouped = workoutDayIndexes.map(() => [] as any[]);
+    const workoutDayNames = buildWorkoutDayNames(Number.isFinite(requestedDays) ? requestedDays : 3, plan?.created_at);
+    const grouped = workoutDayNames.map(() => [] as any[]);
 
     exercises.forEach((exercise: any, index: number) => {
-      grouped[index % workoutDayIndexes.length].push(exercise);
+      grouped[index % workoutDayNames.length].push(exercise);
     });
 
-    return WEEK_TEMPLATE.map((weekDay, weekIndex) => {
-      const slot = workoutDayIndexes.indexOf(weekIndex);
+    return WEEK_TEMPLATE.map((weekDay) => {
+      const slot = workoutDayNames.indexOf(weekDay.day);
       const dayExercises = slot >= 0 ? grouped[slot] : [];
       return {
         ...weekDay,
@@ -1132,6 +1164,8 @@ export function CoachPage() {
           nameAr: ex?.nameAr || ex?.name || 'تمرين',
           sets: String(ex?.sets ?? ''),
           reps: String(ex?.reps ?? ''),
+          rest_seconds: Number(ex?.rest_seconds || 0),
+          notes: String(ex?.notes || ''),
         })),
       };
     });
@@ -1212,6 +1246,18 @@ export function CoachPage() {
     };
   };
 
+  const extractPendingProfileConfirmation = (responseData: any): PendingProfileConfirmationState | null => {
+    if (responseData?.action !== 'confirm_profile_update' || !responseData?.data?.field) {
+      return null;
+    }
+
+    return {
+      field: String(responseData.data.field || ''),
+      fieldLabel: String(responseData.data.field_label || responseData.data.field || ''),
+      displayValue: String(responseData.data.display_value || ''),
+    };
+  };
+
   const persistApprovedPlan = async (approvedPayload: any) => {
     if (!user) return;
     const extracted = extractApprovedPlanFromResponse(approvedPayload);
@@ -1272,6 +1318,42 @@ export function CoachPage() {
       console.warn('Failed to persist approved plan to Supabase, kept local fallback:', error);
     }
   };
+
+  const persistProfileUpdate = async (responseData: any) => {
+    if (!user) return;
+    if (responseData?.action !== 'profile_updated') return;
+
+    const profileUpdates = responseData?.data?.profile_updates;
+    const supabaseUpdates = responseData?.data?.supabase_updates;
+    if (!profileUpdates || typeof profileUpdates !== 'object') return;
+
+    setPendingProfileConfirmation(null);
+
+    updateProfile(profileUpdates as any);
+    setProfileUpdateFeedback({
+      field: String(responseData?.data?.field || ''),
+      fieldLabel: String(responseData?.data?.field_label || responseData?.data?.field || ''),
+      displayValue: String(responseData?.data?.display_value || ''),
+      message: repairMojibake(String(responseData?.reply || '')),
+    });
+
+    if (supabaseUpdates && typeof supabaseUpdates === 'object') {
+      try {
+        await supabase
+          .from('profiles')
+          .update(supabaseUpdates)
+          .eq('user_id', user.id);
+      } catch (error) {
+        console.warn('Failed updating profile from AI Coach:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!profileUpdateFeedback) return;
+    const timeoutId = window.setTimeout(() => setProfileUpdateFeedback(null), 6000);
+    return () => window.clearTimeout(timeoutId);
+  }, [profileUpdateFeedback]);
 
   const buildCombinedUserProfile = async () => {
     // Use profile from React Context (always up-to-date)
@@ -1829,6 +1911,15 @@ export function CoachPage() {
         setPendingPlan(pendingFromApi);
       }
 
+      const pendingProfileConfirmationFromApi = extractPendingProfileConfirmation(data);
+      if (pendingProfileConfirmationFromApi) {
+        setPendingProfileConfirmation(pendingProfileConfirmationFromApi);
+      } else if (data?.action === 'profile_update_cancelled' || data?.action === 'profile_updated') {
+        setPendingProfileConfirmation(null);
+      }
+
+      await persistProfileUpdate(data);
+
       const planOptionsFromApi = extractPlanOptionsFromResponse(data);
       if (planOptionsFromApi) {
         setPendingPlan(null);
@@ -1887,6 +1978,14 @@ export function CoachPage() {
 
   const loadMorePlanOptions = () => {
     void sendMessageWithText(language === 'ar' ? 'خيارات أكثر' : 'more options');
+  };
+
+  const confirmPendingProfileUpdate = () => {
+    void sendMessageWithText(language === 'ar' ? 'موافق' : 'confirm');
+  };
+
+  const cancelPendingProfileUpdate = () => {
+    void sendMessageWithText(language === 'ar' ? 'إلغاء' : 'cancel');
   };
 
   useEffect(() => {
@@ -1989,8 +2088,9 @@ export function CoachPage() {
     id: pendingPlan.id,
     name: pendingPlan.plan?.title || 'AI Workout Plan',
     duration_days: pendingPlan.plan?.duration_days || 7,
-    exercises: (pendingPlan.plan?.days || [])
-      .flatMap((day: any) => day?.exercises || [])
+    exercises: (((pendingPlan.plan?.days || [])
+      .flatMap((day: any) => day?.exercises || []))
+      .concat(Array.isArray(pendingPlan.plan?.exercises) ? pendingPlan.plan.exercises : []))
       .map((exercise: any) => exercise?.name)
       .filter(Boolean),
     status: 'pending' as const,
@@ -2000,7 +2100,7 @@ export function CoachPage() {
   const nutritionApprovalPlan = pendingPlan?.type === 'nutrition' ? {
     id: pendingPlan.id,
     daily_calories: Number(pendingPlan.plan?.daily_calories || 0),
-    meals: ((pendingPlan.plan?.days || [])[0]?.meals || []).map((meal: any) => ({
+    meals: ((((pendingPlan.plan?.days || [])[0]?.meals || []).concat(Array.isArray(pendingPlan.plan?.meals) ? pendingPlan.plan.meals : []))).map((meal: any) => ({
       name: meal?.name || 'Meal',
       macros: {
         protein: Number(meal?.protein || 0),
@@ -2346,6 +2446,39 @@ export function CoachPage() {
                     {language === 'ar' ? 'لا توجد مقاطع مسترجعة بعد.' : 'No retrieved chunks yet.'}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {profileUpdateFeedback && (
+            <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-2">
+              <div className="text-sm font-semibold text-foreground">
+                {language === 'ar' ? 'تم تحديث الملف الشخصي' : 'Profile updated'}
+              </div>
+              <div className="text-sm text-foreground">
+                {profileUpdateFeedback.fieldLabel}: {profileUpdateFeedback.displayValue}
+              </div>
+              <div className="text-xs text-muted-foreground">{profileUpdateFeedback.message}</div>
+            </div>
+          )}
+
+          {pendingProfileConfirmation && (
+            <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  {language === 'ar' ? 'تأكيد تعديل الملف الشخصي' : 'Confirm profile change'}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {pendingProfileConfirmation.fieldLabel}: {pendingProfileConfirmation.displayValue}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={confirmPendingProfileUpdate} disabled={isBusy}>
+                  {language === 'ar' ? 'تأكيد' : 'Confirm'}
+                </Button>
+                <Button variant="outline" onClick={cancelPendingProfileUpdate} disabled={isBusy}>
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </Button>
               </div>
             </div>
           )}

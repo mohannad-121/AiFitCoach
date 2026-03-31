@@ -1,0 +1,55 @@
+[
+  {
+    "id": "rag-user-direct_profile",
+    "text": "User profile: {\"goal\": \"muscle_gain\", \"fitness_level\": \"intermediate\", \"training_days_per_week\": 4, \"weight\": 80, \"height\": 180}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "rag-user-direct_tracking_summary",
+    "text": "Tracking summary: {\"recent_workout_notes\": [\"Felt stronger on chest day and completed all sets\"], \"recent_nutrition_notes\": [\"Protein was good but calories were low\"], \"recent_moods\": [\"Energy was high\"], \"active_plan_details\": [{\"title\": \"Push Pull\", \"type\": \"workout\", \"weekly_days_with_items\": 4, \"sample_exercises\": [\"Bench Press\", \"Row\"]}], \"adherence_score\": 0.78}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "rag-user-direct_active_plan_0",
+    "text": "Active plan detail: {\"title\": \"Push Pull\", \"type\": \"workout\", \"weekly_days_with_items\": 4, \"sample_exercises\": [\"Bench Press\", \"Row\"]}",
+    "metadata": {
+      "kind": "active_plan_detail",
+      "index": 0
+    }
+  },
+  {
+    "id": "rag-user-direct_workout_note_0",
+    "text": "workout note: Felt stronger on chest day and completed all sets",
+    "metadata": {
+      "kind": "workout_note",
+      "index": 0
+    }
+  },
+  {
+    "id": "rag-user-direct_nutrition_note_0",
+    "text": "nutrition note: Protein was good but calories were low",
+    "metadata": {
+      "kind": "nutrition_note",
+      "index": 0
+    }
+  },
+  {
+    "id": "rag-user-direct_mood_note_0",
+    "text": "mood note: Energy was high",
+    "metadata": {
+      "kind": "mood_note",
+      "index": 0
+    }
+  },
+  {
+    "id": "rag-user-direct_plan_snapshot",
+    "text": "Plan snapshot: {\"active_workout_plans\": 1, \"workout_titles\": [\"Push Pull\"]}",
+    "metadata": {
+      "kind": "plan_snapshot"
+    }
+  }
+]

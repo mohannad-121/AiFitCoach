@@ -1,0 +1,95 @@
+[
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_profile",
+    "text": "User profile: {\"id\": \"mock_mohandabuayyash7_gmail_com\", \"user_id\": \"mock_mohandabuayyash7_gmail_com\", \"name\": \"mohannad\", \"age\": 23, \"gender\": \"male\", \"weight\": 70, \"height\": 175, \"goal\": \"muscle_gain\", \"location\": \"home\", \"fitnessLevel\": \"beginner\", \"trainingDaysPerWeek\": 3, \"equipment\": \"dumbbells\", \"injuries\": \"dislocated should\", \"activityLevel\": \"moderate\", \"dietaryPreferences\": \"Halal\", \"chronicConditions\": \"Diabetes\", \"allergies\": [], \"chronic_diseases\": [\"Diabetes\"], \"fitness_level\": \"beginner\", \"training_days_per_week\": 3, \"activity_level\": \"moderate\", \"available_equipment\": \"dumbbells\", \"dietary_preferences\": [\"Halal\"]}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_tracking_summary",
+    "text": "Tracking summary: {\"completed_tasks\": 0, \"total_tasks\": 0, \"adherence_score\": 0, \"completed_workout_tasks\": 0, \"total_workout_tasks\": 0, \"total_nutrition_tasks\": 0, \"active_workout_plans\": 0, \"active_nutrition_plans\": 0, \"completed_last_7_days\": 0, \"last_completed_at\": null, \"days_logged_last_7\": 0, \"last_log_date\": null, \"recent_completed_exercises\": [], \"recent_workout_notes\": [], \"recent_nutrition_notes\": [], \"recent_moods\": [], \"recent_activity\": [], \"active_plan_details\": [], \"weekly_stats\": {\"workout_days\": 0, \"planned_days\": 0, \"planned_nutrition_days\": 0, \"workout_log_days\": 0, \"nutrition_log_days\": 0, \"completed_workouts\": 0, \"recent_exercise_names\": []}, \"monthly_stats\": {\"consistency_percent\": 0, \"days_logged\": 0, \"workout_log_days\": 0, \"nutrition_log_days\": 0}, \"goal\": {\"type\": \"bulking\", \"current_weight\": 70}}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_plan_snapshot",
+    "text": "Plan snapshot: {\"active_workout_plans\": 0, \"active_nutrition_plans\": 0, \"workout_titles\": [], \"nutrition_titles\": [], \"updated_at\": \"2026-03-27T12:56:33.443Z\"}",
+    "metadata": {
+      "kind": "plan_snapshot"
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_0",
+    "text": "Recent assistant message: أهلاً وسهلاً يا حج! 👋 كيف أقدر أساعدك اليوم في تمارينك، نظام غذائيك أو أي شيء يخص لياقتك؟",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "assistant",
+      "index": 0
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_1",
+    "text": "Recent user message: كيفك",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 1
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_2",
+    "text": "Recent assistant message: أنا بخير وجاهز للمساعدة. إذا أردت، أستطيع الآن أن أحسن تمرينك، أو أجيب عن سؤال غذائي، أو أراجع تقدمك.",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "assistant",
+      "index": 2
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_3",
+    "text": "Recent user message: بدي تعطيني جميع معلوماتي",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 3
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_4",
+    "text": "Recent assistant message: بالتأكيد. أخبرني الآن في ماذا تريد المساعدة: التمرين، التغذية، خسارة الدهون، زيادة العضلات، أم تعديل خطتك الحالية.",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "assistant",
+      "index": 4
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_5",
+    "text": "Recent user message: لا بس اعطيني معلوماتسي",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 5
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_6",
+    "text": "Recent assistant message: **معلوماتك الشخصية**  \n- الاسم: Mohannad  \n- العمر: 23 سنة  \n- الجنس: ذكر  \n- الطول: 175 سم  \n- الوزن: 70 كغ  \n- الهدف المسجل: زيادة الكتلة (Bulking)  \n- مستوى اللياقة: مبتدئ  \n- أيام التدريب الأسبوعية: 3 أيام  \n- مستوى النشاط اليومي: متوسط  \n- مكان التدريب المفضَّل: المنزل  \n- المعدات المتوفرة: دمبلز (dumbbells)  \n- الإصابة الحالية: خلع في الكتف  \n\n**الحالة الصحية**  \n- أمراض مزمنة: سكري (Diabetes)  \n- حساسية: ليس هناك (لم تُسجَّل)  \n- تفضيلات غذائية: حلال (Halal)  \n\n**ملخص المتابعة** (حتى الآن)  \n- درجة الالتزام: 0 %  \n- تم إكمال تمارين خلال آخر 7 أيام: 0 - **درجة الالتزام**: 0  \n- **عدد التمارين المكتملة خلال آخر 7 أيام**: 0  \n- **عدد الأيام المسجَّلة خلال آخر 7 أيام**: 0  \n- **خطط التمرين النشطة**: 0  \n- **خطط التغذية النشطة**: 0  \n\n**إحصائيات الأسبوعية** (جميعها 0)  \n- أيام التمرين المخططة: 0  \n- أيام التمرين الفعلية: 0  \n- أيام التغذية المخططة: 0  \n- أيام تسجيل التغذية: 0  \n- تم إكمال عدد التمارين: 0  \n- أسماء التمارين الأخيرة: —  \n\n**ملخص الخطة**  \n- عدد خطط التمر - عدد خطط التمرين النشطة: 0  \n- عدد خطط التغذية النشطة: 0  \n\n**ما يمكن فعله الآن**  \n1. **إنشاء خطة تمرين مخصصة** : اطلب من المدرب الذكي (AI Coach) وضع برنامج تمارين منزلية يركز على دمبلز ويأخذ في الاعتبار إصابة الكتف.  \n2. **إنشاء خطة تغذية للزيادة** : حدّد عدد السعرات المطلوبة (≈ 2 500‑2 700 كالوري/يوم) مع توزيع بروتين ≈ 2 غ/كغ وزن (140 غ بروتين).  \n3. **بدء تسجيل النشاط** : سجّل كل تمرين أو وجبة في صفحة “Schedule” لتتبع الالتزام وتحسين التقييم.  \n\n🟢 الخطوة التالية: اكتب “أريد خطة تمارين للمنزل مع دمبلز” أو “أحتاج خطة غذائية للـ bulking”.",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "assistant",
+      "index": 6
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_recent_message_7",
+    "text": "Recent user message: احتاج خطة غذائية",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 7
+    }
+  }
+]

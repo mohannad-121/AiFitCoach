@@ -1,0 +1,24 @@
+[
+  {
+    "id": "smoke-user_profile",
+    "text": "User profile: {\"id\": \"smoke-user\", \"user_id\": \"smoke-user\", \"goal\": \"\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "smoke-user_tracking_summary",
+    "text": "Tracking summary: {\"total_tasks\": 5, \"completed_last_7_days\": 5, \"adherence_score\": 1, \"completed_tasks\": 5, \"recent_completed_exercises\": [{\"exercise_name\": \"Band Donkey Kick\"}]}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "smoke-user_completed_exercise_0",
+    "text": "Recent completed exercise: {\"exercise_name\": \"Band Donkey Kick\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 0
+    }
+  }
+]

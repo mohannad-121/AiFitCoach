@@ -1,0 +1,19 @@
+Age,Gender,Weight (kg),Height (m),BMI,Fat_Percentage,Workout_Frequency (days/week),Experience_Level,Calories_Burned,Avg_BPM
+24,Male,68,1.78,21.5,14,5,Intermediate,420,132
+27,Female,59,1.66,21.4,20,4,Intermediate,380,128
+31,Male,74,1.80,22.8,16,6,Advanced,510,138
+29,Female,62,1.70,21.5,19,4,Intermediate,395,129
+26,Male,70,1.75,22.9,18,5,Intermediate,440,134
+33,Female,64,1.72,21.6,21,4,Beginner,360,124
+38,Male,97,1.78,30.6,31,2,Beginner,260,118
+35,Female,88,1.65,32.3,36,1,Beginner,220,112
+42,Male,101,1.82,30.5,29,2,Intermediate,280,120
+40,Female,84,1.60,32.8,38,1,Beginner,210,110
+37,Male,92,1.74,30.4,33,2,Beginner,250,116
+45,Female,90,1.68,31.9,35,1,Beginner,205,109
+28,Male,76,1.79,23.7,20,3,Intermediate,355,126
+32,Female,67,1.69,23.5,24,3,Intermediate,340,123
+30,Male,80,1.82,24.2,22,3,Beginner,330,122
+36,Female,70,1.71,23.9,25,2,Beginner,300,120
+34,Male,78,1.77,24.9,23,3,Intermediate,345,125
+39,Female,72,1.73,24.1,24,2,Intermediate,310,121

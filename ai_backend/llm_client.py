@@ -82,20 +82,37 @@ class LLMClient:
             )
 
         try:
-            params: dict[str, Any] = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": self.temperature if temperature is None else temperature,
-            }
-            if max_tokens is not None:
-                params["max_tokens"] = max_tokens
-            if tools:
-                params["tools"] = tools
-                params["tool_choice"] = "auto"
+            accumulated_text = ""
+            base_messages = [dict(message) for message in messages]
 
-            response = self._openai_client.chat.completions.create(**params)
-            choice = response.choices[0]
-            return choice.message.content or ""
+            for _attempt in range(3):
+                request_messages = base_messages if not accumulated_text else [
+                    *base_messages,
+                    {"role": "assistant", "content": accumulated_text},
+                    {
+                        "role": "user",
+                        "content": "Continue exactly from where you stopped. Do not repeat anything. Finish the answer.",
+                    },
+                ]
+                params: dict[str, Any] = {
+                    "model": self.model,
+                    "messages": request_messages,
+                    "temperature": self.temperature if temperature is None else temperature,
+                }
+                if max_tokens is not None:
+                    params["max_tokens"] = max_tokens
+                if tools and not accumulated_text:
+                    params["tools"] = tools
+                    params["tool_choice"] = "auto"
+
+                response = self._openai_client.chat.completions.create(**params)
+                choice = response.choices[0]
+                new_text = choice.message.content or ""
+                accumulated_text = self._append_ollama_text(accumulated_text, new_text)
+                if not self._openai_needs_continuation(choice):
+                    break
+
+            return accumulated_text.strip()
         except Exception as exc:
             log_error("LLM_OPENAI_COMPLETION_ERROR", None, exc, {"messages": len(messages)})
             return "I hit a temporary AI error. Please try again."
@@ -361,6 +378,11 @@ class LLMClient:
     def _ollama_needs_continuation(payload: dict[str, Any]) -> bool:
         done_reason = str(payload.get("done_reason", "")).strip().lower()
         return done_reason in {"length", "max_tokens"}
+
+    @staticmethod
+    def _openai_needs_continuation(choice: Any) -> bool:
+        finish_reason = str(getattr(choice, "finish_reason", "") or "").strip().lower()
+        return finish_reason == "length"
 
     @staticmethod
     def _append_ollama_text(existing: str, new_text: str) -> str:

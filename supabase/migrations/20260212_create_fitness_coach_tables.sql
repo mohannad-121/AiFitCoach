@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Create users_extended table
 CREATE TABLE IF NOT EXISTS public.users_extended (
   id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
@@ -14,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.users_extended (
 
 -- Create workout_plans table
 CREATE TABLE IF NOT EXISTS public.workout_plans (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   plan_json JSONB NOT NULL,
   start_date DATE,
@@ -28,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.workout_plans (
 
 -- Create nutrition_plans table
 CREATE TABLE IF NOT EXISTS public.nutrition_plans (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   plan_json JSONB NOT NULL,
   daily_calories INTEGER,
@@ -43,7 +45,7 @@ CREATE TABLE IF NOT EXISTS public.nutrition_plans (
 
 -- Create daily_tracking table
 CREATE TABLE IF NOT EXISTS public.daily_tracking (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   date DATE NOT NULL,
   workout_completed BOOLEAN DEFAULT FALSE,
@@ -57,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.daily_tracking (
 
 -- Create chat_memory table (long-term memory)
 CREATE TABLE IF NOT EXISTS public.chat_memory (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   conversation_id TEXT NOT NULL,
   message_index INTEGER,

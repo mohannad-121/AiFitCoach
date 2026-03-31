@@ -1,0 +1,47 @@
+[
+  {
+    "id": "progress-user_profile",
+    "text": "User profile: {\"weight\": 80, \"training_days_per_week\": 4, \"fitness_level\": \"intermediate\", \"height\": 180, \"goal\": \"general_fitness\", \"id\": \"progress-user\", \"user_id\": \"progress-user\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "progress-user_tracking_summary",
+    "text": "Tracking summary: {\"adherence_score\": 0.6, \"total_tasks\": 30, \"progress_metrics\": {\"recent_completed_tasks\": 8, \"logging_consistency_percent\": 57, \"completion_delta\": 3, \"current_workout_streak_days\": 3, \"current_logging_streak_days\": 2, \"prior_completed_tasks\": 5, \"trend\": \"up\", \"workout_adherence_percent\": 75}, \"completed_last_7_days\": 8, \"recent_workout_notes\": [\"Felt stronger this week and finished my sets\"], \"recent_nutrition_notes\": [\"Protein intake was better than last week\"], \"recent_moods\": [\"Energy was stable\"], \"weekly_stats\": {\"workout_adherence_percent\": 75, \"workout_days\": 3, \"current_workout_streak_days\": 3, \"planned_days\": 4, \"completion_delta\": 3, \"current_logging_streak_days\": 2, \"nutrition_log_days\": 4, \"recent_completed_tasks\": 8, \"previous_completed_tasks\": 5, \"logging_consistency_percent\": 57}, \"days_logged_last_7\": 4, \"completed_tasks\": 18}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "progress-user_progress_metrics",
+    "text": "Progress metrics: {\"recent_completed_tasks\": 8, \"logging_consistency_percent\": 57, \"completion_delta\": 3, \"current_workout_streak_days\": 3, \"current_logging_streak_days\": 2, \"prior_completed_tasks\": 5, \"trend\": \"up\", \"workout_adherence_percent\": 75}",
+    "metadata": {
+      "kind": "progress_metrics"
+    }
+  },
+  {
+    "id": "progress-user_workout_note_0",
+    "text": "workout note: Felt stronger this week and finished my sets",
+    "metadata": {
+      "kind": "workout_note",
+      "index": 0
+    }
+  },
+  {
+    "id": "progress-user_nutrition_note_0",
+    "text": "nutrition note: Protein intake was better than last week",
+    "metadata": {
+      "kind": "nutrition_note",
+      "index": 0
+    }
+  },
+  {
+    "id": "progress-user_mood_note_0",
+    "text": "mood note: Energy was stable",
+    "metadata": {
+      "kind": "mood_note",
+      "index": 0
+    }
+  }
+]

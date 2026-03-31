@@ -1,0 +1,23 @@
+[
+  {
+    "id": "qa-live-user-2_profile",
+    "text": "User profile: {\"trainingDaysPerWeek\": 3, \"goal\": \"general_fitness\", \"training_days_per_week\": 3, \"id\": \"qa-live-user-2\", \"user_id\": \"qa-live-user-2\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "qa-live-user-2_tracking_summary",
+    "text": "Tracking summary: {\"fitbit\": {\"configured\": true, \"connected\": false, \"scope\": [], \"last_sync_at\": null, \"profile\": {}, \"today_summary\": {}, \"activity_history\": [], \"heart_history\": [], \"sleep_history\": [], \"weight_history\": [], \"food_history\": [], \"water_history\": [], \"coach_summary\": {}}}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "qa-live-user-2_fitbit_summary",
+    "text": "Fitbit summary: {\"configured\": true, \"connected\": false, \"scope\": [], \"last_sync_at\": null, \"profile\": {}, \"today_summary\": {}, \"activity_history\": [], \"heart_history\": [], \"sleep_history\": [], \"weight_history\": [], \"food_history\": [], \"water_history\": [], \"coach_summary\": {}}",
+    "metadata": {
+      "kind": "fitbit_summary"
+    }
+  }
+]

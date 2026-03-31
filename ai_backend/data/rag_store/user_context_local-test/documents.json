@@ -1,0 +1,9 @@
+[
+  {
+    "id": "local-test_profile",
+    "text": "User profile: {\"id\": \"local-test\", \"user_id\": \"local-test\", \"goal\": \"\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  }
+]

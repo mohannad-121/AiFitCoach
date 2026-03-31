@@ -854,6 +854,56 @@ PLAN_CHOICE_KEYWORDS = {
     
 }
 PLAN_REFRESH_KEYWORDS = {"more options", "another options", "Ø®ÙŠØ§Ø±Ø§Øª Ø§ÙƒØ«Ø±", "Ø®ÙŠØ§Ø±Ø§Øª Ø£Ø®Ø±Ù‰", "ØºÙŠØ±Ù‡Ù…"}
+PLAN_OPTION_HELP_KEYWORDS = {
+    "best",
+    "recommend",
+    "recommended",
+    "difference",
+    "compare",
+    "comparison",
+    "which one",
+    "which option",
+    "what is the difference",
+    "شو الفرق",
+    "ما الفرق",
+    "ايهم",
+    "اي خيار",
+    "انسب",
+    "افضل",
+    "أفضل",
+    "قارن",
+}
+PLAN_OPTION_COMPARE_KEYWORDS = {
+    "difference",
+    "compare",
+    "comparison",
+    "which one",
+    "which option",
+    "what is the difference",
+    "شو الفرق",
+    "ما الفرق",
+    "قارن",
+    "قارنهم",
+    "فرقهم",
+    "الفرق بينهم",
+}
+PLAN_OPTION_RECOMMEND_KEYWORDS = {
+    "best",
+    "recommend",
+    "recommended",
+    "which is best",
+    "which fits me",
+    "which suits me",
+    "which one do you recommend",
+    "افضل",
+    "أفضل",
+    "انسب",
+    "أنسب",
+    "شو بتنصح",
+    "شو بتقترح",
+    "اي خيار انسب",
+    "أي خيار أنسب",
+}
 APPROVE_KEYWORDS = APPROVE_KEYWORDS | {"accept", "okay", "ok", "Ù…Ø§Ø´ÙŠ"}
 REJECT_KEYWORDS = REJECT_KEYWORDS | {"decline", "cancel"}
 WORKOUT_PLAN_KEYWORDS = WORKOUT_PLAN_KEYWORDS | {"workout", "training", "routine", "\u062a\u0645\u0627\u0631\u064a\u0646", "\u0628\u0631\u0646\u0627\u0645\u062c"}
@@ -890,6 +940,69 @@ ASK_MY_AGE_KEYWORDS = {"my age", "how old am i", "\u0643\u0645 \u0639\u0645\u063
 ASK_MY_HEIGHT_KEYWORDS = {"my height", "how tall am i", "\u0637\u0648\u0644\u064a", "\u0643\u0645 \u0637\u0648\u0644\u064a"}
 ASK_MY_WEIGHT_KEYWORDS = {"my weight", "how much do i weigh", "\u0648\u0632\u0646\u064a", "\u0643\u0645 \u0648\u0632\u0646\u064a"}
 ASK_MY_GOAL_KEYWORDS = {"my goal", "what is my goal", "\u0647\u062f\u0641\u064a", "\u0634\u0648 \u0647\u062f\u0641\u064a", "\u0645\u0627 \u0647\u062f\u0641\u064a"}
+PROFILE_UPDATE_VERBS = {
+    "change",
+    "update",
+    "set",
+    "edit",
+    "modify",
+    "adjust",
+    "replace",
+    "make",
+    "غير",
+    "غيّر",
+    "عدل",
+    "عدّل",
+    "حدث",
+    "حدّث",
+    "خل",
+    "خلي",
+    "خلّي",
+    "خليه",
+    "خلّيه",
+    "اجعل",
+    "ثبت",
+    "ثبّت",
+}
+WEIGHT_UPDATE_KEYWORDS = {"my weight", "weight", "current weight", "وزني", "الوزن", "وزني الحالي"}
+HEIGHT_UPDATE_KEYWORDS = {"my height", "height", "طولي", "الطول"}
+AGE_UPDATE_KEYWORDS = {"my age", "age", "عمري", "العمر"}
+TRAINING_DAYS_UPDATE_KEYWORDS = {
+    "training days",
+    "days per week",
+    "workout days",
+    "training days per week",
+    "ايام التمرين",
+    "أيام التمرين",
+    "ايام التدريب",
+    "أيام التدريب",
+    "عدد ايام التمرين",
+    "عدد أيام التمرين",
+    "عدد ايام التدريب",
+    "عدد أيام التدريب",
+}
+GOAL_UPDATE_KEYWORDS = {"my goal", "goal", "هدفي", "الهدف", "هدفي الحالي"}
+FITNESS_LEVEL_UPDATE_KEYWORDS = {
+    "fitness level",
+    "level",
+    "experience level",
+    "مستوى اللياقة",
+    "مستواي",
+    "مستوى التدريب",
+    "الليفل",
+}
+ACTIVITY_LEVEL_UPDATE_KEYWORDS = {
+    "activity level",
+    "activity",
+    "daily activity",
+    "مستوى النشاط",
+    "نشاطي",
+    "النشاط",
+}
+LOCATION_UPDATE_KEYWORDS = {"location", "workout location", "place", "المكان", "الموقع", "مكان التمرين", "اللوكيشن"}
+PROFILE_CONFIRM_YES_KEYWORDS = {"yes", "y", "confirm", "confirmed", "ok", "okay", "done", "approve", "وافق", "موافق", "أكيد", "تمام", "نعم", "اوكي"}
+PROFILE_CONFIRM_NO_KEYWORDS = {"no", "n", "cancel", "stop", "reject", "لا", "إلغاء", "الغاء", "وقف", "ارفض", "مش الآن", "لا تؤكد"}
+SENSITIVE_PROFILE_UPDATE_FIELDS = {"weight", "height", "age", "goal", "training_days_per_week", "fitness_level", "activity_level", "location"}
 
 PROGRESS_CONCERN_KEYWORDS = {
     "no progress",
@@ -929,6 +1042,22 @@ PLAN_STATUS_KEYWORDS = {
     "\u0634\u0648 \u062e\u0637\u062a\u064a",
     "\u0645\u0627 \u0647\u064a \u062e\u0637\u062a\u064a",
     "\u062e\u0637\u062a\u064a \u0627\u0644\u062d\u0627\u0644\u064a\u0629",
+}
+STATUS_OVERVIEW_KEYWORDS = {
+    "status update",
+    "give me an update",
+    "where do i stand",
+    "how am i doing overall",
+    "whats my status",
+    "what's my status",
+    "شو الوضع",
+    "كيف الوضع",
+    "شو وضعي",
+    "كيف وضعي",
+    "وين وصلت",
+    "اعطيني تحديث",
+    "اعطيني ابديت",
+    "طمني عن وضعي",
 }
 
 # Add robust Arabic forms to avoid encoding-related misses.
@@ -1098,15 +1227,24 @@ REJECT_KEYWORDS = _expand_keyword_set_with_repair(REJECT_KEYWORDS)
 JORDANIAN_HINTS = _expand_keyword_set_with_repair(JORDANIAN_HINTS)
 PLAN_CHOICE_KEYWORDS = _expand_keyword_set_with_repair(PLAN_CHOICE_KEYWORDS)
 PLAN_REFRESH_KEYWORDS = _expand_keyword_set_with_repair(PLAN_REFRESH_KEYWORDS)
+PLAN_OPTION_HELP_KEYWORDS = _expand_keyword_set_with_repair(PLAN_OPTION_HELP_KEYWORDS)
+PLAN_OPTION_COMPARE_KEYWORDS = _expand_keyword_set_with_repair(PLAN_OPTION_COMPARE_KEYWORDS)
+PLAN_OPTION_RECOMMEND_KEYWORDS = _expand_keyword_set_with_repair(PLAN_OPTION_RECOMMEND_KEYWORDS)
 THANKS_KEYWORDS = _expand_keyword_set_with_repair(THANKS_KEYWORDS)
 WHO_AM_I_KEYWORDS = _expand_keyword_set_with_repair(WHO_AM_I_KEYWORDS)
 ASK_MY_AGE_KEYWORDS = _expand_keyword_set_with_repair(ASK_MY_AGE_KEYWORDS)
 ASK_MY_HEIGHT_KEYWORDS = _expand_keyword_set_with_repair(ASK_MY_HEIGHT_KEYWORDS)
 ASK_MY_WEIGHT_KEYWORDS = _expand_keyword_set_with_repair(ASK_MY_WEIGHT_KEYWORDS)
 ASK_MY_GOAL_KEYWORDS = _expand_keyword_set_with_repair(ASK_MY_GOAL_KEYWORDS)
+PROFILE_UPDATE_VERBS = _expand_keyword_set_with_repair(PROFILE_UPDATE_VERBS)
+WEIGHT_UPDATE_KEYWORDS = _expand_keyword_set_with_repair(WEIGHT_UPDATE_KEYWORDS)
+HEIGHT_UPDATE_KEYWORDS = _expand_keyword_set_with_repair(HEIGHT_UPDATE_KEYWORDS)
+AGE_UPDATE_KEYWORDS = _expand_keyword_set_with_repair(AGE_UPDATE_KEYWORDS)
+TRAINING_DAYS_UPDATE_KEYWORDS = _expand_keyword_set_with_repair(TRAINING_DAYS_UPDATE_KEYWORDS)
 PROGRESS_CONCERN_KEYWORDS = _expand_keyword_set_with_repair(PROGRESS_CONCERN_KEYWORDS)
 TROUBLESHOOT_KEYWORDS = _expand_keyword_set_with_repair(TROUBLESHOOT_KEYWORDS)
 PLAN_STATUS_KEYWORDS = _expand_keyword_set_with_repair(PLAN_STATUS_KEYWORDS)
+STATUS_OVERVIEW_KEYWORDS = _expand_keyword_set_with_repair(STATUS_OVERVIEW_KEYWORDS)
 STRONG_DOMAIN_KEYWORDS = _expand_keyword_set_with_repair(STRONG_DOMAIN_KEYWORDS)
 ML_GOAL_QUERY_KEYWORDS = _expand_keyword_set_with_repair(ML_GOAL_QUERY_KEYWORDS)
 ML_SUCCESS_QUERY_KEYWORDS = _expand_keyword_set_with_repair(ML_SUCCESS_QUERY_KEYWORDS)
@@ -1193,6 +1331,9 @@ def _routing_vocab_tokens() -> tuple[str, ...]:
         REJECT_KEYWORDS,
         PLAN_CHOICE_KEYWORDS,
         PLAN_REFRESH_KEYWORDS,
+        PLAN_OPTION_HELP_KEYWORDS,
+        PLAN_OPTION_COMPARE_KEYWORDS,
+        PLAN_OPTION_RECOMMEND_KEYWORDS,
         THANKS_KEYWORDS,
         PLAN_STATUS_KEYWORDS,
         PROGRESS_CONCERN_KEYWORDS,
@@ -1376,9 +1517,77 @@ def _is_workout_plan_request(user_input: str) -> bool:
     normalized = normalize_text(user_input)
     if _is_performance_analysis_request(user_input):
         return False
+    rehab_markers = {
+        "rehab",
+        "recovery",
+        "mobility",
+        "injury",
+        "pain",
+        "sprain",
+        "ankle",
+        "knee",
+        "shoulder",
+        "back pain",
+        "تأهيل",
+        "تعافي",
+        "اصابة",
+        "إصابة",
+        "ألم",
+        "التواء",
+        "كاحل",
+        "ركبة",
+        "كتف",
+        "ظهر",
+    }
+    rehab_plan_markers = WORKOUT_PLAN_TERMS | PLAN_BUILD_TERMS | {
+        "sets",
+        "reps",
+        "rest",
+        "session",
+        "protocol",
+        "تكرار",
+        "تكرارات",
+        "راحة",
+        "جلسة",
+        "جلسات",
+        "بروتوكول",
+    }
+    if _contains_any(normalized, rehab_markers) and _contains_any(normalized, rehab_plan_markers):
+        return True
     return (
         _contains_any(normalized, WORKOUT_PLAN_TERMS) or _contains_any(normalized, PLAN_BUILD_TERMS)
     ) and _contains_any(normalized, WORKOUT_REQUEST_TERMS)
+
+
+def _is_rehab_workout_request(user_input: str) -> bool:
+    normalized = normalize_text(user_input)
+    if not normalized or _is_performance_analysis_request(user_input):
+        return False
+    return _contains_any(
+        normalized,
+        {
+            "rehab",
+            "recovery",
+            "mobility",
+            "injury",
+            "pain",
+            "sprain",
+            "ankle",
+            "knee",
+            "shoulder",
+            "back pain",
+            "تأهيل",
+            "تعافي",
+            "اصابة",
+            "إصابة",
+            "ألم",
+            "التواء",
+            "كاحل",
+            "ركبة",
+            "كتف",
+            "ظهر",
+        },
+    )
 
 
 def _is_nutrition_plan_request(user_input: str) -> bool:
@@ -3174,6 +3383,457 @@ def _profile_query_reply(
     return None
 
 
+def _extract_first_float(text: str) -> Optional[float]:
+    match = re.search(r"([+-]?\d+(?:\.\d+)?)", text)
+    if not match:
+        return None
+    return _to_float(match.group(1))
+
+
+def _extract_training_days_value(text: str) -> Optional[int]:
+    raw_text = _repair_mojibake(text or "")
+    patterns = [
+        r"([1-7])\s*(?:days?|sessions?)\s*(?:per\s*)?(?:week)?",
+        r"([1-7])\s*(?:ايام|أيام)\s*(?:بالاسبوع|بالأسبوع|بالاسبوعية|بالأسبوعية|بالاسبوع الواحد|بالأسبوع الواحد|في الاسبوع|في الأسبوع)?",
+        r"(?:ايام|أيام)\s*(?:التمرين|التدريب)?\s*(?:هي|هو|=|:|الى|إلى)?\s*([1-7])",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, raw_text, flags=re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    value = _extract_first_float(raw_text)
+    if value is None:
+        return None
+    numeric_value = int(value)
+    if 1 <= numeric_value <= 7:
+        return numeric_value
+    return None
+
+
+def _extract_goal_value(text: str) -> Optional[str]:
+    normalized = normalize_text(_repair_mojibake(text or ""))
+    if not normalized:
+        return None
+    mapping = [
+        ("muscle_gain", {"bulking", "bulk", "muscle gain", "gain muscle", "build muscle", "زيادة عضل", "بناء عضل", "تضخيم"}),
+        ("fat_loss", {"cutting", "cut", "fat loss", "lose fat", "lose weight", "weight loss", "تنشيف", "خسارة دهون", "تنزيل دهون", "خسارة وزن"}),
+        ("general_fitness", {"fitness", "general fitness", "maintain fitness", "لياقة", "لياقة عامة", "رشاقة", "صحة عامة"}),
+    ]
+    for value, keywords in mapping:
+        if _contains_phrase(normalized, keywords):
+            return value
+    return None
+
+
+def _extract_fitness_level_value(text: str) -> Optional[str]:
+    normalized = normalize_text(_repair_mojibake(text or ""))
+    if not normalized:
+        return None
+    mapping = [
+        ("beginner", {"beginner", "novice", "new", "مبتدئ", "مبتدئة"}),
+        ("intermediate", {"intermediate", "mid", "متوسط", "متوسطة"}),
+        ("advanced", {"advanced", "expert", "pro", "متقدم", "متقدمة", "محترف"}),
+    ]
+    for value, keywords in mapping:
+        if _contains_phrase(normalized, keywords):
+            return value
+    return None
+
+
+def _extract_activity_level_value(text: str) -> Optional[str]:
+    normalized = normalize_text(_repair_mojibake(text or ""))
+    if not normalized:
+        return None
+    mapping = [
+        ("low", {"low", "light", "sedentary", "منخفض", "خفيف", "قليل"}),
+        ("moderate", {"moderate", "medium", "average", "متوسط", "معتدل"}),
+        ("high", {"high", "very active", "active", "مرتفع", "عالي", "نشيط"}),
+    ]
+    for value, keywords in mapping:
+        if _contains_phrase(normalized, keywords):
+            return value
+    return None
+
+
+def _extract_location_value(text: str) -> Optional[str]:
+    normalized = normalize_text(_repair_mojibake(text or ""))
+    if not normalized:
+        return None
+    if _contains_phrase(normalized, {"gym", "club", "جيم", "gym", "النادي", "النادي الرياضي"}):
+        return "gym"
+    if _contains_phrase(normalized, {"home", "house", "بيت", "البيت", "منزل", "المنزل", "بالبيت", "في البيت"}):
+        return "home"
+    return None
+
+
+def _extract_profile_update_value(field_name: str, user_input: str) -> Any:
+    raw_text = _repair_mojibake(user_input or "")
+
+    if field_name == "weight":
+        value = _extract_first_float(raw_text)
+        if value is None:
+            return None
+        numeric_value = round(float(value), 1)
+        return numeric_value if 20 <= numeric_value <= 400 else None
+
+    if field_name == "height":
+        value = _extract_first_float(raw_text)
+        if value is None:
+            return None
+        numeric_value = round(float(value), 1)
+        return numeric_value if 80 <= numeric_value <= 260 else None
+
+    if field_name == "age":
+        value = _extract_first_float(raw_text)
+        if value is None:
+            return None
+        numeric_value = int(value)
+        return numeric_value if 10 <= numeric_value <= 100 else None
+
+    if field_name == "training_days_per_week":
+        return _extract_training_days_value(raw_text)
+
+    if field_name == "goal":
+        return _extract_goal_value(raw_text)
+
+    if field_name == "fitness_level":
+        return _extract_fitness_level_value(raw_text)
+
+    if field_name == "activity_level":
+        return _extract_activity_level_value(raw_text)
+
+    if field_name == "location":
+        return _extract_location_value(raw_text)
+
+    return None
+
+
+def _profile_field_label(field_name: str, language: str) -> str:
+    labels = {
+        "weight": _lang_reply(language, "weight", "وزنك", "وزنك"),
+        "height": _lang_reply(language, "height", "طولك", "طولك"),
+        "age": _lang_reply(language, "age", "عمرك", "عمرك"),
+        "training_days_per_week": _lang_reply(language, "training days per week", "عدد أيام التدريب الأسبوعية", "أيام تمرينك بالأسبوع"),
+        "goal": _lang_reply(language, "goal", "هدفك", "هدفك"),
+        "fitness_level": _lang_reply(language, "fitness level", "مستوى لياقتك", "مستوى لياقتك"),
+        "activity_level": _lang_reply(language, "activity level", "مستوى نشاطك", "مستوى نشاطك"),
+        "location": _lang_reply(language, "training location", "مكان التمرين", "مكان التمرين"),
+    }
+    return labels.get(field_name, _lang_reply(language, "profile field", "حقل الملف الشخصي", "حقل البروفايل"))
+
+
+def _frontend_goal_value(goal_value: str) -> str:
+    if goal_value == "muscle_gain":
+        return "bulking"
+    if goal_value == "fat_loss":
+        return "cutting"
+    return "fitness"
+
+
+def _profile_update_display_value(field_name: str, value: Any, language: str) -> str:
+    if field_name == "weight":
+        return f"{value} kg" if language == "en" else f"{value} كغ"
+    if field_name == "height":
+        return f"{value} cm" if language == "en" else f"{value} سم"
+    if field_name == "age":
+        return str(value)
+    if field_name == "training_days_per_week":
+        return _lang_reply(language, f"{value} days per week", f"{value} أيام أسبوعيًا", f"{value} أيام بالأسبوع")
+    if field_name == "goal":
+        return _profile_goal_label(str(value or ""), language)
+    if field_name == "fitness_level":
+        level = str(value or "").strip().lower()
+        if level == "beginner":
+            return _lang_reply(language, "beginner", "مبتدئ", "مبتدئ")
+        if level == "intermediate":
+            return _lang_reply(language, "intermediate", "متوسط", "متوسط")
+        if level == "advanced":
+            return _lang_reply(language, "advanced", "متقدم", "متقدم")
+    if field_name == "activity_level":
+        level = str(value or "").strip().lower()
+        if level == "low":
+            return _lang_reply(language, "low", "منخفض", "منخفض")
+        if level == "moderate":
+            return _lang_reply(language, "moderate", "متوسط", "متوسط")
+        if level == "high":
+            return _lang_reply(language, "high", "مرتفع", "مرتفع")
+    if field_name == "location":
+        if str(value or "").strip().lower() == "gym":
+            return _lang_reply(language, "gym", "النادي", "الجيم")
+        if str(value or "").strip().lower() == "home":
+            return _lang_reply(language, "home", "المنزل", "البيت")
+    return str(value or "").strip()
+
+
+def _profile_update_confirmation_reply(field_name: str, value: Any, language: str) -> str:
+    label = _profile_field_label(field_name, language)
+    display_value = _profile_update_display_value(field_name, value, language)
+    if field_name in SENSITIVE_PROFILE_UPDATE_FIELDS:
+        return _lang_reply(
+            language,
+            f"You want me to update your {label} to {display_value}. Confirm and I will save it in the app and use it in future coaching.",
+            f"أنت تريد أن أحدّث {label} إلى {display_value}. أكّد وسأحفظه في التطبيق وأستخدمه في التوجيهات القادمة.",
+            f"أنت بدك أحدّث {label} إلى {display_value}. أكّد وأنا بحفظه بالتطبيق وبستخدمه بالتوجيهات الجاية.",
+        )
+    return _lang_reply(
+        language,
+        f"You want me to update your {label} to {display_value}. Confirm and I will save it in the app.",
+        f"أنت تريد أن أحدّث {label} إلى {display_value}. أكّد وسأحفظه في التطبيق.",
+        f"أنت بدك أحدّث {label} إلى {display_value}. أكّد وأنا بحفظه بالتطبيق.",
+    )
+
+
+def _profile_update_cancel_reply(language: str) -> str:
+    return _lang_reply(
+        language,
+        "Okay. I did not change anything in your profile.",
+        "حسنًا. لم أغيّر أي شيء في ملفك الشخصي.",
+        "تمام. ما غيّرت ولا إشي ببروفايلك.",
+    )
+
+
+def _profile_update_needs_confirmation_reply(language: str) -> str:
+    return _lang_reply(
+        language,
+        "Please confirm or cancel the pending profile change first.",
+        "يرجى تأكيد أو إلغاء التعديل المعلّق على الملف الشخصي أولاً.",
+        "أكد أو ألغِ تعديل البروفايل المعلّق أولًا.",
+    )
+
+
+def _is_profile_update_confirmation_yes(user_input: str) -> bool:
+    normalized = normalize_text(_repair_mojibake(user_input or ""))
+    return bool(normalized) and _contains_phrase(normalized, PROFILE_CONFIRM_YES_KEYWORDS)
+
+
+def _is_profile_update_confirmation_no(user_input: str) -> bool:
+    normalized = normalize_text(_repair_mojibake(user_input or ""))
+    return bool(normalized) and _contains_phrase(normalized, PROFILE_CONFIRM_NO_KEYWORDS)
+
+
+def _profile_update_value_prompt(field_name: str, language: str) -> str:
+    prompts = {
+        "weight": _lang_reply(
+            language,
+            "What should I set your weight to in kg?",
+            "إلى كم تريد أن أضبط وزنك بالكيلوغرام؟",
+            "لقديش بدك أضبط وزنك بالكيلو؟",
+        ),
+        "height": _lang_reply(
+            language,
+            "What should I set your height to in cm?",
+            "إلى كم تريد أن أضبط طولك بالسنتيمتر؟",
+            "لقديش بدك أضبط طولك بالسم؟",
+        ),
+        "age": _lang_reply(
+            language,
+            "What age should I save in your profile?",
+            "ما العمر الذي تريد أن أحفظه في ملفك؟",
+            "كم عمرك اللي بدك أحفظه بالبروفايل؟",
+        ),
+        "training_days_per_week": _lang_reply(
+            language,
+            "How many training days per week should I save?",
+            "كم عدد أيام التدريب الأسبوعية التي تريد حفظها؟",
+            "كم يوم تمرين بالأسبوع بدك أحفظ؟",
+        ),
+        "goal": _lang_reply(
+            language,
+            "What goal should I save: bulking, cutting, or fitness?",
+            "ما الهدف الذي تريد حفظه: زيادة عضل أم تنشيف أم لياقة؟",
+            "شو الهدف اللي بدك أحفظه: زيادة عضل ولا تنشيف ولا لياقة؟",
+        ),
+        "fitness_level": _lang_reply(
+            language,
+            "What fitness level should I save: beginner, intermediate, or advanced?",
+            "ما مستوى اللياقة الذي تريد حفظه: مبتدئ أم متوسط أم متقدم؟",
+            "شو مستوى اللياقة اللي بدك أحفظه: مبتدئ ولا متوسط ولا متقدم؟",
+        ),
+        "activity_level": _lang_reply(
+            language,
+            "What activity level should I save: low, moderate, or high?",
+            "ما مستوى النشاط الذي تريد حفظه: منخفض أم متوسط أم مرتفع؟",
+            "شو مستوى النشاط اللي بدك أحفظه: منخفض ولا متوسط ولا مرتفع؟",
+        ),
+        "location": _lang_reply(
+            language,
+            "What training location should I save: home or gym?",
+            "ما مكان التمرين الذي تريد حفظه: المنزل أم النادي؟",
+            "شو مكان التمرين اللي بدك أحفظه: البيت ولا الجيم؟",
+        ),
+    }
+    return prompts.get(field_name, _lang_reply(language, "What value should I save?", "ما القيمة التي تريد حفظها؟", "شو القيمة اللي بدك أحفظها؟"))
+
+
+def _profile_update_success_reply(field_name: str, value: Any, language: str) -> str:
+    label = _profile_field_label(field_name, language)
+    display_value = _profile_update_display_value(field_name, value, language)
+    return _lang_reply(
+        language,
+        f"Done. I updated your {label} in the app to {display_value}.",
+        f"تم. حدّثت {label} في التطبيق إلى {display_value}.",
+        f"تم. حدّثت {label} بالتطبيق إلى {display_value}.",
+    )
+
+
+def _profile_update_payload(field_name: str, value: Any, language: str) -> dict[str, Any]:
+    profile_updates: dict[str, Any] = {}
+    supabase_updates: dict[str, Any] = {"updated_at": datetime.utcnow().isoformat()}
+
+    if field_name == "weight":
+        profile_updates["weight"] = value
+        supabase_updates["weight"] = value
+    elif field_name == "height":
+        profile_updates["height"] = value
+        supabase_updates["height"] = value
+    elif field_name == "age":
+        profile_updates["age"] = value
+        supabase_updates["age"] = value
+    elif field_name == "training_days_per_week":
+        profile_updates["trainingDaysPerWeek"] = value
+        supabase_updates["training_days_per_week"] = value
+    elif field_name == "goal":
+        frontend_value = _frontend_goal_value(str(value or ""))
+        profile_updates["goal"] = frontend_value
+        supabase_updates["goal"] = frontend_value
+    elif field_name == "fitness_level":
+        profile_updates["fitnessLevel"] = value
+        supabase_updates["fitness_level"] = value
+    elif field_name == "activity_level":
+        profile_updates["activityLevel"] = value
+        supabase_updates["activity_level"] = value
+    elif field_name == "location":
+        profile_updates["location"] = value
+        supabase_updates["location"] = value
+
+    return {
+        "field": field_name,
+        "field_label": _profile_field_label(field_name, language),
+        "display_value": _profile_update_display_value(field_name, value, language),
+        "requires_confirmation": True,
+        "updated_fields": [field_name],
+        "profile_updates": profile_updates,
+        "supabase_updates": supabase_updates,
+    }
+
+
+def _extract_profile_update_command(user_input: str) -> Optional[dict[str, Any]]:
+    raw_text = _repair_mojibake(user_input or "")
+    normalized = normalize_text(raw_text)
+    if not normalized:
+        return None
+
+    has_update_verb = _contains_any(normalized, PROFILE_UPDATE_VERBS)
+    if (not has_update_verb) and _contains_phrase(normalized, ASK_MY_WEIGHT_KEYWORDS | ASK_MY_HEIGHT_KEYWORDS | ASK_MY_AGE_KEYWORDS):
+        return None
+
+    field_configs = [
+        ("weight", WEIGHT_UPDATE_KEYWORDS),
+        ("height", HEIGHT_UPDATE_KEYWORDS),
+        ("age", AGE_UPDATE_KEYWORDS),
+        ("training_days_per_week", TRAINING_DAYS_UPDATE_KEYWORDS),
+        ("goal", GOAL_UPDATE_KEYWORDS),
+        ("fitness_level", FITNESS_LEVEL_UPDATE_KEYWORDS),
+        ("activity_level", ACTIVITY_LEVEL_UPDATE_KEYWORDS),
+        ("location", LOCATION_UPDATE_KEYWORDS),
+    ]
+
+    for field_name, field_keywords in field_configs:
+        if not _contains_any(normalized, field_keywords):
+            continue
+
+        explicit_statement = False
+        if field_name == "weight":
+            explicit_statement = bool(re.search(r"(?:وزني|weight)\s*(?:هو|is|صار|اصبح|أصبح|=|:)?\s*([+-]?\d+(?:\.\d+)?)", raw_text, flags=re.IGNORECASE))
+        elif field_name == "height":
+            explicit_statement = bool(re.search(r"(?:طولي|height)\s*(?:هو|is|صار|=|:)?\s*([+-]?\d+(?:\.\d+)?)", raw_text, flags=re.IGNORECASE))
+        elif field_name == "age":
+            explicit_statement = bool(re.search(r"(?:عمري|age)\s*(?:هو|is|صار|=|:)?\s*([+-]?\d+(?:\.\d+)?)", raw_text, flags=re.IGNORECASE))
+        elif field_name == "training_days_per_week":
+            explicit_statement = bool(re.search(r"([1-7])\s*(?:days?|ايام|أيام).*(?:week|اسبوع|أسبوع)", raw_text, flags=re.IGNORECASE))
+
+        if not has_update_verb and not explicit_statement:
+            continue
+
+        value = _extract_profile_update_value(field_name, raw_text)
+        if value is None:
+            return {"field": field_name, "value": None}
+        return {"field": field_name, "value": value}
+
+    return None
+
+
+def _is_status_overview_request(user_input: str) -> bool:
+    normalized = normalize_text(user_input)
+    if not normalized:
+        return False
+    return _contains_phrase(normalized, STATUS_OVERVIEW_KEYWORDS)
+
+
+def _status_overview_reply(
+    language: str,
+    profile: dict[str, Any],
+    tracking_summary: Optional[dict[str, Any]],
+    plan_snapshot: Optional[dict[str, Any]],
+) -> str:
+    goal_label = _profile_goal_label(str(profile.get("goal", "")), language)
+    fitness_level = str(profile.get("fitness_level") or profile.get("fitnessLevel") or "").strip()
+    training_days = int(_to_float(profile.get("training_days_per_week") or profile.get("trainingDaysPerWeek")) or 0)
+    workout_count = int((plan_snapshot or {}).get("active_workout_plans", 0) or 0)
+    nutrition_count = int((plan_snapshot or {}).get("active_nutrition_plans", 0) or 0)
+
+    completed = int((tracking_summary or {}).get("completed_tasks", 0) or 0)
+    total = int((tracking_summary or {}).get("total_tasks", 0) or 0)
+    adherence_pct = int(round(float((tracking_summary or {}).get("adherence_score", 0) or 0) * 100))
+
+    if language == "en":
+        lines = ["Current snapshot:"]
+        if goal_label:
+            lines.append(f"Goal: {goal_label}")
+        if fitness_level:
+            lines.append(f"Level: {fitness_level}")
+        if training_days > 0:
+            lines.append(f"Training days: {training_days} per week")
+        if total > 0:
+            lines.append(f"Progress: {completed}/{total} tasks done, adherence {adherence_pct}%")
+        else:
+            lines.append("Progress: I do not have a fresh tracking summary yet")
+        lines.append(f"Active plans: {workout_count} workout, {nutrition_count} nutrition")
+        lines.append("If you want, I can break down any part in more detail.")
+        return "\n".join(lines)
+
+    if language == "ar_fusha":
+        lines = ["هذا وضعك الحالي باختصار:"]
+        if goal_label:
+            lines.append(f"الهدف: {goal_label}")
+        if fitness_level:
+            lines.append(f"المستوى: {fitness_level}")
+        if training_days > 0:
+            lines.append(f"أيام التدريب: {training_days} أسبوعيًا")
+        if total > 0:
+            lines.append(f"التقدم: أنجزت {completed}/{total} مهمة، والالتزام {adherence_pct}%")
+        else:
+            lines.append("التقدم: لا أملك ملخص متابعة حديثًا بعد")
+        lines.append(f"الخطط النشطة: {workout_count} تمرين و{nutrition_count} تغذية")
+        lines.append("إذا أردت، أستطيع تفصيل أي جزء أكثر.")
+        return "\n".join(lines)
+
+    lines = ["وضعك الحالي باختصار:"]
+    if goal_label:
+        lines.append(f"الهدف: {goal_label}")
+    if fitness_level:
+        lines.append(f"المستوى: {fitness_level}")
+    if training_days > 0:
+        lines.append(f"أيام التمرين: {training_days} بالأسبوع")
+    if total > 0:
+        lines.append(f"التقدم: خلصت {completed}/{total} مهمة، والتزامك {adherence_pct}%")
+    else:
+        lines.append("التقدم: لسا ما عندي ملخص متابعة جديد")
+    lines.append(f"الخطط النشطة: {workout_count} تمرين و{nutrition_count} تغذية")
+    lines.append("إذا بدك، بفصلّك أي جزء أكثر.")
+    return "\n".join(lines)
+
+
 def _social_reply(user_input: str, language: str, profile: dict[str, Any]) -> Optional[str]:
     normalized = normalize_text(user_input)
     name = _profile_display_name(profile)
@@ -3588,6 +4248,121 @@ def _generate_workout_plan(profile: dict[str, Any], language: str) -> dict[str, 
         "rest_days": rest_days,
         "duration_days": 7,
         "days": plan_days,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+
+def _generate_rehab_workout_plan(user_input: str, profile: dict[str, Any], language: str) -> dict[str, Any]:
+    normalized = normalize_text(user_input)
+    rehab_library = {
+        "ankle": {
+            "markers": {"ankle", "sprain", "كاحل", "التواء"},
+            "title_en": "Ankle Recovery Plan",
+            "title_ar": "خطة تعافي الكاحل",
+            "exercises": [
+                {"name": "Ankle Circles", "name_ar": "دوائر الكاحل", "sets": "3", "reps": "12 each direction", "rest": 20, "notes_en": "Move only in a pain-free range.", "notes_ar": "حرّك المفصل ضمن مدى مريح بدون زيادة الألم."},
+                {"name": "Standing Calf Raise", "name_ar": "رفع السمانة واقفًا", "sets": "3", "reps": "12-15", "rest": 30, "notes_en": "Pause 1 second at the top.", "notes_ar": "توقف ثانية واحدة في أعلى الحركة."},
+                {"name": "Supported Single-Leg Balance", "name_ar": "توازن رجل واحدة مع دعم", "sets": "3", "reps": "20-30 sec", "rest": 30, "notes_en": "Use a wall or chair as needed.", "notes_ar": "استخدم الحائط أو الكرسي إذا احتجت دعمًا."},
+                {"name": "Low Step-Up", "name_ar": "صعود درجة منخفضة", "sets": "3", "reps": "8-10 each side", "rest": 45, "notes_en": "Control the lowering phase slowly.", "notes_ar": "انزل ببطء وتحكم أثناء النزول."},
+            ],
+        },
+        "knee": {
+            "markers": {"knee", "ركبة"},
+            "title_en": "Knee-Friendly Recovery Plan",
+            "title_ar": "خطة تعافي مراعية للركبة",
+            "exercises": [
+                {"name": "Sit-to-Stand", "name_ar": "جلوس ووقوف متحكم", "sets": "3", "reps": "10-12", "rest": 30, "notes_en": "Keep the knee tracking over the foot.", "notes_ar": "اجعل الركبة باتجاه القدم أثناء الحركة."},
+                {"name": "Step-Up", "name_ar": "ستيب أب", "sets": "3", "reps": "8 each side", "rest": 45, "notes_en": "Use a low step and stay controlled.", "notes_ar": "استخدم درجة منخفضة وتحكم بالحركة."},
+                {"name": "Hip Abduction (Band)", "name_ar": "إبعاد الورك بالمطاط", "sets": "3", "reps": "12-15", "rest": 30, "notes_en": "Keep the toes forward.", "notes_ar": "حافظ على اتجاه الأصابع للأمام."},
+                {"name": "Supported Wall Hold", "name_ar": "ثبات مدعوم على الحائط", "sets": "3", "reps": "20-30 sec", "rest": 30, "notes_en": "Use shallow range if pain increases.", "notes_ar": "خفف المدى إذا زاد الألم."},
+            ],
+        },
+        "shoulder": {
+            "markers": {"shoulder", "كتف"},
+            "title_en": "Shoulder Recovery Plan",
+            "title_ar": "خطة تعافي الكتف",
+            "exercises": [
+                {"name": "Standing Band Pull-Apart", "name_ar": "سحب المطاط للخارج", "sets": "3", "reps": "12-15", "rest": 30, "notes_en": "Keep the shoulders down and relaxed.", "notes_ar": "أبق الكتفين منخفضين ومرتاحين."},
+                {"name": "Face Pull", "name_ar": "فيس بول", "sets": "3", "reps": "10-12", "rest": 45, "notes_en": "Pull toward eye level with control.", "notes_ar": "اسحب بمستوى العين مع تحكم."},
+                {"name": "Wall Slide", "name_ar": "انزلاق الحائط", "sets": "3", "reps": "8-10", "rest": 30, "notes_en": "Stop before pinching pain.", "notes_ar": "توقف قبل أي ألم حاد أو انحشار."},
+                {"name": "Incline Push-Up", "name_ar": "بوش أب مائل", "sets": "2-3", "reps": "8-10", "rest": 45, "notes_en": "Use an elevated surface to reduce load.", "notes_ar": "استخدم سطحًا مرتفعًا لتخفيف الحمل."},
+            ],
+        },
+        "back": {
+            "markers": {"back", "lower back", "ظهر"},
+            "title_en": "Back-Friendly Recovery Plan",
+            "title_ar": "خطة تعافي مراعية للظهر",
+            "exercises": [
+                {"name": "Cat-Cow", "name_ar": "كات كاو", "sets": "3", "reps": "8-10", "rest": 20, "notes_en": "Move slowly through each position.", "notes_ar": "تحرك ببطء بين كل وضعية."},
+                {"name": "Bird Dog", "name_ar": "بيرد دوغ", "sets": "3", "reps": "8 each side", "rest": 30, "notes_en": "Brace the core before reaching.", "notes_ar": "شد البطن قبل مد الذراع والرجل."},
+                {"name": "Glute Bridge", "name_ar": "غلوت بريدج", "sets": "3", "reps": "10-12", "rest": 30, "notes_en": "Avoid arching the lower back.", "notes_ar": "تجنب تقوس أسفل الظهر."},
+                {"name": "Hip Hinge Drill", "name_ar": "تدريب مفصل الورك", "sets": "3", "reps": "10", "rest": 30, "notes_en": "Keep the spine neutral throughout.", "notes_ar": "حافظ على ظهر محايد طوال الحركة."},
+            ],
+        },
+        "general": {
+            "markers": set(),
+            "title_en": "Recovery Workout Plan",
+            "title_ar": "خطة تمارين للتعافي",
+            "exercises": [
+                {"name": "Mobility Flow", "name_ar": "حركة مفصلية خفيفة", "sets": "3", "reps": "60 sec", "rest": 20, "notes_en": "Use smooth and controlled motion.", "notes_ar": "استخدم حركة سلسة ومتحكم بها."},
+                {"name": "Bodyweight Squat", "name_ar": "سكوات وزن الجسم", "sets": "3", "reps": "10-12", "rest": 30, "notes_en": "Stay within a pain-free depth.", "notes_ar": "ابقَ ضمن عمق مريح بدون ألم."},
+                {"name": "Standing Calf Raise", "name_ar": "رفع السمانة واقفًا", "sets": "3", "reps": "12-15", "rest": 30, "notes_en": "Pause briefly at the top.", "notes_ar": "توقف قليلًا في أعلى الحركة."},
+                {"name": "Supported Balance Hold", "name_ar": "ثبات توازن مع دعم", "sets": "3", "reps": "20 sec", "rest": 30, "notes_en": "Use support if stability drops.", "notes_ar": "استخدم دعمًا إذا قل الثبات."},
+            ],
+        },
+    }
+
+    selected_key = "general"
+    for key, template in rehab_library.items():
+        markers = template.get("markers") or set()
+        if markers and _contains_any(normalized, set(markers)):
+            selected_key = key
+            break
+
+    template = rehab_library[selected_key]
+    requested_days = int(_to_float(profile.get("training_days_per_week")) or 0)
+    training_days = max(2, min(5, requested_days)) if requested_days > 0 else 3
+    exercises = [
+        {
+            "name": item["name"],
+            "nameAr": item["name_ar"],
+            "sets": item["sets"],
+            "reps": item["reps"],
+            "rest_seconds": item["rest"],
+            "notes": item["notes_ar"] if language != "en" else item["notes_en"],
+        }
+        for item in template["exercises"]
+    ]
+    progression = _lang_reply(
+        language,
+        "Increase range or repetitions gradually only if pain stays mild and recovery is stable.",
+        "زد المدى أو التكرارات تدريجيًا فقط إذا بقي الألم خفيفًا وكان التعافي مستقرًا.",
+        "زيد المدى أو التكرارات شوي شوي فقط إذا ظل الألم خفيف والتعافي مستقر.",
+    )
+    notes = _lang_reply(
+        language,
+        "Stop and get medical evaluation if swelling, sharp pain, or loss of stability gets worse.",
+        "أوقف التمرين واطلب تقييمًا طبيًا إذا زاد التورم أو الألم الحاد أو ضعف الثبات.",
+        "وقف التمرين واطلب تقييم طبي إذا زاد التورم أو الألم الحاد أو ضعف الثبات.",
+    )
+    frequency = _lang_reply(
+        language,
+        f"Repeat this plan {training_days} times per week with at least one easier day between hard sessions.",
+        f"كرر هذه الخطة {training_days} مرات أسبوعيًا مع يوم أخف على الأقل بين الجلسات الأصعب.",
+        f"كرر الخطة {training_days} مرات بالأسبوع وخلي بين الجلسات الأصعب يوم أخف على الأقل.",
+    )
+    return {
+        "id": f"workout_{uuid.uuid4().hex[:10]}",
+        "type": "workout",
+        "title": template["title_en"] if language == "en" else template["title_ar"],
+        "title_ar": template["title_ar"],
+        "training_days_per_week": training_days,
+        "frequency": frequency,
+        "duration_days": 7,
+        "exercises": exercises,
+        "notes": notes,
+        "progression": progression,
+        "source": "rehab_request",
         "created_at": datetime.utcnow().isoformat(),
     }
 
@@ -4128,10 +4903,10 @@ def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) ->
         workout_days = [d for d in plan.get("days", []) if d.get("exercises")]
         workout_day_names = [str(d.get("day") or "") for d in workout_days if d.get("day")]
         rest_days = list(plan.get("rest_days") or [d.get("day") for d in plan.get("days", []) if not d.get("exercises")])
-        sample = workout_days[0]["exercises"][:3] if workout_days else []
+        sample = workout_days[0]["exercises"][:3] if workout_days else list(plan.get("exercises") or [])[:3]
         sample_text = "\n".join([f"- {_clean_plan_label(x.get('name'), 'Exercise')} ({x['sets']} x {x['reps']})" for x in sample])
-        training_days_count = len(workout_days)
-        workout_days_line = " · ".join(workout_day_names) if workout_day_names else "Not specified"
+        training_days_count = len(workout_days) or int(_to_float(plan.get("training_days_per_week") or plan.get("trainingDaysPerWeek")) or 0)
+        workout_days_line = " · ".join(workout_day_names) if workout_day_names else _lang_reply(language, "Flexible / not specified", "مرن / غير محدد", "مرن / مش محدد")
 
         if language == "en":
             return (
@@ -4163,6 +4938,8 @@ def _format_plan_preview(plan_type: str, plan: dict[str, Any], language: str) ->
     calories = plan.get("daily_calories", 0)
     meals_count = plan.get("meals_per_day", 4)
     sample_meals = plan.get("days", [{}])[0].get("meals", [])[:3]
+    if not sample_meals:
+        sample_meals = list(plan.get("meals") or [])[:3]
     sample_text = "\n".join([f"- {_clean_plan_label(m.get('name'), 'Meal')} ({m['calories']} kcal)" for m in sample_meals])
 
     if language == "en":
@@ -4205,14 +4982,14 @@ def _detect_generated_plan_type(reply_text: str) -> Optional[str]:
     )
     numbered_sections = len(re.findall(r"\bday\s*[1-7]\b|\bmeal\s*[1-7]\b|\bاليوم\s*[1-7]\b|\bوجبة\s*[1-7]\b", normalized))
 
-    workout_markers = WORKOUT_REQUEST_TERMS | {"sets", "reps", "rest", "warmup", "إحماء", "عدة", "تكرار"}
-    nutrition_markers = NUTRITION_REQUEST_TERMS | {"kcal", "macro", "macros", "سناك", "فطور", "غداء", "عشاء"}
+    workout_markers = WORKOUT_REQUEST_TERMS | {"sets", "reps", "rest", "warmup", "cooldown", "mobility", "stretch", "rehab", "recovery", "protocol", "session", "إحماء", "تبريد", "إطالة", "اطالة", "تأهيل", "تعافي", "إصابة", "اصابة", "عدة", "تكرار"}
+    nutrition_markers = NUTRITION_REQUEST_TERMS | {"kcal", "macro", "macros", "snack", "breakfast", "lunch", "dinner", "سناك", "فطور", "غداء", "عشاء"}
     workout_score = int(_contains_any(normalized, workout_markers)) + int(_contains_any(normalized, WORKOUT_PLAN_TERMS))
     nutrition_score = int(_contains_any(normalized, nutrition_markers)) + int(_contains_any(normalized, NUTRITION_PLAN_TERMS))
 
     workout_structure_hits = sum(
         1
-        for marker in {"sets", "reps", "rest", "push", "pull", "legs", "تمارين", "عدة", "تكرار", "راحة"}
+        for marker in {"sets", "reps", "rest", "warmup", "cooldown", "mobility", "stretch", "rehab", "recovery", "session", "push", "pull", "legs", "تمارين", "تأهيل", "تعافي", "اطالة", "إطالة", "عدة", "تكرار", "راحة"}
         if marker in normalized
     )
     nutrition_structure_hits = sum(
@@ -4232,13 +5009,382 @@ def _detect_generated_plan_type(reply_text: str) -> Optional[str]:
     ):
         workout_score = 2
 
+    plan_like_lines = sum(
+        1
+        for line in reply_text.splitlines()
+        if re.match(r"^\s*(?:[-*•]|\d+[\).:-])", line.strip())
+    )
+    frequency_days, frequency_note = _extract_training_frequency_from_text(reply_text, 0)
+    has_structured_day_split = day_mentions >= 2 or bool(
+        re.search(
+            r"\b(?:day|session)\s*\d+\b|(?:اليوم|جلسة)\s*\d+",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+    )
+    schedule_markers = {
+        "per week",
+        "weekly",
+        "times a week",
+        "days per week",
+        "every week",
+        "split",
+        "routine",
+        "schedule",
+        "يوم راحة",
+        "ايام التمرين",
+        "أيام التمرين",
+        "بالأسبوع",
+        "بالاسبوع",
+        "في الأسبوع",
+        "اسبوعي",
+        "أسبوعي",
+        "روتين",
+        "جدول",
+    }
+    has_schedule_context = bool(frequency_note) or has_structured_day_split or _contains_any(normalized, schedule_markers)
+    plan_framing_markers = {
+        "plan",
+        "program",
+        "routine",
+        "schedule",
+        "split",
+        "phase",
+        "week 1",
+        "week 2",
+        "خطة",
+        "برنامج",
+        "روتين",
+        "جدول",
+        "مرحلة",
+        "الاسبوع 1",
+        "الأسبوع 1",
+    }
+    has_plan_framing = has_structured_day_split or _contains_any(normalized, plan_framing_markers)
+
+    workout_exercise_lines = 0
+    nutrition_meal_lines = 0
+    for raw_line in reply_text.splitlines():
+        stripped = _repair_mojibake(str(raw_line or "")).strip()
+        if not stripped:
+            continue
+        bullet_like = bool(re.match(r"^\s*(?:[-*•]|\d+[\).:-])", stripped))
+        cleaned_line = _clean_generated_plan_line(stripped)
+        if not cleaned_line:
+            continue
+        line_normalized = normalize_text(cleaned_line)
+        sets, reps = _extract_sets_reps_from_line(cleaned_line)
+        if (bullet_like or sets or reps) and _contains_any(
+            line_normalized,
+            {
+                "exercise",
+                "stretch",
+                "mobility",
+                "walk",
+                "raise",
+                "hold",
+                "balance",
+                "squat",
+                "lunge",
+                "press",
+                "pull",
+                "rehab",
+                "recovery",
+                "ankle",
+                "calf",
+                "تمرين",
+                "تمارين",
+                "اطالة",
+                "إطالة",
+                "توازن",
+                "مشي",
+                "رفع",
+                "تأهيل",
+                "تعافي",
+                "كاحل",
+                "ربلة",
+            },
+        ):
+            workout_exercise_lines += 1
+        if (bullet_like or "meal" in line_normalized or "وجبة" in line_normalized) and _contains_any(
+            line_normalized,
+            {"meal", "breakfast", "lunch", "dinner", "snack", "وجبة", "فطور", "غداء", "عشاء", "سناك", "protein", "carbs", "fat", "calories", "بروتين", "كارب", "دهون", "سعرات"},
+        ):
+            nutrition_meal_lines += 1
+
     if workout_score == 0 and nutrition_score == 0:
         return None
-    if day_mentions < 2 and numbered_sections < 2 and workout_structure_hits < 3 and nutrition_structure_hits < 3:
+    if day_mentions < 2 and numbered_sections < 2 and workout_structure_hits < 3 and nutrition_structure_hits < 3 and plan_like_lines < 3:
         return None
+    if workout_score >= nutrition_score:
+        if workout_exercise_lines < 4:
+            return None
+        if not has_schedule_context:
+            return None
+        if not has_plan_framing:
+            return None
+    else:
+        has_daily_nutrition_structure = nutrition_meal_lines >= 3 and (
+            has_schedule_context
+            or _contains_any(normalized, {"daily calories", "total calories", "kcal", "macros", "سعرات", "بروتين", "كارب", "دهون"})
+        )
+        if not has_daily_nutrition_structure:
+            return None
     if nutrition_structure_hits != workout_structure_hits and max(nutrition_structure_hits, workout_structure_hits) >= 3:
         return "nutrition" if nutrition_structure_hits > workout_structure_hits else "workout"
     return "workout" if workout_score >= nutrition_score else "nutrition"
+
+
+def _clean_generated_plan_line(line: str) -> str:
+    cleaned = _repair_mojibake(str(line or "")).strip()
+    cleaned = re.sub(r"^#{1,6}\s*", "", cleaned)
+    cleaned = re.sub(r"^\s*(?:[-*•]+|\d+[\).:-])\s*", "", cleaned)
+    return cleaned.strip(" -–—:\t")
+
+
+def _extract_generated_plan_title(reply_text: str, plan_type: str, language: str) -> str:
+    default_title = _lang_reply(
+        language,
+        "AI Nutrition Plan" if plan_type == "nutrition" else "AI Workout Plan",
+        "خطة تغذية ذكية" if plan_type == "nutrition" else "خطة تمارين ذكية",
+        "خطة أكل ذكية" if plan_type == "nutrition" else "خطة تمارين ذكية",
+    )
+    for raw_line in reply_text.splitlines():
+        line = _clean_generated_plan_line(raw_line)
+        if not line or len(line) > 90:
+            continue
+        normalized = normalize_text(line)
+        if plan_type == "nutrition" and _contains_any(normalized, NUTRITION_REQUEST_TERMS | {"nutrition", "meal", "diet", "وجبات", "تغذية", "سعرات"}):
+            return line
+        if plan_type == "workout" and _contains_any(normalized, WORKOUT_REQUEST_TERMS | {"workout", "training", "rehab", "recovery", "mobility", "تمارين", "تأهيل", "تعافي"}):
+            return line
+    return default_title
+
+
+def _extract_sets_reps_from_line(line: str) -> tuple[str, str]:
+    compact = line.replace("×", "x")
+    match = re.search(r"(\d+)\s*x\s*([0-9]+(?:\s*[-/]\s*[0-9]+)?(?:\s*(?:reps?|تكرار(?:ات)?|sec|seconds|min|minutes|ثانية|ثواني|دقيقة|دقائق))?)", compact, flags=re.IGNORECASE)
+    if match:
+        return match.group(1), match.group(2).strip()
+
+    sets_match = re.search(r"(\d+)\s*(?:sets?|مجموعات?)", compact, flags=re.IGNORECASE)
+    reps_match = re.search(r"([0-9]+(?:\s*[-/]\s*[0-9]+)?)\s*(?:reps?|تكرار(?:ات)?|ثانية|ثواني|دقيقة|دقائق|sec|seconds|min|minutes)", compact, flags=re.IGNORECASE)
+    sets = sets_match.group(1) if sets_match else ""
+    reps = reps_match.group(1) if reps_match else ""
+    return sets, reps
+
+
+def _extract_rest_seconds_from_line(line: str) -> int:
+    compact = _repair_mojibake(str(line or "")).replace("×", "x")
+    match = re.search(r"(?:rest|راحة)\s*[:=-]?\s*(\d+(?:\.\d+)?)\s*(sec|second|seconds|ثانية|ثواني|min|minute|minutes|دقيقة|دقائق)?", compact, flags=re.IGNORECASE)
+    if not match:
+        match = re.search(r"(\d+(?:\.\d+)?)\s*(sec|second|seconds|ثانية|ثواني|min|minute|minutes|دقيقة|دقائق)\s*(?:rest|راحة)", compact, flags=re.IGNORECASE)
+    if not match:
+        return 0
+    value = float(match.group(1))
+    unit = str(match.group(2) or "").lower()
+    if unit.startswith("min") or unit in {"دقيقة", "دقائق"}:
+        value *= 60
+    return int(round(value))
+
+
+def _extract_training_frequency_from_text(reply_text: str, fallback: int) -> tuple[int, str]:
+    raw_text = _repair_mojibake(reply_text or "")
+    patterns = [
+        r"(?:repeat|perform|do|train)\s*(?:this|the plan)?\s*(\d+)\s*(?:times?|days?)\s*(?:per|a)?\s*week",
+        r"(?:كرر|نفذ|طبّق|طبق)\s*(?:الخطة|التمارين)?\s*(\d+)\s*(?:مرات|أيام)\s*(?:بالأسبوع|بالاسبوع|في الأسبوع|بالاسبوعي)?",
+        r"(\d+)\s*(?:مرات|أيام|days?|times?)\s*(?:بالأسبوع|بالاسبوع|per week|a week)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, raw_text, flags=re.IGNORECASE)
+        if match:
+            days = max(1, min(7, int(match.group(1))))
+            return days, match.group(0).strip()
+    return fallback, ""
+
+
+def _split_generated_workout_line(line: str) -> tuple[str, str]:
+    parts = re.split(r"\s+(?:—|–|-|:)\s+", line, maxsplit=1)
+    if len(parts) == 2:
+        return parts[0].strip(), parts[1].strip()
+    return line.strip(), ""
+
+
+def _extract_workout_line_notes(line: str) -> str:
+    _name_part, details_part = _split_generated_workout_line(line)
+    if not details_part:
+        return ""
+    cleaned = re.sub(r"\b\d+\s*x\s*[0-9]+(?:\s*[-/]\s*[0-9]+)?(?:\s*(?:reps?|تكرار(?:ات)?|sec|seconds|min|minutes|ثانية|ثواني|دقيقة|دقائق))?", "", details_part, flags=re.IGNORECASE)
+    cleaned = re.sub(r"(?:rest|راحة)\s*[:=-]?\s*\d+(?:\.\d+)?\s*(?:sec|second|seconds|ثانية|ثواني|min|minute|minutes|دقيقة|دقائق)?", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b\d+(?:\.\d+)?\s*(?:sec|second|seconds|ثانية|ثواني|min|minute|minutes|دقيقة|دقائق)\s*(?:rest|راحة)?", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^[,;\-–—:\s]+|[,;\-–—:\s]+$", "", cleaned)
+    return cleaned.strip()
+
+
+def _extract_meal_macros_from_line(line: str) -> tuple[int, int, int, int]:
+    calories = int(_to_float(_extract_float_from_patterns(line, [r"(\d+(?:\.\d+)?)\s*(?:kcal|calories|سعرة)"])) or 0)
+    protein = int(_to_float(_extract_float_from_patterns(line, [r"p\s*[:=]?\s*(\d+(?:\.\d+)?)", r"protein\s*[:=]?\s*(\d+(?:\.\d+)?)", r"بروتين\s*[:=]?\s*(\d+(?:\.\d+)?)"])) or 0)
+    carbs = int(_to_float(_extract_float_from_patterns(line, [r"c\s*[:=]?\s*(\d+(?:\.\d+)?)", r"carbs?\s*[:=]?\s*(\d+(?:\.\d+)?)", r"كارب\s*[:=]?\s*(\d+(?:\.\d+)?)"])) or 0)
+    fat = int(_to_float(_extract_float_from_patterns(line, [r"f\s*[:=]?\s*(\d+(?:\.\d+)?)", r"fat\s*[:=]?\s*(\d+(?:\.\d+)?)", r"دهون\s*[:=]?\s*(\d+(?:\.\d+)?)"])) or 0)
+    return calories, protein, carbs, fat
+
+
+def _build_generated_workout_plan_from_reply(reply_text: str, profile: dict[str, Any], language: str) -> Optional[dict[str, Any]]:
+    exercise_items: list[dict[str, Any]] = []
+    notes: list[str] = []
+    progression_notes: list[str] = []
+    plan_title = _extract_generated_plan_title(reply_text, "workout", language)
+    frequency_days, frequency_note = _extract_training_frequency_from_text(reply_text, _preferred_training_days(profile, fallback=3))
+    if frequency_note:
+        notes.append(frequency_note)
+    for raw_line in reply_text.splitlines():
+        raw_stripped = _repair_mojibake(str(raw_line or "")).strip()
+        if not raw_stripped:
+            continue
+        bullet_like = bool(re.match(r"^\s*(?:[-*•]|\d+[\).:-])", raw_stripped))
+        line = _clean_generated_plan_line(raw_stripped)
+        if not line:
+            continue
+        normalized = normalize_text(line)
+        sets, reps = _extract_sets_reps_from_line(line)
+        if line == plan_title and not bullet_like and not sets and not reps:
+            continue
+        looks_like_exercise = bullet_like or bool(sets or reps) or _contains_any(
+            normalized,
+            {
+                "exercise",
+                "stretch",
+                "mobility",
+                "walk",
+                "raise",
+                "hold",
+                "balance",
+                "squat",
+                "lunge",
+                "press",
+                "pull",
+                "rehab",
+                "recovery",
+                "تمرين",
+                "اطالة",
+                "إطالة",
+                "توازن",
+                "مشي",
+                "رفع",
+                "تأهيل",
+                "تعافي",
+            },
+        )
+        if _contains_any(normalized, {"progression", "increase", "advance", "progress", "حسب التحمل", "زد", "زيادة بسيطة", "تقدم تدريجي", "اذا خف الألم", "إذا خف الألم"}):
+            progression_notes.append(line)
+            continue
+        if looks_like_exercise and len(exercise_items) < 16:
+            name, _details = _split_generated_workout_line(line)
+            name = re.sub(r"\((?:[^()]*(?:x|sets?|reps?|ثانية|ثواني|دقيقة|دقائق)[^()]*)\)", "", name, flags=re.IGNORECASE).strip()
+            rest_seconds = _extract_rest_seconds_from_line(line)
+            exercise_notes = _extract_workout_line_notes(line)
+            if name:
+                exercise_items.append(
+                    {
+                        "name": name,
+                        "nameAr": name,
+                        "sets": sets or "",
+                        "reps": reps or "",
+                        "rest_seconds": rest_seconds or 0,
+                        "notes": exercise_notes,
+                    }
+                )
+                continue
+        if bullet_like and len(notes) < 8:
+            notes.append(line)
+
+    if len(exercise_items) < 2:
+        return None
+
+    return {
+        "id": f"workout_{uuid.uuid4().hex[:10]}",
+        "type": "workout",
+        "title": plan_title,
+        "title_ar": plan_title,
+        "training_days_per_week": frequency_days,
+        "frequency": frequency_note,
+        "duration_days": 7,
+        "exercises": exercise_items,
+        "notes": "\n".join(notes).strip(),
+        "progression": "\n".join(dict.fromkeys([item for item in progression_notes if item])).strip(),
+        "source": "llm_text_plan",
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+
+def _build_generated_nutrition_plan_from_reply(reply_text: str, language: str) -> Optional[dict[str, Any]]:
+    meals: list[dict[str, Any]] = []
+    for raw_line in reply_text.splitlines():
+        raw_stripped = _repair_mojibake(str(raw_line or "")).strip()
+        if not raw_stripped:
+            continue
+        bullet_like = bool(re.match(r"^\s*(?:[-*•]|\d+[\).:-])", raw_stripped))
+        line = _clean_generated_plan_line(raw_stripped)
+        if not line:
+            continue
+        normalized = normalize_text(line)
+        if not bullet_like and not _contains_any(normalized, {"meal", "breakfast", "lunch", "dinner", "snack", "وجبة", "فطور", "غداء", "عشاء", "سناك"}):
+            continue
+        calories, protein, carbs, fat = _extract_meal_macros_from_line(line)
+        name = re.split(r"\s+(?:—|–|-|:)\s+", line, maxsplit=1)[0].strip()
+        if name and len(meals) < 12:
+            meals.append(
+                {
+                    "name": name,
+                    "nameAr": name,
+                    "calories": calories,
+                    "protein": protein,
+                    "carbs": carbs,
+                    "fat": fat,
+                }
+            )
+
+    if len(meals) < 2:
+        return None
+
+    daily_calories = sum(int(meal.get("calories", 0) or 0) for meal in meals)
+    estimated_protein = sum(int(meal.get("protein", 0) or 0) for meal in meals)
+    return {
+        "id": f"nutrition_{uuid.uuid4().hex[:10]}",
+        "type": "nutrition",
+        "title": _extract_generated_plan_title(reply_text, "nutrition", language),
+        "title_ar": _extract_generated_plan_title(reply_text, "nutrition", language),
+        "daily_calories": daily_calories,
+        "estimated_protein": estimated_protein,
+        "meals_per_day": len(meals),
+        "meals": meals,
+        "source": "llm_text_plan",
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+
+def _extract_generated_plan_payload(reply_text: str, profile: dict[str, Any], language: str) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    for candidate in _extract_json_objects(reply_text):
+        payload = _try_parse_json_object(candidate)
+        if not payload:
+            continue
+        nested_plan = payload.get("plan") if isinstance(payload.get("plan"), dict) else payload
+        if any(key in nested_plan for key in ("days", "exercises", "meals", "daily_calories", "meals_per_day")):
+            inferred_type = str(nested_plan.get("type") or "").strip().lower()
+            if inferred_type not in {"workout", "nutrition"}:
+                inferred_type = "nutrition" if any(key in nested_plan for key in ("meals", "daily_calories", "meals_per_day")) else "workout"
+            return inferred_type, _sanitize_plan_payload(inferred_type, nested_plan, language)
+
+    inferred_type = _detect_generated_plan_type(reply_text)
+    if inferred_type == "nutrition":
+        plan = _build_generated_nutrition_plan_from_reply(reply_text, language)
+        if plan:
+            return "nutrition", _sanitize_plan_payload("nutrition", plan, language)
+    if inferred_type == "workout":
+        plan = _build_generated_workout_plan_from_reply(reply_text, profile, language)
+        if plan:
+            return "workout", _sanitize_plan_payload("workout", plan, language)
+    return None, None
 
 
 def _build_pending_plan_response(
@@ -4250,12 +5396,16 @@ def _build_pending_plan_response(
     conversation_id: str,
     state: dict[str, Any],
     memory: MemorySystem,
+    plan_override: Optional[dict[str, Any]] = None,
+    reply_override: Optional[str] = None,
 ) -> ChatResponse:
     inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(profile, tracking_summary)
     plan_profile = dict(profile)
     plan_profile["goal"] = inferred_goal
 
-    if plan_type == "nutrition":
+    if plan_override is not None:
+        plan = plan_override
+    elif plan_type == "nutrition":
         plan = _generate_nutrition_plan(plan_profile, language)
     else:
         plan = _generate_workout_plan(plan_profile, language)
@@ -4275,8 +5425,8 @@ def _build_pending_plan_response(
     state["pending_plan_options"] = None
     state["pending_plan_type"] = None
 
-    reply = _format_plan_preview(plan_type, plan, language)
-    if inferred_by_ml:
+    reply = reply_override or _format_plan_preview(plan_type, plan, language)
+    if inferred_by_ml and reply_override is None:
         goal_label = _profile_goal_label(inferred_goal, language)
         confidence_text = (
             f" ({_format_number((inferred_confidence or 0.0) * 100, 1)}%)"
@@ -4844,38 +5994,10 @@ def _format_plan_options_preview(
             return "تعذر توليد خيارات الآن. حاول مرة أخرى."
         return "ما قدرت اولّد خيارات هسا. جرّب مرة ثانية."
 
+    visible_numbers = ", ".join(str(i) for i in range(1, len(options) + 1))
     lines = []
     for i, plan in enumerate(options, start=1):
-        default_title = (
-            f"Workout Plan Option {i}"
-            if plan_type == "workout" and language == "en"
-            else (
-                f"Nutrition Plan Option {i}"
-                if plan_type != "workout" and language == "en"
-                else (f"خيار تمارين {i}" if plan_type == "workout" else f"خيار تغذية {i}")
-            )
-        )
-        display_title = _clean_language_text(
-            plan.get("title") if language == "en" else (plan.get("title_ar") or plan.get("title")),
-            language,
-            default_title,
-        )
-        if language == "en" and display_title in {"Workout Plan", "Nutrition Plan"}:
-            display_title = default_title
-
-        if plan_type == "workout":
-            rest_days = ", ".join(plan.get("rest_days", [])) or "None"
-            sample_focus = _clean_language_text(
-                next((d.get("focus") for d in plan.get("days", []) if d.get("exercises")), "general"),
-                language,
-                "training" if language == "en" else "تدريب",
-            )
-            lines.append(f"{i}. {display_title} | focus: {sample_focus} | rest: {rest_days}")
-        else:
-            lines.append(
-                f"{i}. {display_title} | "
-                f"{plan.get('daily_calories', 0)} kcal/day | {plan.get('meals_per_day', 4)} meals/day"
-            )
+        lines.append(f"{i}. {_plan_option_title(plan_type, plan, language, i)} | {_format_plan_option_summary(plan_type, plan, language)}")
 
     options_text = "\n".join(lines)
     header_suffix_en = f" Page {page + 1}/{max(1, total_pages)}" if total_pages > 1 else ""
@@ -4885,18 +6007,110 @@ def _format_plan_options_preview(
         return (
             f"I prepared multiple options for you ({total_options} total).{header_suffix_en}\n"
             f"{options_text}\n\n"
-            "Reply with the option number you want (for example: 1). Say 'more options' to see the next page."
+            f"Reply with the option number you want ({visible_numbers}). Ask which option fits you best if you want a quick recommendation."
+            + (" Say 'more options' to see the next page." if total_pages > page + 1 else "")
         )
     if language == "ar_fusha":
         return (
             f"أعددت لك عدة خيارات ({total_options} إجمالًا).{header_suffix_ar}\n"
             f"{options_text}\n\n"
-            "أرسل رقم الخيار الذي تريده (مثال: 1). ويمكنك قول: خيارات أكثر لعرض الصفحة التالية."
+            f"أرسل رقم الخيار المناسب لك ({visible_numbers}). وإذا أردت ترشيحًا سريعًا فقل: أي خيار أنسب؟"
+            + (" ويمكنك قول: خيارات أكثر لعرض الصفحة التالية." if total_pages > page + 1 else "")
         )
     return (
         f"جهزتلك كذا خيار ({total_options} بالمجموع).{header_suffix_ar}\n"
         f"{options_text}\n\n"
-        "ابعت رقم الخيار اللي بدك ياه (مثال: 1). وإذا بدك صفحة ثانية احكي: خيارات أكثر."
+        f"ابعت رقم الخيار اللي ناسبك ({visible_numbers}). وإذا بدك ترشيحي السريع احكي: أي خيار أنسب؟"
+        + (" وإذا بدك صفحة ثانية احكي: خيارات أكثر." if total_pages > page + 1 else "")
+    )
+
+
+def _localized_weekday_name(day_name: str, language: str) -> str:
+    if language == "en":
+        return day_name
+    normalized_day = normalize_text(day_name)
+    for english_day, arabic_day in WEEK_DAYS:
+        if normalized_day in {normalize_text(english_day), normalize_text(arabic_day)}:
+            return arabic_day
+    return day_name
+
+
+def _localized_day_list(day_names: list[str], language: str) -> str:
+    localized = [_localized_weekday_name(str(day_name or ""), language) for day_name in day_names if str(day_name or "").strip()]
+    if not localized:
+        return "None" if language == "en" else ("لا يوجد" if language == "ar_fusha" else "ما في")
+    separator = ", " if language == "en" else "، "
+    return separator.join(localized)
+
+
+def _plan_option_title(plan_type: str, plan: dict[str, Any], language: str, option_index: int) -> str:
+    default_title = (
+        f"Workout Plan Option {option_index}"
+        if plan_type == "workout" and language == "en"
+        else (
+            f"Nutrition Plan Option {option_index}"
+            if plan_type != "workout" and language == "en"
+            else (f"خيار تمارين {option_index}" if plan_type == "workout" else f"خيار تغذية {option_index}")
+        )
+    )
+    title = _clean_language_text(
+        plan.get("title") if language == "en" else (plan.get("title_ar") or plan.get("title")),
+        language,
+        default_title,
+    )
+    if language == "en" and title in {"Workout Plan", "Nutrition Plan"}:
+        return default_title
+    return title
+
+
+def _workout_plan_option_metrics(plan: dict[str, Any]) -> dict[str, Any]:
+    workout_days = [day for day in plan.get("days", []) if isinstance(day, dict) and day.get("exercises")]
+    rest_days = list(plan.get("rest_days") or [day.get("day") for day in plan.get("days", []) if isinstance(day, dict) and not day.get("exercises")])
+    sample_focus = str(next((day.get("focus") for day in workout_days if day.get("focus")), "general"))
+    return {
+        "training_days": len(workout_days),
+        "rest_days": [str(day) for day in rest_days if str(day or "").strip()],
+        "focus": sample_focus,
+    }
+
+
+def _nutrition_plan_option_metrics(plan: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "daily_calories": int(_to_float(plan.get("daily_calories")) or 0),
+        "meals_per_day": int(_to_float(plan.get("meals_per_day")) or 4),
+        "estimated_protein": int(_to_float(plan.get("estimated_protein")) or 0),
+    }
+
+
+def _format_plan_option_summary(plan_type: str, plan: dict[str, Any], language: str) -> str:
+    if plan_type == "workout":
+        metrics = _workout_plan_option_metrics(plan)
+        focus = _clean_language_text(
+            metrics["focus"],
+            language,
+            "training" if language == "en" else "تدريب",
+        )
+        rest_days = _localized_day_list(metrics["rest_days"], language)
+        if language == "en":
+            return f"{metrics['training_days']} training days | focus: {focus} | rest: {rest_days}"
+        if language == "ar_fusha":
+            return f"{metrics['training_days']} أيام تدريب | التركيز: {focus} | الراحة: {rest_days}"
+        return f"{metrics['training_days']} أيام تمرين | التركيز: {focus} | الراحة: {rest_days}"
+
+    metrics = _nutrition_plan_option_metrics(plan)
+    if language == "en":
+        return (
+            f"{metrics['daily_calories']} kcal/day | {metrics['meals_per_day']} meals | "
+            f"est. protein {metrics['estimated_protein']} g"
+        )
+    if language == "ar_fusha":
+        return (
+            f"{metrics['daily_calories']} سعرة/يوم | {metrics['meals_per_day']} وجبات | "
+            f"بروتين تقريبي {metrics['estimated_protein']}غ"
+        )
+    return (
+        f"{metrics['daily_calories']} سعرة باليوم | {metrics['meals_per_day']} وجبات | "
+        f"بروتين تقريبي {metrics['estimated_protein']}غ"
     )
 
 
@@ -4907,35 +6121,13 @@ def _build_plan_option_cards(
 ) -> list[dict[str, Any]]:
     cards: list[dict[str, Any]] = []
     for i, plan in enumerate(options, start=1):
-        default_title = (
-            f"Workout Plan Option {i}"
-            if plan_type == "workout" and language == "en"
-            else (
-                f"Nutrition Plan Option {i}"
-                if plan_type != "workout" and language == "en"
-                else (f"خيار تمارين {i}" if plan_type == "workout" else f"خيار تغذية {i}")
-            )
+        cards.append(
+            {
+                "index": i,
+                "title": _plan_option_title(plan_type, plan, language, i),
+                "summary": _format_plan_option_summary(plan_type, plan, language),
+            }
         )
-        title = _clean_language_text(
-            plan.get("title") if language == "en" else (plan.get("title_ar") or plan.get("title")),
-            language,
-            default_title,
-        )
-        if language == "en" and title in {"Workout Plan", "Nutrition Plan"}:
-            title = default_title
-
-        if plan_type == "workout":
-            rest_days = ", ".join(plan.get("rest_days", [])) or "None"
-            focus = _clean_language_text(
-                next((d.get("focus") for d in plan.get("days", []) if d.get("exercises")), "general"),
-                language,
-                "training" if language == "en" else "تدريب",
-            )
-            summary = f"focus: {focus} | rest: {rest_days}"
-        else:
-            summary = f"{plan.get('daily_calories', 0)} kcal/day | {plan.get('meals_per_day', 4)} meals/day"
-
-        cards.append({"index": i, "title": title, "summary": summary})
 
     return cards
 
@@ -4957,6 +6149,189 @@ def _build_choose_plan_data(
     if extra:
         data.update(extra)
     return data
+
+
+def _pending_plan_options_guidance_reply(language: str, can_show_more: bool, help_requested: bool) -> str:
+    return _pending_plan_options_guidance_reply_with_count(language, can_show_more, help_requested, 5)
+
+
+def _pending_plan_options_guidance_reply_with_count(language: str, can_show_more: bool, help_requested: bool, options_count: int) -> str:
+    visible_numbers = ", ".join(str(i) for i in range(1, max(1, options_count) + 1))
+    if help_requested:
+        extra_en = " You can also say 'more options' if none of these fit."
+        extra_ar_fusha = " ويمكنك أيضًا قول: خيارات أكثر إذا لم يناسبك أيّ منها."
+        extra_ar_jordanian = " وكمان فيك تحكي: خيارات أكثر إذا ولا واحد منهم ناسبك."
+        if not can_show_more:
+            extra_en = ""
+            extra_ar_fusha = ""
+            extra_ar_jordanian = ""
+        return _lang_reply(
+            language,
+            f"I can help, but I still need you to choose one of the visible options by number. Reply with {visible_numbers} so I can open the full draft for approval." + extra_en,
+            f"أستطيع مساعدتك، لكنني ما زلت أحتاج أن تختار أحد الخيارات الظاهرة بالرقم. أرسل {visible_numbers} لأعرض لك المسودة الكاملة للاعتماد." + extra_ar_fusha,
+            f"بقدر أساعدك، بس لسا لازم تختار واحد من الخيارات الظاهرة بالرقم. ابعت {visible_numbers} عشان أفتحلك المسودة الكاملة للاعتماد." + extra_ar_jordanian,
+        )
+
+    extra_en = " or say 'more options'"
+    extra_ar_fusha = " أو قل: خيارات أكثر"
+    extra_ar_jordanian = " أو احكي: خيارات أكثر"
+    if not can_show_more:
+        extra_en = ""
+        extra_ar_fusha = ""
+        extra_ar_jordanian = ""
+
+    return _lang_reply(
+        language,
+        f"I still need a valid option number from the list above. Reply with {visible_numbers}" + extra_en + ".",
+        f"ما زلت أحتاج رقم خيار صحيح من القائمة أعلاه. أرسل {visible_numbers}" + extra_ar_fusha + ".",
+        f"لسا بدي رقم خيار صحيح من القائمة اللي فوق. ابعت {visible_numbers}" + extra_ar_jordanian + ".",
+    )
+
+
+def _recommend_pending_plan_option(plan_type: str, options: list[dict[str, Any]], profile: dict[str, Any]) -> tuple[int, str]:
+    goal = _normalize_goal(profile.get("goal"))
+    preferred_days = int(_to_float(profile.get("training_days_per_week") or profile.get("trainingDaysPerWeek")) or 0)
+
+    if plan_type == "workout":
+        target_days = preferred_days or {"muscle_gain": 4, "fat_loss": 4}.get(goal, 3)
+        best_idx = 0
+        best_score = float("-inf")
+        for idx, option in enumerate(options):
+            metrics = _workout_plan_option_metrics(option)
+            focus_text = normalize_text(metrics["focus"])
+            score = -abs(int(metrics["training_days"]) - target_days) * 3
+            if goal == "muscle_gain":
+                score += metrics["training_days"]
+                score += 1 if _contains_any(focus_text, {"upper", "lower", "push", "pull", "strength", "hypertrophy", "صدر", "ظهر", "ارجل", "أرجل"}) else 0
+            elif goal == "fat_loss":
+                score += 2 if _contains_any(focus_text, {"full body", "conditioning", "cardio", "fat", "full", "كارديو", "لياقه", "لياقة"}) else 0
+                score += metrics["training_days"]
+            else:
+                score += 2 if 3 <= int(metrics["training_days"]) <= 4 else 0
+                score += 1 if _contains_any(focus_text, {"balanced", "full body", "general", "متوازن", "شامل"}) else 0
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        selected = _workout_plan_option_metrics(options[best_idx])
+        rhythm_label = "balanced" if 3 <= int(selected["training_days"]) <= 4 else ("more intense" if int(selected["training_days"]) >= 5 else "lighter")
+        reason = (
+            f"it is closest to {target_days} training days and gives you a {rhythm_label} weekly rhythm"
+        )
+        return best_idx, reason
+
+    best_idx = 0
+    best_score = float("-inf")
+    for idx, option in enumerate(options):
+        metrics = _nutrition_plan_option_metrics(option)
+        calories = int(metrics["daily_calories"])
+        protein = int(metrics["estimated_protein"])
+        meals = int(metrics["meals_per_day"])
+        if goal == "muscle_gain":
+            score = (calories / 100.0) + (protein / 25.0)
+        elif goal == "fat_loss":
+            score = (-calories / 120.0) + (protein / 25.0) - abs(meals - 4)
+        else:
+            score = -(abs(calories - 2200) / 150.0) + (protein / 30.0) - abs(meals - 4)
+        if score > best_score:
+            best_score = score
+            best_idx = idx
+
+    selected = _nutrition_plan_option_metrics(options[best_idx])
+    if goal == "muscle_gain":
+        reason = f"it gives you about {selected['daily_calories']} kcal with {selected['estimated_protein']} g protein, which is stronger for muscle gain"
+    elif goal == "fat_loss":
+        reason = f"it keeps calories around {selected['daily_calories']} while keeping protein at {selected['estimated_protein']} g, which is leaner for fat loss"
+    else:
+        reason = f"it keeps calories moderate at {selected['daily_calories']} with {selected['meals_per_day']} meals, so it should be easier to follow"
+    return best_idx, reason
+
+
+def _pending_plan_options_comparison_reply(plan_type: str, options: list[dict[str, Any]], language: str, user_input: str, profile: dict[str, Any], can_show_more: bool) -> str | None:
+    wants_comparison = _contains_any(user_input, PLAN_OPTION_COMPARE_KEYWORDS)
+    wants_recommendation = _contains_any(user_input, PLAN_OPTION_RECOMMEND_KEYWORDS)
+    if not wants_comparison and not wants_recommendation:
+        return None
+
+    lines: list[str] = []
+    for index, option in enumerate(options, start=1):
+        title = _plan_option_title(plan_type, option, language, index)
+        summary = _format_plan_option_summary(plan_type, option, language)
+        if plan_type == "workout":
+            if language == "en":
+                lines.append(f"{index}. {title}: {summary}.")
+            elif language == "ar_fusha":
+                lines.append(f"{index}. {title}: {summary}.")
+            else:
+                lines.append(f"{index}. {title}: {summary}.")
+        else:
+            lines.append(f"{index}. {title}: {summary}.")
+
+    recommended_idx, recommendation_reason_en = _recommend_pending_plan_option(plan_type, options, profile)
+    recommendation_number = recommended_idx + 1
+    recommendation_reason = _lang_reply(
+        language,
+        recommendation_reason_en,
+        recommendation_reason_en
+        .replace("it is closest to", "الأقرب إلى")
+        .replace("training days", "أيام تدريب")
+        .replace("and gives you a", "ويعطي")
+        .replace("weekly rhythm", "إيقاعًا أسبوعيًا")
+        .replace("balanced", "متوازنًا")
+        .replace("more intense", "أقوى")
+        .replace("lighter", "أخف")
+        .replace("it gives you about", "يعطيك تقريبًا")
+        .replace("kcal with", "سعرة مع")
+        .replace("g protein, which is stronger for muscle gain", "غ بروتين، وهذا أنسب لبناء العضلات")
+        .replace("it keeps calories around", "يبقي السعرات حول")
+        .replace("while keeping protein at", "مع الحفاظ على البروتين عند")
+        .replace("which is leaner for fat loss", "وهذا أنسب لخسارة الدهون")
+        .replace("it keeps calories moderate at", "يبقي السعرات معتدلة عند")
+        .replace("with", "مع")
+        .replace("meals, so it should be easier to follow", "وجبات، وهذا أسهل عادةً للالتزام"),
+        recommendation_reason_en
+        .replace("it is closest to", "الأقرب لـ")
+        .replace("training days", "أيام تمرين")
+        .replace("and gives you a", "وبعطي")
+        .replace("weekly rhythm", "إيقاع أسبوعي")
+        .replace("balanced", "متوازن")
+        .replace("more intense", "أقوى")
+        .replace("lighter", "أخف")
+        .replace("it gives you about", "بيعطيك تقريبًا")
+        .replace("kcal with", "سعرة مع")
+        .replace("g protein, which is stronger for muscle gain", "غ بروتين، وهذا أنسب لبناء العضلات")
+        .replace("it keeps calories around", "بخلي السعرات حوالي")
+        .replace("while keeping protein at", "مع الحفاظ على البروتين عند")
+        .replace("which is leaner for fat loss", "وهذا أنسب لخسارة الدهون")
+        .replace("it keeps calories moderate at", "بخلي السعرات معتدلة عند")
+        .replace("with", "مع")
+        .replace("meals, so it should be easier to follow", "وجبات، وهيك غالبًا أسهل تلتزم فيه"),
+    )
+
+    choose_prompt = _pending_plan_options_guidance_reply_with_count(
+        language,
+        can_show_more=can_show_more,
+        help_requested=True,
+        options_count=len(options),
+    )
+
+    if language == "en":
+        intro = "Quick comparison of the visible options:"
+        recommendation = f"My quick recommendation is option {recommendation_number} because {recommendation_reason}."
+    elif language == "ar_fusha":
+        intro = "هذا هو الفرق السريع بين الخيارات الظاهرة:"
+        recommendation = f"ترشيحي السريع هو الخيار {recommendation_number} لأنه {recommendation_reason}."
+    else:
+        intro = "هاي مقارنة سريعة بين الخيارات الظاهرة:"
+        recommendation = f"ترشيحي السريع هو الخيار {recommendation_number} لأنه {recommendation_reason}."
+
+    if wants_comparison and wants_recommendation:
+        body = [intro, *lines, "", recommendation, choose_prompt]
+    elif wants_comparison:
+        body = [intro, *lines, "", recommendation, choose_prompt]
+    else:
+        body = [recommendation, *lines, "", choose_prompt]
+    return "\n".join(body)
 
 
 def _extract_plan_choice_index(user_input: str, options_count: int) -> int | None:
@@ -7038,6 +8413,164 @@ async def chat(req: ChatRequest) -> ChatResponse:
     routing_input = _normalize_routing_input(user_input)
     lowered = normalize_text(routing_input)
 
+    pending_profile_update = state.get("pending_profile_update")
+    pending_profile_update_conversation_id = state.get("pending_profile_update_conversation_id")
+    if pending_profile_update and pending_profile_update_conversation_id and pending_profile_update_conversation_id != conversation_id:
+        pending_profile_update = None
+        state["pending_profile_update"] = None
+        state["pending_profile_update_conversation_id"] = None
+
+    pending_profile_update_confirmation = state.get("pending_profile_update_confirmation")
+    pending_profile_update_confirmation_conversation_id = state.get("pending_profile_update_confirmation_conversation_id")
+    if (
+        pending_profile_update_confirmation
+        and pending_profile_update_confirmation_conversation_id
+        and pending_profile_update_confirmation_conversation_id != conversation_id
+    ):
+        pending_profile_update_confirmation = None
+        state["pending_profile_update_confirmation"] = None
+        state["pending_profile_update_confirmation_conversation_id"] = None
+
+    profile_update_command = _extract_profile_update_command(user_input)
+
+    if pending_profile_update_confirmation:
+        if _is_profile_update_confirmation_yes(user_input):
+            field_name = str(pending_profile_update_confirmation.get("field") or "")
+            value = pending_profile_update_confirmation.get("value")
+            state_value = pending_profile_update_confirmation.get("state_value", value)
+            payload = pending_profile_update_confirmation.get("payload") if isinstance(pending_profile_update_confirmation.get("payload"), dict) else {}
+            state["pending_profile_update_confirmation"] = None
+            state["pending_profile_update_confirmation_conversation_id"] = None
+            if field_name:
+                state[field_name] = state_value
+            reply = _profile_update_success_reply(field_name, state_value, language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="profile_updated",
+                data=payload,
+            )
+
+        if _is_profile_update_confirmation_no(user_input):
+            state["pending_profile_update_confirmation"] = None
+            state["pending_profile_update_confirmation_conversation_id"] = None
+            reply = _profile_update_cancel_reply(language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="profile_update_cancelled",
+                data={"cancelled": True},
+            )
+
+        if not profile_update_command:
+            reply = _profile_update_needs_confirmation_reply(language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="confirm_profile_update",
+                data=repair_mojibake_deep(dict(pending_profile_update_confirmation)),
+            )
+
+        state["pending_profile_update_confirmation"] = None
+        state["pending_profile_update_confirmation_conversation_id"] = None
+
+    if pending_profile_update:
+        field_name = str(pending_profile_update)
+        if _is_profile_update_confirmation_no(user_input):
+            state["pending_profile_update"] = None
+            state["pending_profile_update_conversation_id"] = None
+            reply = _profile_update_cancel_reply(language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="profile_update_cancelled",
+                data={"cancelled": True},
+            )
+
+        value = _extract_profile_update_value(field_name, user_input)
+        if value is None:
+            reply = _profile_update_value_prompt(field_name, language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="ask_profile_update",
+                data={"field": field_name},
+            )
+
+        profile_payload = _profile_update_payload(field_name, value, language)
+        state["pending_profile_update"] = None
+        state["pending_profile_update_conversation_id"] = None
+        confirmation_payload = {
+            "field": field_name,
+            "value": value,
+            "state_value": value,
+            "payload": profile_payload,
+            **profile_payload,
+        }
+        state["pending_profile_update_confirmation"] = confirmation_payload
+        state["pending_profile_update_confirmation_conversation_id"] = conversation_id
+        reply = _profile_update_confirmation_reply(field_name, value, language)
+        memory.add_assistant_message(reply)
+        return ChatResponse(
+            reply=reply,
+            conversation_id=conversation_id,
+            language=language,
+            action="confirm_profile_update",
+            data=confirmation_payload,
+        )
+
+    if profile_update_command:
+        field_name = str(profile_update_command.get("field") or "")
+        value = profile_update_command.get("value")
+        if field_name and value is None:
+            state["pending_profile_update"] = field_name
+            state["pending_profile_update_conversation_id"] = conversation_id
+            reply = _profile_update_value_prompt(field_name, language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="ask_profile_update",
+                data={"field": field_name},
+            )
+
+        if field_name:
+            profile_payload = _profile_update_payload(field_name, value, language)
+            confirmation_payload = {
+                "field": field_name,
+                "value": value,
+                "state_value": value,
+                "payload": profile_payload,
+                **profile_payload,
+            }
+            state["pending_profile_update_confirmation"] = confirmation_payload
+            state["pending_profile_update_confirmation_conversation_id"] = conversation_id
+            reply = _profile_update_confirmation_reply(field_name, value, language)
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="confirm_profile_update",
+                data=confirmation_payload,
+            )
+
+    if _is_status_overview_request(routing_input):
+        reply = _status_overview_reply(language, profile, tracking_summary, state.get("plan_snapshot"))
+        memory.add_assistant_message(reply)
+        return ChatResponse(reply=reply, conversation_id=conversation_id, language=language)
+
     pending_options_payload = state.get("pending_plan_options")
     if pending_options_payload:
         pending_conv = pending_options_payload.get("conversation_id")
@@ -7103,6 +8636,30 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 data=_build_choose_plan_data(pending_options_type, next_payload, language),
             )
 
+        comparison_reply = _pending_plan_options_comparison_reply(
+            pending_options_type,
+            pending_options,
+            language,
+            routing_input,
+            profile,
+            can_show_more=pending_page + 1 < pending_total_pages,
+        )
+        if comparison_reply:
+            memory.add_assistant_message(comparison_reply)
+            return ChatResponse(
+                reply=comparison_reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="choose_plan",
+                data=_build_choose_plan_data(pending_options_type, pending_options_payload, language),
+            )
+
+        clarification = _pending_plan_options_guidance_reply_with_count(
+            language,
+            can_show_more=pending_page + 1 < pending_total_pages,
+            help_requested=_contains_any(routing_input, PLAN_OPTION_HELP_KEYWORDS | APPROVE_KEYWORDS | REJECT_KEYWORDS),
+            options_count=len(pending_options),
+        )
         reply = _format_plan_options_preview(
             pending_options_type,
             pending_options,
@@ -7111,6 +8668,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             total_pages=pending_total_pages,
             total_options=pending_total_options,
         )
+        reply = f"{clarification}\n\n{reply}"
         memory.add_assistant_message(reply)
         return ChatResponse(
             reply=reply,
@@ -7192,6 +8750,20 @@ async def chat(req: ChatRequest) -> ChatResponse:
         inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(profile, tracking_summary)
         plan_profile = dict(profile)
         plan_profile["goal"] = inferred_goal
+
+        if requested_plan_type == "workout" and _is_rehab_workout_request(routing_input):
+            rehab_plan = _generate_rehab_workout_plan(routing_input, plan_profile, language)
+            return _build_pending_plan_response(
+                "workout",
+                profile,
+                tracking_summary,
+                language,
+                user_id,
+                conversation_id,
+                state,
+                memory,
+                plan_override=rehab_plan,
+            )
 
         if requested_plan_type == "workout":
             options = _generate_workout_plan_options(plan_profile, language, count=PLAN_OPTION_POOL_TARGET)
@@ -7373,8 +8945,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
                     llm_reply = _ollama_unavailable_reply(language)
 
-                llm_plan_type = _detect_generated_plan_type(llm_reply)
-                if llm_plan_type:
+                llm_plan_type, llm_plan_payload = _extract_generated_plan_payload(llm_reply, profile, language)
+                if llm_plan_type and llm_plan_payload:
                     return _build_pending_plan_response(
                         llm_plan_type,
                         profile,
@@ -7384,6 +8956,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
                         conversation_id,
                         state,
                         memory,
+                        plan_override=llm_plan_payload,
+                        reply_override=llm_reply,
                     )
 
                 filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
@@ -7415,8 +8989,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
             llm_reply = _ollama_unavailable_reply(language)
 
-        llm_plan_type = _detect_generated_plan_type(llm_reply)
-        if llm_plan_type:
+        llm_plan_type, llm_plan_payload = _extract_generated_plan_payload(llm_reply, profile, language)
+        if llm_plan_type and llm_plan_payload:
             return _build_pending_plan_response(
                 llm_plan_type,
                 profile,
@@ -7426,6 +9000,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 conversation_id,
                 state,
                 memory,
+                plan_override=llm_plan_payload,
+                reply_override=llm_reply,
             )
 
         filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
@@ -7788,8 +9364,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
             "نموذج الذكاء المحلي غير متاح مؤقتًا. تأكد من تشغيل Ollama ثم أعد المحاولة.",
             "نموذج الذكاء المحلي واقف مؤقتًا. شغّل Ollama وارجع جرّب.",
         )
-    llm_plan_type = _detect_generated_plan_type(llm_reply)
-    if llm_plan_type:
+    llm_plan_type, llm_plan_payload = _extract_generated_plan_payload(llm_reply, profile, language)
+    if llm_plan_type and llm_plan_payload:
         return _build_pending_plan_response(
             llm_plan_type,
             profile,
@@ -7799,6 +9375,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
             conversation_id,
             state,
             memory,
+            plan_override=llm_plan_payload,
+            reply_override=llm_reply,
         )
     filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
     memory.add_assistant_message(filtered_reply)

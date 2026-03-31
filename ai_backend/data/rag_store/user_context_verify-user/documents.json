@@ -1,0 +1,9 @@
+[
+  {
+    "id": "verify-user_profile",
+    "text": "User profile: {\"training_days_per_week\": 4, \"equipment\": \"dumbbells, barbell\", \"weight\": 79, \"fitness_level\": \"intermediate\", \"goal\": \"muscle_gain\", \"height\": 179, \"available_equipment\": \"dumbbells, barbell\", \"id\": \"verify-user\", \"user_id\": \"verify-user\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "plan-user_profile",
+    "text": "User profile: {\"training_days_per_week\": 4, \"fitness_level\": \"intermediate\", \"goal\": \"fat_loss\", \"chronic_conditions\": \"\", \"height\": 180, \"dietary_preferences\": [], \"allergies\": [], \"weight\": 80, \"id\": \"plan-user\", \"user_id\": \"plan-user\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  }
+]

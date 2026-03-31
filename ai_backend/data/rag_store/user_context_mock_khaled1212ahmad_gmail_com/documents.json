@@ -1,0 +1,95 @@
+[
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_profile",
+    "text": "User profile: {\"id\": \"mock_khaled1212ahmad_gmail_com\", \"user_id\": \"mock_khaled1212ahmad_gmail_com\", \"name\": \"moayad\", \"age\": 23, \"gender\": \"male\", \"weight\": 70, \"height\": 175, \"goal\": \"muscle_gain\", \"location\": \"gym\", \"fitnessLevel\": \"intermediate\", \"trainingDaysPerWeek\": 3, \"equipment\": \"\", \"injuries\": \"Ankle sprain\", \"activityLevel\": \"moderate\", \"dietaryPreferences\": \"\", \"chronicConditions\": \"\", \"allergies\": [], \"chronic_diseases\": [], \"fitness_level\": \"intermediate\", \"training_days_per_week\": 3, \"activity_level\": \"moderate\", \"available_equipment\": \"\", \"dietary_preferences\": []}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_tracking_summary",
+    "text": "Tracking summary: {\"completed_tasks\": 0, \"total_tasks\": 0, \"adherence_score\": 0, \"completed_workout_tasks\": 0, \"total_workout_tasks\": 0, \"total_nutrition_tasks\": 0, \"active_workout_plans\": 0, \"active_nutrition_plans\": 0, \"completed_last_7_days\": 0, \"last_completed_at\": null, \"days_logged_last_7\": 0, \"last_log_date\": null, \"recent_completed_exercises\": [], \"recent_workout_notes\": [], \"recent_nutrition_notes\": [], \"recent_moods\": [], \"recent_activity\": [], \"active_plan_details\": [], \"weekly_stats\": {\"workout_days\": 0, \"planned_days\": 0, \"planned_nutrition_days\": 0, \"workout_log_days\": 0, \"nutrition_log_days\": 0, \"completed_workouts\": 0, \"recent_exercise_names\": []}, \"monthly_stats\": {\"consistency_percent\": 0, \"days_logged\": 0, \"workout_log_days\": 0, \"nutrition_log_days\": 0}, \"goal\": {\"type\": \"bulking\", \"current_weight\": 70}}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_plan_snapshot",
+    "text": "Plan snapshot: {\"active_workout_plans\": 0, \"active_nutrition_plans\": 0, \"workout_titles\": [], \"nutrition_titles\": [], \"updated_at\": \"2026-03-27T14:35:58.741Z\"}",
+    "metadata": {
+      "kind": "plan_snapshot"
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_0",
+    "text": "Recent user message: ايش يا حج",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 0
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_1",
+    "text": "Recent assistant message: مرحباً يا مويد! كيف أستطيع مساعدتك اليوم في التدريب أو التغذية؟ 🌟",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "assistant",
+      "index": 1
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_2",
+    "text": "Recent user message: شو عندي اصابات",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 2
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_3",
+    "text": "Recent assistant message: الإصابة المسجلة عندك هي **تمدد بالكاحل (Ankle sprain)**. ما في أي إصابات تانية مسجلة بحسابك حالياً.  \n\nإذا حابب نصائح لتقوية الكاحل أو تمارين بديلة عشان ما تتعبه، قول لي وإحنا نرتب لك برنامج يناسب هدفك للعضلات 💪.",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "assistant",
+      "index": 3
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_4",
+    "text": "Recent user message: بدي تمارين",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 4
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_5",
+    "text": "Recent assistant message: بالتأكيد. أخبرني الآن في ماذا تريد المساعدة: التمرين، التغذية، خسارة الدهون، زيادة العضلات، أم تعديل خطتك الحالية.",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "assistant",
+      "index": 5
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_6",
+    "text": "Recent user message: بدي خطة تناسب اصابتي",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 6
+    }
+  },
+  {
+    "id": "mock_khaled1212ahmad_gmail_com_recent_message_7",
+    "text": "Recent user message: بما انه عندي اصابة بالكاحل بدي خطة تمارين",
+    "metadata": {
+      "kind": "recent_message",
+      "role": "user",
+      "index": 7
+    }
+  }
+]

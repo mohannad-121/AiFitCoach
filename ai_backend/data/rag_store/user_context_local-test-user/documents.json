@@ -1,0 +1,31 @@
+[
+  {
+    "id": "local-test-user_profile",
+    "text": "User profile: {\"weight\": 80, \"training_days_per_week\": 4, \"fitness_level\": \"intermediate\", \"height\": 180, \"goal\": \"muscle_gain\", \"id\": \"local-test-user\", \"user_id\": \"local-test-user\"}",
+    "metadata": {
+      "kind": "profile"
+    }
+  },
+  {
+    "id": "local-test-user_tracking_summary",
+    "text": "Tracking summary: {\"recent_completed_exercises\": [{\"exercise_name\": \"Decline bar press sit-up\", \"date\": \"2026-03-30\"}], \"progress_metrics\": {\"recent_completed_tasks\": 3, \"workout_adherence_percent\": 45, \"prior_completed_tasks\": 2, \"completion_delta\": 1}, \"completed_last_7_days\": 3}",
+    "metadata": {
+      "kind": "tracking_summary"
+    }
+  },
+  {
+    "id": "local-test-user_progress_metrics",
+    "text": "Progress metrics: {\"recent_completed_tasks\": 3, \"workout_adherence_percent\": 45, \"prior_completed_tasks\": 2, \"completion_delta\": 1}",
+    "metadata": {
+      "kind": "progress_metrics"
+    }
+  },
+  {
+    "id": "local-test-user_completed_exercise_0",
+    "text": "Recent completed exercise: {\"exercise_name\": \"Decline bar press sit-up\", \"date\": \"2026-03-30\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 0
+    }
+  }
+]
