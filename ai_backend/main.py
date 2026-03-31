@@ -214,6 +214,19 @@ class PlanActionRequest(BaseModel):
     conversation_id: Optional[str] = None
 
 
+class WorkoutAdherenceRequest(BaseModel):
+    user_id: str
+    issue_reminder: bool = True
+    cutoff_hour_local: int = 18
+
+    @field_validator("cutoff_hour_local")
+    @classmethod
+    def _validate_cutoff_hour(cls, value: int) -> int:
+        if value < 0 or value > 23:
+            raise ValueError("cutoff_hour_local must be between 0 and 23")
+        return value
+
+
 class GoalPredictionRequest(BaseModel):
     age: Optional[float] = 0.0
     gender: Optional[str] = "Other"
@@ -7991,6 +8004,18 @@ def fitbit_callback(
 @app.get("/integrations/fitbit/status")
 def fitbit_status(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
     return FITBIT.get_status(_normalize_user_id(user_id))
+
+
+@app.post("/adherence/workout")
+def workout_adherence(request: WorkoutAdherenceRequest) -> dict[str, Any]:
+    user_id = _normalize_user_id(request.user_id)
+    fitbit_summary = FITBIT.get_coach_tracking_summary(user_id)
+    return SUPABASE_CONTEXT.evaluate_workout_adherence(
+        user_id,
+        fitbit_summary=fitbit_summary,
+        issue_reminder=request.issue_reminder,
+        cutoff_hour_local=request.cutoff_hour_local,
+    )
 
 
 @app.post("/integrations/fitbit/sync")

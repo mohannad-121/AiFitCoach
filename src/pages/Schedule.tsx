@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Check, ChevronLeft, ChevronRight, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
+import { Activity, BellRing, Calendar, Check, CheckCircle2, ChevronLeft, ChevronRight, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -60,6 +60,50 @@ interface DailyLog {
   nutrition_notes: string;
   mood: string;
 }
+
+interface WorkoutAdherenceStatus {
+  evaluated_at: string;
+  timezone: string;
+  schedule: {
+    has_active_workout_plan: boolean;
+    has_workout_planned_today: boolean;
+    planned_workout_items_today: number;
+    planned_workout_names_today: string[];
+    manual_completions_today: number;
+    active_plan_titles: string[];
+  };
+  detection: {
+    workout_detected_today: boolean;
+    confidence: 'high' | 'medium' | 'none';
+    evidence_score: number;
+    evidence_threshold: number;
+    reasons: string[];
+    metrics: {
+      steps: number;
+      resting_heart_rate: number | null;
+      fairly_active_minutes: number;
+      very_active_minutes: number;
+      active_minutes_total: number;
+      heart_zone_active_minutes: number;
+      manual_workout_completions_today: number;
+    };
+  };
+  reminder: {
+    eligible_today: boolean;
+    after_cutoff: boolean;
+    cutoff_hour_local: number;
+    reminder_date: string;
+    already_sent_today: boolean;
+    should_send_now: boolean;
+    sent_now: boolean;
+    sent_at: string | null;
+    show_banner: boolean;
+    message: string;
+    persistence_error: string | null;
+  };
+}
+
+const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
 
 const getLocalPlansStorageKey = (userId: string) => `fitcoach_schedule_plans_${userId}`;
 const getLocalCompletionsStorageKey = (userId: string) => `fitcoach_schedule_completions_${userId}`;
@@ -171,6 +215,8 @@ export function SchedulePage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDateIdx, setSelectedDateIdx] = useState(-1); // index into weekDates
   const [viewTab, setViewTab] = useState<'workout' | 'nutrition'>('workout');
+  const [workoutAdherence, setWorkoutAdherence] = useState<WorkoutAdherenceStatus | null>(null);
+  const [adherenceLoading, setAdherenceLoading] = useState(false);
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
@@ -190,6 +236,11 @@ export function SchedulePage() {
   useEffect(() => {
     if (user) fetchPlans();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || loading) return;
+    void fetchWorkoutAdherence();
+  }, [user?.id, loading, completions.length, dailyLogs.length, plans.length]);
 
   const fetchPlans = async () => {
     if (!user) return;
@@ -233,6 +284,33 @@ export function SchedulePage() {
       setCompletions(localCompletions);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWorkoutAdherence = async () => {
+    if (!user) return;
+
+    setAdherenceLoading(true);
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/adherence/workout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          issue_reminder: true,
+          cutoff_hour_local: 18,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.detail || 'Failed loading workout adherence status');
+      }
+      setWorkoutAdherence(payload as WorkoutAdherenceStatus);
+    } catch (error) {
+      console.warn('Failed loading workout adherence status:', error);
+      setWorkoutAdherence(null);
+    } finally {
+      setAdherenceLoading(false);
     }
   };
 
@@ -472,6 +550,9 @@ export function SchedulePage() {
   const currentDailyLog = useMemo(() => {
     return dailyLogs.find((log) => log.log_date === selectedLogDate) || null;
   }, [dailyLogs, selectedLogDate]);
+
+  const workoutDetectedToday = viewTab === 'workout' && workoutAdherence?.detection.workout_detected_today;
+  const showMissedWorkoutReminder = viewTab === 'workout' && workoutAdherence?.reminder.show_banner;
 
   useEffect(() => {
     if (currentDailyLog) {
@@ -721,6 +802,62 @@ export function SchedulePage() {
         {/* Day Content */}
         {currentPlan ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
+            {!adherenceLoading && workoutDetectedToday && workoutAdherence && (
+              <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-emerald-500/20 p-2 text-emerald-600">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                      <span>{language === 'ar' ? 'تم اكتشاف نشاط تمرين اليوم' : 'Workout detected today'}</span>
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs uppercase tracking-wide">
+                        {workoutAdherence.detection.confidence}
+                      </span>
+                    </div>
+                    <p className="text-sm text-emerald-900/80">
+                      {workoutAdherence.reminder.message || workoutAdherence.detection.reasons[0] || (language === 'ar' ? 'تم تسجيل تمرين أو نشاط قوي اليوم.' : 'Strong workout evidence was recorded today.')}
+                    </p>
+                    <p className="mt-2 text-xs text-emerald-900/70">
+                      {language === 'ar'
+                        ? `الدقائق النشطة: ${workoutAdherence.detection.metrics.active_minutes_total} • دقائق النبض المرتفع: ${workoutAdherence.detection.metrics.heart_zone_active_minutes} • الإكمالات اليدوية: ${workoutAdherence.detection.metrics.manual_workout_completions_today}`
+                        : `Active minutes: ${workoutAdherence.detection.metrics.active_minutes_total} • Heart-zone minutes: ${workoutAdherence.detection.metrics.heart_zone_active_minutes} • Manual completions: ${workoutAdherence.detection.metrics.manual_workout_completions_today}`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!adherenceLoading && showMissedWorkoutReminder && workoutAdherence && (
+              <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-amber-500/20 p-2 text-amber-600">
+                    <BellRing className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-amber-700">
+                      <span>{language === 'ar' ? 'تذكير التمرين اليوم' : 'Workout reminder for today'}</span>
+                      {workoutAdherence.reminder.already_sent_today && (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs uppercase tracking-wide">
+                          {language === 'ar' ? 'تم الإرسال' : 'sent'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-amber-900/80">
+                      {workoutAdherence.reminder.message || (language === 'ar' ? 'اليوم يوم تمرين مخطط ولم يتم اكتشاف تمرين بعد.' : 'Today is a scheduled workout day and no workout has been detected yet.')}
+                    </p>
+                    {workoutAdherence.schedule.planned_workout_names_today.length > 0 && (
+                      <p className="mt-2 text-xs text-amber-900/70">
+                        {language === 'ar'
+                          ? `التمارين المخططة اليوم: ${workoutAdherence.schedule.planned_workout_names_today.slice(0, 4).join('، ')}`
+                          : `Planned today: ${workoutAdherence.schedule.planned_workout_names_today.slice(0, 4).join(', ')}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-foreground">
@@ -730,6 +867,23 @@ export function SchedulePage() {
                   {language === 'ar' ? 'نشط' : 'Active'}
                 </span>
               </div>
+              {viewTab === 'workout' && workoutAdherence && !workoutDetectedToday && !showMissedWorkoutReminder && workoutAdherence.schedule.has_workout_planned_today && (
+                <div className="mb-5 flex items-start gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/10 p-4 text-left">
+                  <div className="rounded-xl bg-sky-500/20 p-2 text-sky-600">
+                    <Activity className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-sky-700">
+                      {language === 'ar' ? 'اليوم يوم تمرين مخطط' : 'A workout is planned for today'}
+                    </div>
+                    <p className="mt-1 text-sm text-sky-900/75">
+                      {language === 'ar'
+                        ? `لم يتم الوصول إلى وقت التذكير بعد. التمارين المخططة اليوم: ${workoutAdherence.schedule.planned_workout_items_today}`
+                        : `The reminder cutoff has not been reached yet. Planned workout items today: ${workoutAdherence.schedule.planned_workout_items_today}`}
+                    </p>
+                  </div>
+                </div>
+              )}
               {planProgress && (
                 <div className="mb-5">
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
