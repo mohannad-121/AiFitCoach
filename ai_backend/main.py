@@ -550,6 +550,7 @@ def _refresh_persistent_rag_context(
         if app_docs:
             PERSISTENT_RAG.upsert_documents("app_knowledge", app_docs, replace=True)
 
+        namespace = _rag_namespace_for_user(user_id)
         user_docs = _build_user_rag_documents(
             user_id,
             profile,
@@ -558,8 +559,18 @@ def _refresh_persistent_rag_context(
             recent_messages,
             attachment_context,
         )
+        if not isinstance(attachment_context, dict):
+            existing_attachment_docs = [
+                doc
+                for doc in PERSISTENT_RAG.list_documents(namespace)
+                if isinstance(doc, dict)
+                and isinstance(doc.get("metadata"), dict)
+                and doc["metadata"].get("kind") == "attachment"
+            ]
+            if existing_attachment_docs:
+                user_docs.extend(existing_attachment_docs)
         if user_docs:
-            PERSISTENT_RAG.upsert_documents(_rag_namespace_for_user(user_id), user_docs, replace=True)
+            PERSISTENT_RAG.upsert_documents(namespace, user_docs, replace=True)
     except Exception as exc:
         logger.warning("Failed refreshing persistent RAG context: %s", exc)
 
@@ -9554,8 +9565,24 @@ async def chat_with_attachments(
             else "حلل الملفات المرفوعة وقل لي أهم النتائج وما الذي يجب أن أفعله بعد ذلك."
         )
 
+    parsed_user_profile = _parse_json_form_field(user_profile, None)
+    parsed_tracking_summary = _parse_json_form_field(tracking_summary, None)
+    parsed_recent_messages = _parse_json_form_field(recent_messages, None)
+    parsed_plan_snapshot = _parse_json_form_field(plan_snapshot, None)
+    parsed_website_context = _parse_json_form_field(website_context, None)
+
     uid = _normalize_user_id(user_id)
     conv_id = _normalize_conversation_id(conversation_id, uid)
+    if isinstance(parsed_user_profile, dict):
+        _refresh_persistent_rag_context(
+            uid,
+            parsed_user_profile,
+            parsed_tracking_summary if isinstance(parsed_tracking_summary, dict) else None,
+            parsed_plan_snapshot if isinstance(parsed_plan_snapshot, dict) else None,
+            parsed_website_context if isinstance(parsed_website_context, dict) else None,
+            parsed_recent_messages if isinstance(parsed_recent_messages, list) else None,
+            attachment_context,
+        )
     if _is_direct_attachment_request(effective_message, attachment_context):
         memory = _get_memory_session(uid, conv_id)
         memory.add_user_message(effective_message)
@@ -9568,11 +9595,11 @@ async def chat_with_attachments(
         user_id=uid,
         conversation_id=conv_id,
         language=language,
-        user_profile=_parse_json_form_field(user_profile, None),
-        tracking_summary=_parse_json_form_field(tracking_summary, None),
-        recent_messages=_parse_json_form_field(recent_messages, None),
-        plan_snapshot=_parse_json_form_field(plan_snapshot, None),
-        website_context=_parse_json_form_field(website_context, None),
+        user_profile=parsed_user_profile,
+        tracking_summary=parsed_tracking_summary,
+        recent_messages=parsed_recent_messages,
+        plan_snapshot=parsed_plan_snapshot,
+        website_context=parsed_website_context,
         attachment_context=attachment_context,
     )
     return await chat(req)

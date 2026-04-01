@@ -20,6 +20,14 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  attachments?: MessageAttachment[];
+}
+
+interface MessageAttachment {
+  id: string;
+  filename: string;
+  kind: 'pdf' | 'image';
+  sizeBytes: number;
 }
 
 interface Conversation {
@@ -117,6 +125,8 @@ const NUTRITION_PREFIX = '\u{1F37D}\uFE0F';
 const BACKEND_ARABIC_VOICE_ID = '__backend_arabic_ai__';
 const MAX_CHAT_ATTACHMENTS = 4;
 const MAX_CHAT_ATTACHMENT_BYTES = 12 * 1024 * 1024;
+const ATTACHMENT_META_PREFIX = '[[fitcoach_attachments:';
+const ATTACHMENT_META_SUFFIX = ']]';
 const WEEK_TEMPLATE = [
   { day: 'Saturday', dayAr: 'السبت' },
   { day: 'Sunday', dayAr: 'الأحد' },
@@ -385,16 +395,101 @@ const getAttachmentKind = (file: File): PendingAttachment['kind'] | null => {
   return null;
 };
 
-const buildOutgoingUserMessage = (
-  text: string,
-  attachments: PendingAttachment[],
-  language: 'en' | 'ar'
-) => {
-  const trimmed = text.trim();
+const cleanMessageContent = (content: string) => content;
+
+const buildOutgoingUserMessage = (message: ChatMessage, language: 'en' | 'ar') => {
+  const trimmed = cleanMessageContent(message.content).trim();
+  const attachments = message.attachments || [];
   if (!attachments.length) return trimmed;
   const prefix = language === 'ar' ? 'المرفقات' : 'Attachments';
-  const names = attachments.map((item) => item.file.name).join(', ');
+  const names = attachments.map((item) => item.filename).join(', ');
   return trimmed ? `${trimmed}\n\n${prefix}: ${names}` : `${prefix}: ${names}`;
+};
+
+const toMessageAttachments = (attachments: PendingAttachment[]): MessageAttachment[] =>
+  attachments.map((item) => ({
+    id: item.id,
+    filename: item.file.name,
+    kind: item.kind,
+    sizeBytes: item.file.size,
+  }));
+
+const encodeAttachmentMetadata = (attachments: MessageAttachment[]) => {
+  if (!attachments.length) return '';
+  try {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(attachments))));
+  } catch {
+    return '';
+  }
+};
+
+const decodeAttachmentMetadata = (value: string): MessageAttachment[] => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(decodeURIComponent(escape(atob(value))));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => item && typeof item === 'object')
+      .map((item, index) => ({
+        id: String(item.id || `attachment-${index}`),
+        filename: String(item.filename || 'attachment'),
+        kind: item.kind === 'image' ? 'image' : 'pdf',
+        sizeBytes: Number(item.sizeBytes || 0),
+      }));
+  } catch {
+    return [];
+  }
+};
+
+const serializeStoredMessageContent = (content: string, attachments: MessageAttachment[]) => {
+  const trimmed = content.trim();
+  if (!attachments.length) return trimmed;
+  const encoded = encodeAttachmentMetadata(attachments);
+  if (!encoded) return trimmed;
+  return `${ATTACHMENT_META_PREFIX}${encoded}${ATTACHMENT_META_SUFFIX}${trimmed ? `\n${trimmed}` : ''}`;
+};
+
+const parseStoredMessageContent = (storedContent: string) => {
+  const raw = String(storedContent || '');
+  if (!raw.startsWith(ATTACHMENT_META_PREFIX)) {
+    return { content: raw, attachments: [] as MessageAttachment[] };
+  }
+
+  const suffixIndex = raw.indexOf(ATTACHMENT_META_SUFFIX, ATTACHMENT_META_PREFIX.length);
+  if (suffixIndex < 0) {
+    return { content: raw, attachments: [] as MessageAttachment[] };
+  }
+
+  const encoded = raw.slice(ATTACHMENT_META_PREFIX.length, suffixIndex);
+  const content = raw.slice(suffixIndex + ATTACHMENT_META_SUFFIX.length).replace(/^\n+/, '');
+  return {
+    content,
+    attachments: decodeAttachmentMetadata(encoded),
+  };
+};
+
+const normalizeChatMessage = (message: Partial<ChatMessage>): ChatMessage => {
+  const parsed = parseStoredMessageContent(String(message.content || ''));
+  return {
+    role: message.role === 'assistant' ? 'assistant' : 'user',
+    content: parsed.content,
+    timestamp: Number(message.timestamp || Date.now()),
+    attachments: Array.isArray(message.attachments) && message.attachments.length > 0 ? message.attachments : parsed.attachments,
+  };
+};
+
+const buildMessageCopyText = (message: ChatMessage, language: 'en' | 'ar') => {
+  const visibleText = cleanMessageContent(message.content).trim();
+  const attachments = message.attachments || [];
+  const parts: string[] = [];
+  if (attachments.length) {
+    const prefix = language === 'ar' ? 'المرفقات' : 'Attachments';
+    parts.push(`${prefix}: ${attachments.map((item) => item.filename).join(', ')}`);
+  }
+  if (visibleText) {
+    parts.push(visibleText);
+  }
+  return parts.join('\n\n').trim();
 };
 
 export function CoachPage() {
@@ -1126,9 +1221,15 @@ export function CoachPage() {
     setLoadingConvs(true);
     const localSnapshot = readLocalConversations(user.id);
     if (localSnapshot.conversations.length > 0) {
-      setConversations(localSnapshot.conversations);
+      const normalizedConversations = localSnapshot.conversations.map((conversation) => ({
+        ...conversation,
+        messages: Array.isArray(conversation.messages)
+          ? conversation.messages.map((message) => normalizeChatMessage(message))
+          : [],
+      }));
+      setConversations(normalizedConversations);
       setCurrentId(localSnapshot.currentId);
-      const selected = localSnapshot.conversations.find((c) => c.id === localSnapshot.currentId) || localSnapshot.conversations[0];
+      const selected = normalizedConversations.find((c) => c.id === localSnapshot.currentId) || normalizedConversations[0];
       setCurrentMessages(selected?.messages || []);
     }
     
@@ -1157,7 +1258,7 @@ export function CoachPage() {
           convsWithMessages.push({
             id: conv.id,
             title: conv.title,
-            messages: (msgs || []).map(m => ({
+            messages: (msgs || []).map(m => normalizeChatMessage({
               role: m.role as 'user' | 'assistant',
               content: m.content,
               timestamp: new Date(m.created_at).getTime(),
@@ -1948,8 +2049,14 @@ export function CoachPage() {
     const activeConversationId = await ensureActiveConversation();
     if (!activeConversationId) return;
 
-    const userContent = buildOutgoingUserMessage(text, attachments, language);
-    const userMessage: ChatMessage = { role: 'user', content: userContent, timestamp: Date.now() };
+    const messageAttachments = toMessageAttachments(attachments);
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: text.trim(),
+      timestamp: Date.now(),
+      attachments: messageAttachments,
+    };
+    const storedUserContent = serializeStoredMessageContent(userMessage.content, messageAttachments);
     const newMessages = [...currentMessages, userMessage];
     setCurrentMessages(newMessages);
     setInput('');
@@ -1962,7 +2069,7 @@ export function CoachPage() {
             conversation_id: activeConversationId,
             user_id: user.id,
             role: 'user',
-            content: userContent,
+            content: storedUserContent,
           });
           
           const conv = conversations.find(c => c.id === activeConversationId);
@@ -1992,7 +2099,7 @@ export function CoachPage() {
       const plan_snapshot = await buildPlanSnapshot();
       const recent_messages = newMessages.slice(-12).map((msg) => ({
         role: msg.role,
-        content: msg.content,
+        content: buildOutgoingUserMessage(msg, language),
       }));
 
       const website_context = await buildWebsiteContext();
@@ -2293,7 +2400,6 @@ export function CoachPage() {
     const d = new Date(dateStr);
     return d.toLocaleDateString(language === 'ar' ? 'ar' : 'en', { month: 'short', day: 'numeric' });
   };
-  const cleanContent = (content: string) => content;
 
   const handleVoiceSelect = (voiceName: string) => {
     setSelectedVoice(voiceName);
@@ -2302,7 +2408,7 @@ export function CoachPage() {
   };
 
   const copyMessage = useCallback(async (messageKey: string, content: string) => {
-    const text = cleanContent(content).trim();
+    const text = content.trim();
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
@@ -2314,6 +2420,21 @@ export function CoachPage() {
       console.error('Failed to copy message:', error);
     }
   }, []);
+
+  const renderAttachmentBadge = (attachment: MessageAttachment) => (
+    <div
+      key={attachment.id}
+      className="flex w-full max-w-sm items-center gap-3 rounded-2xl border border-border/60 bg-card/80 px-3 py-2 text-left shadow-sm"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary/70">
+        {attachment.kind === 'image' ? <FileImage className="w-5 h-5 text-primary" /> : <FileText className="w-5 h-5 text-primary" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-foreground">{attachment.filename}</p>
+        <p className="text-xs text-muted-foreground">{formatAttachmentSize(attachment.sizeBytes)}</p>
+      </div>
+    </div>
+  );
 
   if (!user) {
     return (
@@ -2512,6 +2633,9 @@ export function CoachPage() {
               (() => {
                 const messageKey = `${currentId}-${index}-${message.timestamp}`;
                 const isCopied = copiedMessageKey === messageKey;
+                const visibleMessageText = cleanMessageContent(message.content).trim();
+                const copyText = buildMessageCopyText(message, language);
+                const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
                 return (
               <motion.div key={`${currentId}-${index}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
@@ -2522,24 +2646,33 @@ export function CoachPage() {
                   {message.role === 'user' ? <User className="w-4 h-4 text-accent-foreground" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
                 </div>
                 <div className="max-w-[80%]">
-                  <div className={`p-4 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
-                    {message.role === 'assistant' ? (
-                      <div className="prose prose-sm prose-invert max-w-none">
-                        <ReactMarkdown>{cleanContent(message.content)}</ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    )}
-                  </div>
+                  {hasAttachments && (
+                    <div className={`mb-2 flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                      {message.attachments!.map((attachment) => renderAttachmentBadge(attachment))}
+                    </div>
+                  )}
+                  {visibleMessageText && (
+                    <div className={`p-4 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
+                      {message.role === 'assistant' ? (
+                        <div className="prose prose-sm prose-invert max-w-none">
+                          <ReactMarkdown>{cleanMessageContent(message.content)}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+                    </div>
+                  )}
                   <div className={`mt-2 flex items-center gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <button
-                      type="button"
-                      onClick={() => void copyMessage(messageKey, message.content)}
-                      className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      <span>{isCopied ? (language === 'ar' ? 'تم النسخ' : 'Copied') : (language === 'ar' ? 'نسخ' : 'Copy')}</span>
-                    </button>
+                    {copyText && (
+                      <button
+                        type="button"
+                        onClick={() => void copyMessage(messageKey, copyText)}
+                        className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        <span>{isCopied ? (language === 'ar' ? 'تم النسخ' : 'Copied') : (language === 'ar' ? 'نسخ' : 'Copy')}</span>
+                      </button>
+                    )}
                     {message.role === 'assistant' && (
                       <button
                         type="button"

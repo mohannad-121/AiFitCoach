@@ -11,6 +11,11 @@ from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader
 
 try:
+    import fitz  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    fitz = None
+
+try:
     from rapidocr_onnxruntime import RapidOCR
 except Exception:  # pragma: no cover - optional dependency
     RapidOCR = None
@@ -18,8 +23,11 @@ except Exception:  # pragma: no cover - optional dependency
 
 MAX_ATTACHMENTS = 4
 MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024
-MAX_TEXT_CHARS = 12000
-MAX_PDF_PAGES = 20
+MAX_TEXT_CHARS = 120000
+MAX_ATTACHMENT_SUMMARY_CHARS = 24000
+MAX_ATTACHMENT_RAG_CHUNK_CHARS = 3500
+MAX_ATTACHMENT_RAG_CHUNKS = 24
+MAX_PDF_OCR_PAGES = 120
 MAX_VISION_IMAGE_DIMENSION = 896
 FAST_VISION_MAX_TOKENS = 180
 SUPPORTED_IMAGE_MIME_TYPES = {
@@ -51,6 +59,7 @@ class ProcessedAttachment:
     width: Optional[int] = None
     height: Optional[int] = None
     warnings: Optional[list[str]] = None
+    document_chunks: Optional[list[str]] = None
 
     def to_payload(self) -> dict[str, Any]:
         return {
@@ -66,27 +75,55 @@ class ProcessedAttachment:
             "warnings": self.warnings or [],
         }
 
-    def to_rag_document(self) -> dict[str, Any]:
-        parts = [
-            f"Attachment filename: {self.filename}",
-            f"Attachment kind: {self.kind}",
-            f"Attachment summary: {self.summary}",
+    def to_rag_documents(self) -> list[dict[str, Any]]:
+        base_text = "\n".join(
+            [
+                f"Attachment filename: {self.filename}",
+                f"Attachment kind: {self.kind}",
+                f"Attachment summary: {self.summary}",
+            ]
+        )
+        documents = [
+            {
+                "id": f"attachment_{self.attachment_id}",
+                "text": base_text,
+                "metadata": {
+                    "kind": "attachment",
+                    "attachment_kind": self.kind,
+                    "filename": self.filename,
+                },
+            }
         ]
-        if self.vision_summary:
-            parts.append(f"Vision analysis: {self.vision_summary}")
-        if self.ocr_text:
-            parts.append(f"OCR text: {self.ocr_text}")
-        if self.extracted_text:
-            parts.append(f"Extracted text: {self.extracted_text}")
-        return {
-            "id": f"attachment_{self.attachment_id}",
-            "text": "\n".join(parts),
-            "metadata": {
-                "kind": "attachment",
-                "attachment_kind": self.kind,
-                "filename": self.filename,
-            },
-        }
+
+        chunk_source = self.document_chunks or []
+        if not chunk_source:
+            chunk_parts: list[str] = []
+            if self.vision_summary:
+                chunk_parts.append(f"Vision analysis: {self.vision_summary}")
+            if self.ocr_text:
+                chunk_parts.append(f"OCR text: {self.ocr_text}")
+            if self.extracted_text:
+                chunk_parts.append(f"Extracted text: {self.extracted_text}")
+            if chunk_parts:
+                chunk_source = ["\n".join(chunk_parts)]
+
+        for index, chunk in enumerate(chunk_source[:MAX_ATTACHMENT_RAG_CHUNKS]):
+            clean_chunk = str(chunk or "").strip()
+            if not clean_chunk:
+                continue
+            documents.append(
+                {
+                    "id": f"attachment_{self.attachment_id}_chunk_{index}",
+                    "text": clean_chunk,
+                    "metadata": {
+                        "kind": "attachment",
+                        "attachment_kind": self.kind,
+                        "filename": self.filename,
+                        "chunk_index": index,
+                    },
+                }
+            )
+        return documents
 
 
 class AttachmentProcessor:
@@ -111,7 +148,7 @@ class AttachmentProcessor:
         return {
             "summary": self._build_combined_summary(processed, language, user_message),
             "attachments": [item.to_payload() for item in processed],
-            "documents": [item.to_rag_document() for item in processed],
+            "documents": [doc for item in processed for doc in item.to_rag_documents()],
             "used_ocr": any(bool(item.ocr_text) for item in processed),
             "used_vision": any(bool(item.vision_summary) for item in processed),
         }
@@ -151,20 +188,42 @@ class AttachmentProcessor:
             raise AttachmentProcessingError(f"Could not open PDF {filename}: {exc}") from exc
 
         page_count = len(reader.pages)
-        chunks: list[str] = []
-        for page in reader.pages[:MAX_PDF_PAGES]:
+        page_texts: list[str] = []
+        missing_text_pages: list[int] = []
+
+        for page_index, page in enumerate(reader.pages):
             try:
                 text = str(page.extract_text() or "").strip()
             except Exception:
                 text = ""
             if text:
-                chunks.append(text)
+                page_texts.append(f"Page {page_index + 1}: {self._trim_text(text, limit=8000)}")
+            else:
+                page_texts.append("")
+                missing_text_pages.append(page_index)
 
-        extracted_text = self._trim_text("\n\n".join(chunks))
+        ocr_pages_used = 0
+        if missing_text_pages:
+            if fitz is None:
+                warnings.append(
+                    "Some PDF pages do not contain selectable text. Install PyMuPDF to OCR scanned PDF pages automatically."
+                )
+            else:
+                for page_index in missing_text_pages[:MAX_PDF_OCR_PAGES]:
+                    ocr_text = self._extract_pdf_page_ocr(raw_bytes, page_index)
+                    if ocr_text:
+                        page_texts[page_index] = f"Page {page_index + 1}: {self._trim_text(ocr_text, limit=8000)}"
+                        ocr_pages_used += 1
+
+        extracted_pages = [page_text for page_text in page_texts if page_text.strip()]
+        extracted_text = "\n\n".join(extracted_pages)
         if not extracted_text:
             warnings.append(
                 "No selectable text was found in this PDF. If it is a scanned document, OCR is needed page by page."
             )
+        elif missing_text_pages and ocr_pages_used < len(missing_text_pages):
+            unresolved_pages = len(missing_text_pages) - ocr_pages_used
+            warnings.append(f"{unresolved_pages} PDF pages still could not be extracted cleanly.")
 
         summary = self._summarize_pdf(filename, extracted_text, page_count, language)
         return ProcessedAttachment(
@@ -174,9 +233,10 @@ class AttachmentProcessor:
             kind="pdf",
             size_bytes=len(raw_bytes),
             summary=summary,
-            extracted_text=extracted_text,
+            extracted_text=self._trim_text(extracted_text),
             page_count=page_count,
             warnings=warnings,
+            document_chunks=self._chunk_attachment_text(extracted_text),
         )
 
     def _process_image(
@@ -250,6 +310,21 @@ class AttachmentProcessor:
         except Exception:
             self._ocr_engine = None
         return self._ocr_engine
+
+    def _extract_pdf_page_ocr(self, raw_bytes: bytes, page_index: int) -> str:
+        engine = self._get_ocr_engine()
+        if engine is None or fitz is None:
+            return ""
+        try:
+            with fitz.open(stream=raw_bytes, filetype="pdf") as document:
+                if page_index < 0 or page_index >= len(document):
+                    return ""
+                page = document.load_page(page_index)
+                pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+                image_bytes = pixmap.tobytes("png")
+        except Exception:
+            return ""
+        return self._extract_ocr(image_bytes)
 
     def _analyze_image(
         self,
@@ -369,6 +444,36 @@ class AttachmentProcessor:
         if user_message.strip():
             blocks.append(f"User request about attachments: {user_message.strip()}")
         return "\n".join(blocks)
+
+    def _chunk_attachment_text(self, value: str, limit: int = MAX_ATTACHMENT_RAG_CHUNK_CHARS) -> list[str]:
+        compact = str(value or "").strip()
+        if not compact:
+            return []
+
+        chunks: list[str] = []
+        current = ""
+        segments = re.split(r"(?=Page\s+\d+:)", compact)
+        for segment in segments:
+            part = str(segment or "").strip()
+            if not part:
+                continue
+            if len(part) > limit:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                for start in range(0, len(part), limit):
+                    chunks.append(part[start : start + limit].strip())
+                continue
+            candidate = f"{current}\n\n{part}".strip() if current else part
+            if len(candidate) <= limit:
+                current = candidate
+                continue
+            chunks.append(current)
+            current = part
+
+        if current:
+            chunks.append(current)
+        return chunks[:MAX_ATTACHMENT_RAG_CHUNKS]
 
     @staticmethod
     def _trim_text(value: str, limit: int = MAX_TEXT_CHARS) -> str:
