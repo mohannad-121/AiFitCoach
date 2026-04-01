@@ -9,6 +9,7 @@ load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=True)
 # LLM Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o")
+OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", LLM_MODEL or "gpt-4o")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
 # Prefer auto so hosted deployments can immediately use OpenAI when a key exists.
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto").lower()

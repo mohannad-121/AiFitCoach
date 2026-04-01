@@ -14,6 +14,7 @@ class RouteSmokeTests(unittest.TestCase):
     def test_core_routes_are_registered(self) -> None:
         route_paths = {getattr(route, "path", "") for route in app.routes}
         self.assertIn("/chat", route_paths)
+        self.assertIn("/chat-with-attachments", route_paths)
         self.assertIn("/docs", route_paths)
         self.assertTrue(any(path.startswith("/plans/") for path in route_paths))
 

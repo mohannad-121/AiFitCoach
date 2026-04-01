@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 from typing import Any, Iterator
 
@@ -17,6 +18,7 @@ from config import (
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT_SECONDS,
     OPENAI_API_KEY,
+    OPENAI_VISION_MODEL,
 )
 from utils_logger import log_error
 
@@ -67,6 +69,18 @@ class LLMClient:
             yield from self._chat_openai_stream(messages, temperature, max_tokens)
             return
         yield from self._chat_ollama_stream(messages, temperature, max_tokens)
+
+    def analyze_image(
+        self,
+        image_bytes: bytes,
+        mime_type: str,
+        prompt: str,
+        max_tokens: int | None = None,
+    ) -> str | None:
+        provider = self.active_provider
+        if provider == "openai":
+            return self._analyze_image_openai(image_bytes, mime_type, prompt, max_tokens)
+        return self._analyze_image_ollama(image_bytes, prompt, max_tokens)
 
     def _chat_openai(
         self,
@@ -148,6 +162,47 @@ class LLMClient:
         except Exception as exc:
             log_error("LLM_OPENAI_STREAM_ERROR", None, exc, {"messages": len(messages)})
             yield "I hit a temporary AI streaming error. Please try again."
+
+    def _analyze_image_openai(
+        self,
+        image_bytes: bytes,
+        mime_type: str,
+        prompt: str,
+        max_tokens: int | None,
+    ) -> str | None:
+        if not self.has_openai_key or self._openai_client is None:
+            return None
+
+        params: dict[str, Any] = {
+            "model": OPENAI_VISION_MODEL,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": (
+                                    f"data:{mime_type};base64,"
+                                    f"{base64.b64encode(image_bytes).decode('utf-8')}"
+                                )
+                            },
+                        },
+                    ],
+                }
+            ],
+            "temperature": 0.2,
+        }
+        if max_tokens is not None:
+            params["max_tokens"] = max_tokens
+        try:
+            response = self._openai_client.chat.completions.create(**params)
+            text = str(response.choices[0].message.content or "").strip()
+            return text or None
+        except Exception as exc:
+            log_error("LLM_OPENAI_VISION_ERROR", None, exc, {"model": OPENAI_VISION_MODEL})
+            return None
 
     def _chat_ollama(
         self,
@@ -261,6 +316,48 @@ class LLMClient:
                 {"base_url": OLLAMA_BASE_URL, "model": OLLAMA_MODEL},
             )
             yield "Ollama streaming is unavailable right now. Please retry."
+
+    def _analyze_image_ollama(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        max_tokens: int | None,
+    ) -> str | None:
+        if not self._ollama_model_supports_vision(OLLAMA_MODEL):
+            return None
+
+        payload = {
+            "model": OLLAMA_MODEL,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                    "images": [base64.b64encode(image_bytes).decode("utf-8")],
+                }
+            ],
+            "stream": False,
+            "options": {
+                "temperature": 0.2,
+                "num_ctx": self._ollama_num_ctx(max_tokens),
+            },
+        }
+        if max_tokens is not None:
+            payload["options"]["num_predict"] = max_tokens
+        try:
+            response = requests.post(
+                f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
+                json=payload,
+                timeout=OLLAMA_TIMEOUT_SECONDS,
+            )
+            if response.status_code >= 400:
+                return None
+            response.raise_for_status()
+            data = response.json()
+            text = str(data.get("message", {}).get("content", "")).strip()
+            return text or None
+        except Exception as exc:
+            log_error("LLM_OLLAMA_VISION_ERROR", None, exc, {"model": OLLAMA_MODEL})
+            return None
 
     @staticmethod
     def _messages_to_prompt(messages: list[dict[str, Any]]) -> str:
@@ -378,6 +475,11 @@ class LLMClient:
     def _ollama_needs_continuation(payload: dict[str, Any]) -> bool:
         done_reason = str(payload.get("done_reason", "")).strip().lower()
         return done_reason in {"length", "max_tokens"}
+
+    @staticmethod
+    def _ollama_model_supports_vision(model_name: str) -> bool:
+        normalized = str(model_name or "").strip().lower()
+        return any(tag in normalized for tag in ("llava", "vision", "gemma3", "minicpm-v", "qwen2.5vl", "qwen2-vl", "bakllava"))
 
     @staticmethod
     def _openai_needs_continuation(choice: Any) -> bool:

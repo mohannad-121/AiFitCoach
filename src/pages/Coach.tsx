@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -105,9 +105,18 @@ interface DailyLogRow {
   mood?: string | null;
 }
 
+interface PendingAttachment {
+  id: string;
+  file: File;
+  kind: 'pdf' | 'image';
+  previewUrl: string | null;
+}
+
 const AI_BACKEND_URL = import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002';
 const NUTRITION_PREFIX = '\u{1F37D}\uFE0F';
 const BACKEND_ARABIC_VOICE_ID = '__backend_arabic_ai__';
+const MAX_CHAT_ATTACHMENTS = 4;
+const MAX_CHAT_ATTACHMENT_BYTES = 12 * 1024 * 1024;
 const WEEK_TEMPLATE = [
   { day: 'Saturday', dayAr: 'السبت' },
   { day: 'Sunday', dayAr: 'الأحد' },
@@ -359,6 +368,35 @@ const writeLocalPlans = (userId: string, plans: StoredSchedulePlan[]) => {
   localStorage.setItem(getLocalPlansStorageKey(userId), JSON.stringify(plans));
 };
 
+const formatAttachmentSize = (sizeBytes: number) => {
+  if (sizeBytes >= 1024 * 1024) {
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+};
+
+const getAttachmentKind = (file: File): PendingAttachment['kind'] | null => {
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    return 'pdf';
+  }
+  if (file.type.startsWith('image/')) {
+    return 'image';
+  }
+  return null;
+};
+
+const buildOutgoingUserMessage = (
+  text: string,
+  attachments: PendingAttachment[],
+  language: 'en' | 'ar'
+) => {
+  const trimmed = text.trim();
+  if (!attachments.length) return trimmed;
+  const prefix = language === 'ar' ? 'المرفقات' : 'Attachments';
+  const names = attachments.map((item) => item.file.name).join(', ');
+  return trimmed ? `${trimmed}\n\n${prefix}: ${names}` : `${prefix}: ${names}`;
+};
+
 export function CoachPage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
@@ -391,11 +429,15 @@ export function CoachPage() {
   const [voiceMode, setVoiceMode] = useState(false);
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const [pendingVoiceResponse, setPendingVoiceResponse] = useState<VoiceChatApiResponse | null>(null);
+  const [selectedAttachments, setSelectedAttachments] = useState<PendingAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState('');
 
 
   const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedAttachmentsRef = useRef<PendingAttachment[]>([]);
   const voiceModeRef = useRef(false);
   const assistantAudioRef = useRef<HTMLAudioElement | null>(null);
   const processedCoachPromptRef = useRef<string | null>(null);
@@ -414,6 +456,104 @@ export function CoachPage() {
       }
     }, 0);
   }, []);
+
+  const clearPendingAttachments = useCallback(() => {
+    setSelectedAttachments((prev) => {
+      prev.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+      return [];
+    });
+  }, []);
+
+  const removePendingAttachment = useCallback((attachmentId: string) => {
+    setSelectedAttachments((prev) => {
+      const target = prev.find((item) => item.id === attachmentId);
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((item) => item.id !== attachmentId);
+    });
+  }, []);
+
+  useEffect(() => {
+    selectedAttachmentsRef.current = selectedAttachments;
+  }, [selectedAttachments]);
+
+  useEffect(() => {
+    return () => {
+      selectedAttachmentsRef.current.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+    };
+  }, []);
+
+  const openAttachmentPicker = useCallback(() => {
+    setAttachmentError('');
+    attachmentInputRef.current?.click();
+  }, []);
+
+  const handleAttachmentSelection = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!files.length) return;
+
+    setSelectedAttachments((prev) => {
+      const next = [...prev];
+      const localErrors: string[] = [];
+
+      for (const file of files) {
+        if (next.length >= MAX_CHAT_ATTACHMENTS) {
+          localErrors.push(
+            language === 'ar'
+              ? `يمكنك رفع ${MAX_CHAT_ATTACHMENTS} ملفات كحد أقصى في الرسالة الواحدة.`
+              : `You can attach up to ${MAX_CHAT_ATTACHMENTS} files per message.`
+          );
+          break;
+        }
+
+        const kind = getAttachmentKind(file);
+        if (!kind) {
+          localErrors.push(
+            language === 'ar'
+              ? `${file.name}: النوع غير مدعوم. ارفع PDF أو صورة.`
+              : `${file.name}: unsupported type. Upload a PDF or image.`
+          );
+          continue;
+        }
+
+        if (file.size > MAX_CHAT_ATTACHMENT_BYTES) {
+          localErrors.push(
+            language === 'ar'
+              ? `${file.name}: يجب أن يكون الملف أقل من 12 ميجابايت.`
+              : `${file.name}: file must be smaller than 12 MB.`
+          );
+          continue;
+        }
+
+        const duplicate = next.some(
+          (item) => item.file.name === file.name && item.file.size === file.size && item.file.lastModified === file.lastModified
+        );
+        if (duplicate) {
+          continue;
+        }
+
+        next.push({
+          id: `${file.name}-${file.size}-${file.lastModified}`,
+          file,
+          kind,
+          previewUrl: kind === 'image' ? URL.createObjectURL(file) : null,
+        });
+      }
+
+      setAttachmentError(localErrors.join(' '));
+      return next;
+    });
+  }, [language]);
 
   const buildWebsiteContext = useCallback(async (): Promise<Record<string, unknown>> => {
     const exerciseMuscles = Array.from(new Set(exercises.map((exercise) => exercise.muscle))).sort();
@@ -1800,13 +1940,15 @@ export function CoachPage() {
     []
   );
 
-  const sendMessageWithText = async (text: string) => {
-    if (!text.trim() || isBusy || !user) return;
+  const sendMessageWithText = async (text: string, attachmentsOverride?: PendingAttachment[]) => {
+    const attachments = attachmentsOverride ?? selectedAttachments;
+    if ((!text.trim() && attachments.length === 0) || isBusy || !user) return;
 
     const activeConversationId = await ensureActiveConversation();
     if (!activeConversationId) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: text.trim(), timestamp: Date.now() };
+    const userContent = buildOutgoingUserMessage(text, attachments, language);
+    const userMessage: ChatMessage = { role: 'user', content: userContent, timestamp: Date.now() };
     const newMessages = [...currentMessages, userMessage];
     setCurrentMessages(newMessages);
     setInput('');
@@ -1819,12 +1961,13 @@ export function CoachPage() {
             conversation_id: activeConversationId,
             user_id: user.id,
             role: 'user',
-            content: text.trim(),
+            content: userContent,
           });
           
           const conv = conversations.find(c => c.id === activeConversationId);
           if (conv && !conv.title) {
-            const title = text.trim().slice(0, 50) + (text.trim().length > 50 ? '...' : '');
+            const titleSeed = text.trim() || attachments.map((item) => item.file.name).join(', ');
+            const title = titleSeed.slice(0, 50) + (titleSeed.length > 50 ? '...' : '');
             await supabase.from('chat_conversations').update({ title }).eq('id', activeConversationId);
             setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, title } : c));
           }
@@ -1867,14 +2010,35 @@ export function CoachPage() {
 
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 120000);
-      const apiResponse = await fetch(`${AI_BACKEND_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      const apiResponse = attachments.length > 0
+        ? await (async () => {
+            const formData = new FormData();
+            formData.append('message', text.trim());
+            formData.append('user_id', user.id);
+            formData.append('conversation_id', activeConversationId);
+            formData.append('language', language === 'ar' ? 'ar' : 'en');
+            formData.append('user_profile', JSON.stringify(user_profile));
+            formData.append('tracking_summary', JSON.stringify(tracking_summary));
+            formData.append('plan_snapshot', JSON.stringify(plan_snapshot));
+            formData.append('website_context', JSON.stringify(website_context));
+            formData.append('recent_messages', JSON.stringify(recent_messages));
+            attachments.forEach((item) => {
+              formData.append('attachments', item.file, item.file.name);
+            });
+            return fetch(`${AI_BACKEND_URL}/chat-with-attachments`, {
+              method: 'POST',
+              body: formData,
+              signal: controller.signal,
+            });
+          })()
+        : await fetch(`${AI_BACKEND_URL}/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json; charset=UTF-8',
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
       window.clearTimeout(timeoutId);
 
       if (!apiResponse.ok) {
@@ -1882,6 +2046,10 @@ export function CoachPage() {
       }
 
       const data = await apiResponse.json();
+      if (attachments.length > 0) {
+        clearPendingAttachments();
+        setAttachmentError('');
+      }
 
       // prefer the textual reply from backend
       const assistantTextRaw = data?.reply || formatExercisesMessage(data?.exercises || []);
@@ -1941,7 +2109,7 @@ export function CoachPage() {
 
       if (autoSpeak) speakWithVoice(assistantText);
       if (showRagDebug) {
-        void loadRagDebug(text.trim());
+        void loadRagDebug(text.trim() || attachments.map((item) => item.file.name).join(' '));
       }
       if (!voiceModeRef.current) focusInput();
     } catch (error: any) {
@@ -2586,7 +2754,76 @@ export function CoachPage() {
 
           {/* Input */}
           <div className="glass-card rounded-2xl p-3 mb-4">
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              accept=".pdf,image/*"
+              multiple
+              className="hidden"
+              onChange={handleAttachmentSelection}
+            />
+            {selectedAttachments.length > 0 && (
+              <div className="mb-3 grid gap-2 sm:grid-cols-2">
+                {selectedAttachments.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-border/60 bg-background/70 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-secondary/40 flex items-center justify-center">
+                        {item.previewUrl ? (
+                          <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
+                        ) : item.kind === 'pdf' ? (
+                          <FileText className="w-6 h-6 text-primary" />
+                        ) : (
+                          <FileImage className="w-6 h-6 text-primary" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-foreground truncate">{item.file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.kind === 'pdf'
+                                ? (language === 'ar' ? 'ملف PDF' : 'PDF document')
+                                : (language === 'ar' ? 'صورة للتحليل' : 'Image for analysis')}
+                              {' • '}
+                              {formatAttachmentSize(item.file.size)}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => removePendingAttachment(item.id)}
+                            disabled={isBusy}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {attachmentError && (
+              <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {attachmentError}
+              </div>
+            )}
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
+              <span>
+                {language === 'ar'
+                  ? 'ارفع ملفات PDF أو صور مثل تقارير التحاليل، صور الوجبات، ملصقات المكملات، أو لقطات التقدم.'
+                  : 'Upload PDFs or images like lab reports, meal photos, supplement labels, or progress screenshots.'}
+              </span>
+              <span className="shrink-0">
+                {selectedAttachments.length}/{MAX_CHAT_ATTACHMENTS}
+              </span>
+            </div>
             <div className="flex gap-2 items-end">
+              <Button variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isBusy} className="shrink-0">
+                <Paperclip className="w-4 h-4" />
+              </Button>
               {isSupported && (
                 <Button variant={isListening ? 'destructive' : 'ghost'} size="icon"
                   onClick={isListening ? stopListening : startListeningIfPossible}
@@ -2610,7 +2847,7 @@ export function CoachPage() {
                 disabled={isBusy}
                 rows={2}
               />
-              <Button variant="hero" size="icon" onClick={sendMessage} disabled={isBusy || !input.trim()} className="shrink-0">
+              <Button variant="hero" size="icon" onClick={sendMessage} disabled={isBusy || (!input.trim() && selectedAttachments.length === 0)} className="shrink-0">
                 <Send className="w-4 h-4" />
               </Button>
             </div>

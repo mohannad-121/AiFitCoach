@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
 from ai_engine import AIEngine
+from attachment_processing import AttachmentProcessingError, AttachmentProcessor
 from data_catalog import DataCatalog
 from domain_router import DomainRouter
 from dataset_registry import DatasetRegistry
@@ -151,6 +152,7 @@ class ChatRequest(BaseModel):
     recent_messages: Optional[list[Dict[str, Any]]] = None
     plan_snapshot: Optional[Dict[str, Any]] = None
     website_context: Optional[Dict[str, Any]] = None
+    attachment_context: Optional[Dict[str, Any]] = None
 
 
 def _repair_mojibake(text: str) -> str:
@@ -289,6 +291,7 @@ def _resolve_response_dataset_dir() -> Path:
 ROUTER = DomainRouter(threshold=0.42, enable_semantic=False)
 MODERATION = ModerationLayer()
 LLM = LLMClient()
+ATTACHMENT_PROCESSOR = AttachmentProcessor(LLM)
 AI_ENGINE = AIEngine(Path(__file__).resolve().parent / "exercises.json")
 CATEGORY_DATA = DataCatalog(resolve_dataset_root(), resolve_derived_root())
 RAG_CONTEXT_BUILDER = RagContextBuilder(CATEGORY_DATA)
@@ -364,6 +367,7 @@ def _build_user_rag_documents(
     tracking_summary: Optional[dict[str, Any]],
     plan_snapshot: Optional[dict[str, Any]],
     recent_messages: Optional[list[dict[str, Any]]] = None,
+    attachment_context: Optional[dict[str, Any]] = None,
 ) -> list[dict[str, Any]]:
     docs: list[dict[str, Any]] = []
     docs.append(
@@ -512,6 +516,23 @@ def _build_user_rag_documents(
                 }
             )
 
+    attachment_docs = attachment_context.get("documents") if isinstance(attachment_context, dict) else None
+    if isinstance(attachment_docs, list):
+        for index, item in enumerate(attachment_docs[:8]):
+            if not isinstance(item, dict):
+                continue
+            text = str(item.get("text") or "").strip()
+            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            if not text:
+                continue
+            docs.append(
+                {
+                    "id": str(item.get("id") or f"{user_id}_attachment_{index}"),
+                    "text": text,
+                    "metadata": {"kind": "attachment", **metadata},
+                }
+            )
+
     return docs
 
 
@@ -522,13 +543,21 @@ def _refresh_persistent_rag_context(
     plan_snapshot: Optional[dict[str, Any]],
     website_context: Optional[dict[str, Any]],
     recent_messages: Optional[list[dict[str, Any]]] = None,
+    attachment_context: Optional[dict[str, Any]] = None,
 ) -> None:
     try:
         app_docs = _build_app_knowledge_documents(website_context)
         if app_docs:
             PERSISTENT_RAG.upsert_documents("app_knowledge", app_docs, replace=True)
 
-        user_docs = _build_user_rag_documents(user_id, profile, tracking_summary, plan_snapshot, recent_messages)
+        user_docs = _build_user_rag_documents(
+            user_id,
+            profile,
+            tracking_summary,
+            plan_snapshot,
+            recent_messages,
+            attachment_context,
+        )
         if user_docs:
             PERSISTENT_RAG.upsert_documents(_rag_namespace_for_user(user_id), user_docs, replace=True)
     except Exception as exc:
@@ -7859,6 +7888,7 @@ def _general_llm_reply(
     state: Optional[dict[str, Any]] = None,
     recent_messages: Optional[list[dict[str, Any]]] = None,
     website_context: Optional[dict[str, Any]] = None,
+    attachment_context: Optional[dict[str, Any]] = None,
 ) -> str:
     language_instructions = {
         "en": "Reply in polished English. Use 0-2 relevant emojis naturally.",
@@ -7966,6 +7996,10 @@ def _general_llm_reply(
         context_lines.append(f"Retrieved RAG context:\n{rag_context}")
     if website_context_text:
         context_lines.append(f"Website/app context (JSON): {website_context_text}")
+    if isinstance(attachment_context, dict):
+        attachment_summary = str(attachment_context.get("summary") or "").strip()
+        if attachment_summary:
+            context_lines.append(f"Uploaded attachment intelligence:\n{attachment_summary}")
     messages = [{"role": "system", "content": system_prompt + '\n'.join(context_lines)}]
 
     external_history = _normalize_recent_messages(recent_messages)
@@ -8368,6 +8402,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         state.get("plan_snapshot") or req.plan_snapshot,
         req.website_context,
         recent_messages,
+        req.attachment_context,
     )
 
     user_input = _repair_mojibake(req.message.strip())
@@ -8395,6 +8430,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             state.get("plan_snapshot") or req.plan_snapshot,
             req.website_context,
             recent_messages,
+            req.attachment_context,
         )
 
     memory = _get_memory_session(user_id, conversation_id)
@@ -8941,6 +8977,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                     state=state,
                     recent_messages=recent_messages,
                     website_context=req.website_context,
+                    attachment_context=req.attachment_context,
                 )
                 if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
                     llm_reply = _ollama_unavailable_reply(language)
@@ -8985,6 +9022,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             state=state,
             recent_messages=recent_messages,
             website_context=req.website_context,
+            attachment_context=req.attachment_context,
         )
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
             llm_reply = _ollama_unavailable_reply(language)
@@ -9109,6 +9147,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             memory=memory,
             state=state,
             recent_messages=recent_messages,
+            attachment_context=req.attachment_context,
         )
         state["pending_diagnostic"] = None
         state["pending_diagnostic_conversation_id"] = None
@@ -9356,6 +9395,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         memory=memory,
         state=state,
         recent_messages=recent_messages,
+        attachment_context=req.attachment_context,
     )
     if llm_reply.startswith("Ollama error:"):
         llm_reply = _lang_reply(
@@ -9381,6 +9421,76 @@ async def chat(req: ChatRequest) -> ChatResponse:
     filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
     memory.add_assistant_message(filtered_reply)
     return ChatResponse(reply=filtered_reply, conversation_id=conversation_id, language=language)
+
+
+def _parse_json_form_field(raw_value: Optional[str], fallback: Any) -> Any:
+    if not raw_value:
+        return fallback
+    try:
+        parsed = json.loads(raw_value)
+    except Exception:
+        return fallback
+    return parsed if parsed is not None else fallback
+
+
+@app.post("/chat-with-attachments", response_model=ChatResponse)
+async def chat_with_attachments(
+    message: str = Form(""),
+    user_id: Optional[str] = Form(None),
+    conversation_id: Optional[str] = Form(None),
+    language: str = Form("en"),
+    user_profile: Optional[str] = Form(None),
+    tracking_summary: Optional[str] = Form(None),
+    recent_messages: Optional[str] = Form(None),
+    plan_snapshot: Optional[str] = Form(None),
+    website_context: Optional[str] = Form(None),
+    attachments: list[UploadFile] = File(...),
+) -> ChatResponse:
+    if not attachments:
+        raise HTTPException(status_code=400, detail="At least one attachment is required.")
+
+    file_payloads: list[dict[str, Any]] = []
+    for attachment in attachments:
+        file_payloads.append(
+            {
+                "filename": attachment.filename or "attachment",
+                "content_type": attachment.content_type or "application/octet-stream",
+                "bytes": await attachment.read(),
+            }
+        )
+
+    try:
+        attachment_context = ATTACHMENT_PROCESSOR.process_files(file_payloads, language, message)
+    except AttachmentProcessingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        for attachment in attachments:
+            try:
+                await attachment.close()
+            except Exception:
+                pass
+
+    effective_message = (message or "").strip()
+    if not effective_message:
+        effective_message = (
+            "Please analyze the uploaded files and tell me the most important findings and what I should do next."
+            if not language.lower().startswith("ar")
+            else "حلل الملفات المرفوعة وقل لي أهم النتائج وما الذي يجب أن أفعله بعد ذلك."
+        )
+
+    req = ChatRequest(
+        message=effective_message,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        language=language,
+        user_profile=_parse_json_form_field(user_profile, None),
+        tracking_summary=_parse_json_form_field(tracking_summary, None),
+        recent_messages=_parse_json_form_field(recent_messages, None),
+        plan_snapshot=_parse_json_form_field(plan_snapshot, None),
+        website_context=_parse_json_form_field(website_context, None),
+        attachment_context=attachment_context,
+    )
+    return await chat(req)
 
 
 @app.post("/voice-chat", response_model=VoiceChatResponse)
