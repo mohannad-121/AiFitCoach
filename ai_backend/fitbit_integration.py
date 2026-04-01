@@ -18,6 +18,10 @@ from supabase_context import SupabaseContextRepository
 
 logger = logging.getLogger(__name__)
 
+
+class FitbitReconnectRequiredError(ValueError):
+    pass
+
 FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize"
 FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token"
 FITBIT_REVOKE_URL = "https://api.fitbit.com/oauth2/revoke"
@@ -353,7 +357,10 @@ class FitbitIntegration:
             },
             timeout=20,
         )
-        payload = self._parse_fitbit_response(response)
+        try:
+            payload = self._parse_fitbit_response(response)
+        except ValueError as exc:
+            self._raise_sync_error(record.get("user_id"), exc)
         updated = {
             **record,
             "access_token": payload.get("access_token", record.get("access_token", "")),
@@ -365,19 +372,22 @@ class FitbitIntegration:
         return self.store.upsert(str(record.get("user_id") or ""), updated)
 
     def _sync_record(self, user_id: str, record: dict[str, Any]) -> dict[str, Any]:
-        record = self._refresh_if_needed(record)
-        profile_payload = self._fetch_profile(record["access_token"])
-        sync_payload = self._fetch_sync_payload(record["access_token"])
-        return self.store.upsert(
-            user_id,
-            {
-                **record,
-                "fitbit_user_id": record.get("fitbit_user_id") or profile_payload.get("encodedId") or "",
-                "profile_data": self._normalize_profile(profile_payload),
-                "last_sync_data": sync_payload,
-                "last_sync_at": _utc_now().isoformat(),
-            },
-        )
+        try:
+            record = self._refresh_if_needed(record)
+            profile_payload = self._fetch_profile(record["access_token"])
+            sync_payload = self._fetch_sync_payload(record["access_token"])
+            return self.store.upsert(
+                user_id,
+                {
+                    **record,
+                    "fitbit_user_id": record.get("fitbit_user_id") or profile_payload.get("encodedId") or "",
+                    "profile_data": self._normalize_profile(profile_payload),
+                    "last_sync_data": sync_payload,
+                    "last_sync_at": _utc_now().isoformat(),
+                },
+            )
+        except ValueError as exc:
+            self._raise_sync_error(user_id, exc)
 
     def _should_auto_sync(self, record: dict[str, Any]) -> bool:
         last_sync_at = _parse_iso_datetime(record.get("last_sync_at"))
@@ -754,6 +764,26 @@ class FitbitIntegration:
 
     def _bearer_headers(self, access_token: str) -> dict[str, str]:
         return {"Authorization": f"Bearer {access_token}"}
+
+    def _raise_sync_error(self, user_id: Optional[str], exc: ValueError) -> None:
+        if self._requires_reconnect(str(exc)):
+            self.store.delete(str(user_id or ""))
+            raise FitbitReconnectRequiredError("Your Fitbit connection expired. Reconnect Fitbit and try again.") from exc
+        raise exc
+
+    def _requires_reconnect(self, message: str) -> bool:
+        normalized = str(message or "").strip().lower()
+        reconnect_markers = (
+            "refresh token invalid",
+            "invalid refresh token",
+            "invalid_grant",
+            "invalid token",
+            "token expired",
+            "expired token",
+            "authorization revoked",
+            "revoked",
+        )
+        return any(marker in normalized for marker in reconnect_markers)
 
     def _parse_fitbit_response(self, response: requests.Response) -> dict[str, Any]:
         try:

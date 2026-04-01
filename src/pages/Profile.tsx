@@ -43,6 +43,17 @@ type FitbitStatus = {
   };
 };
 
+const EXPIRED_FITBIT_MESSAGE = 'Your Fitbit connection expired. Reconnect Fitbit and try again.';
+
+function getFitbitErrorMessage(error: unknown, language: string) {
+  if (error instanceof Error && error.message === EXPIRED_FITBIT_MESSAGE) {
+    return language === 'ar'
+      ? 'انتهت صلاحية ربط Fitbit. اربط الحساب من جديد ثم حاول مرة أخرى.'
+      : 'Your Fitbit session expired. Reconnect Fitbit and try again.';
+  }
+  return error instanceof Error ? error.message : (language === 'ar' ? 'تعذر تحديث Fitbit.' : 'Could not sync Fitbit.');
+}
+
 const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
 
 export function ProfilePage() {
@@ -227,8 +238,15 @@ export function ProfilePage() {
       toast({
         variant: 'destructive',
         title: language === 'ar' ? 'فشل التحديث' : 'Sync failed',
-        description: error instanceof Error ? error.message : (language === 'ar' ? 'تعذر تحديث Fitbit.' : 'Could not sync Fitbit.'),
+        description: getFitbitErrorMessage(error, language),
       });
+      if (error instanceof Error && error.message === EXPIRED_FITBIT_MESSAGE) {
+        setFitbitStatus((previous) => ({
+          configured: previous?.configured ?? true,
+          connected: false,
+        }));
+      }
+      await fetchFitbitStatus(currentUserId);
     } finally {
       setFitbitBusyAction(null);
     }

@@ -35,7 +35,7 @@ from persistent_rag_store import PersistentRagStore
 from predict import predict_goal, predict_plan_intent, predict_success
 from response_datasets import ResponseDatasets
 from dataset_paths import resolve_dataset_root, resolve_derived_root
-from fitbit_integration import FitbitIntegration
+from fitbit_integration import FitbitIntegration, FitbitReconnectRequiredError
 from rag_context import RagContextBuilder
 from supabase_context import SupabaseContextRepository
 from voice.stt import WhisperSTT
@@ -9795,6 +9795,8 @@ def workout_adherence(request: WorkoutAdherenceRequest) -> dict[str, Any]:
 def sync_fitbit(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
     try:
         return FITBIT.sync(_normalize_user_id(user_id))
+    except FitbitReconnectRequiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
