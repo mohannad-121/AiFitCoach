@@ -17,6 +17,7 @@ from config import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT_SECONDS,
+    OLLAMA_VISION_MODEL,
     OPENAI_API_KEY,
     OPENAI_VISION_MODEL,
 )
@@ -45,6 +46,13 @@ class LLMClient:
         if self.active_provider == "ollama":
             return OLLAMA_MODEL
         return self.model
+
+    @property
+    def active_vision_model(self) -> str | None:
+        if self.active_provider == "openai":
+            return OPENAI_VISION_MODEL
+        candidate = str(OLLAMA_VISION_MODEL or "").strip() or OLLAMA_MODEL
+        return candidate or None
 
     def chat_completion(
         self,
@@ -323,11 +331,12 @@ class LLMClient:
         prompt: str,
         max_tokens: int | None,
     ) -> str | None:
-        if not self._ollama_model_supports_vision(OLLAMA_MODEL):
+        vision_model = str(OLLAMA_VISION_MODEL or "").strip() or OLLAMA_MODEL
+        if not self._ollama_model_supports_vision(vision_model):
             return None
 
         payload = {
-            "model": OLLAMA_MODEL,
+            "model": vision_model,
             "messages": [
                 {
                     "role": "user",
@@ -356,7 +365,7 @@ class LLMClient:
             text = str(data.get("message", {}).get("content", "")).strip()
             return text or None
         except Exception as exc:
-            log_error("LLM_OLLAMA_VISION_ERROR", None, exc, {"model": OLLAMA_MODEL})
+            log_error("LLM_OLLAMA_VISION_ERROR", None, exc, {"model": vision_model})
             return None
 
     @staticmethod
