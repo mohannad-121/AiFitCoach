@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage } from 'lucide-react';
+import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -431,6 +431,7 @@ export function CoachPage() {
   const [pendingVoiceResponse, setPendingVoiceResponse] = useState<VoiceChatApiResponse | null>(null);
   const [selectedAttachments, setSelectedAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState('');
+  const [copiedMessageKey, setCopiedMessageKey] = useState<string | null>(null);
 
 
   const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
@@ -2300,6 +2301,20 @@ export function CoachPage() {
     localStorage.setItem('fitcoach_voice', voiceName);
   };
 
+  const copyMessage = useCallback(async (messageKey: string, content: string) => {
+    const text = cleanContent(content).trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMessageKey(messageKey);
+      window.setTimeout(() => {
+        setCopiedMessageKey((current) => (current === messageKey ? null : current));
+      }, 1800);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+    }
+  }, []);
+
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -2494,6 +2509,10 @@ export function CoachPage() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto scrollbar-thin space-y-4 py-4">
             {currentMessages.map((message, index) => (
+              (() => {
+                const messageKey = `${currentId}-${index}-${message.timestamp}`;
+                const isCopied = copiedMessageKey === messageKey;
+                return (
               <motion.div key={`${currentId}-${index}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
               >
@@ -2502,7 +2521,7 @@ export function CoachPage() {
                 }`}>
                   {message.role === 'user' ? <User className="w-4 h-4 text-accent-foreground" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
                 </div>
-                <div className="max-w-[80%] group relative">
+                <div className="max-w-[80%]">
                   <div className={`p-4 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
                     {message.role === 'assistant' ? (
                       <div className="prose prose-sm prose-invert max-w-none">
@@ -2512,15 +2531,30 @@ export function CoachPage() {
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     )}
                   </div>
-                  {message.role === 'assistant' && (
-                    <button onClick={() => isAssistantSpeaking ? stopAllSpeech() : speakWithVoice(message.content)}
-                      className="absolute -bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-card border border-border rounded-full p-1.5 hover:bg-secondary"
+                  <div className={`mt-2 flex items-center gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <button
+                      type="button"
+                      onClick={() => void copyMessage(messageKey, message.content)}
+                      className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
-                      {isAssistantSpeaking ? <VolumeX className="w-3 h-3 text-muted-foreground" /> : <Volume2 className="w-3 h-3 text-muted-foreground" />}
+                      {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      <span>{isCopied ? (language === 'ar' ? 'تم النسخ' : 'Copied') : (language === 'ar' ? 'نسخ' : 'Copy')}</span>
                     </button>
-                  )}
+                    {message.role === 'assistant' && (
+                      <button
+                        type="button"
+                        onClick={() => isAssistantSpeaking ? stopAllSpeech() : speakWithVoice(message.content)}
+                        className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        {isAssistantSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                        <span>{isAssistantSpeaking ? (language === 'ar' ? 'إيقاف' : 'Stop') : (language === 'ar' ? 'استماع' : 'Listen')}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
+                );
+              })()
             ))}
             {isLoading && !isTypingReply && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">

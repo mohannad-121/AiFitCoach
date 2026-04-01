@@ -20,6 +20,8 @@ MAX_ATTACHMENTS = 4
 MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024
 MAX_TEXT_CHARS = 12000
 MAX_PDF_PAGES = 20
+MAX_VISION_IMAGE_DIMENSION = 896
+FAST_VISION_MAX_TOKENS = 180
 SUPPORTED_IMAGE_MIME_TYPES = {
     "image/jpeg",
     "image/jpg",
@@ -105,7 +107,7 @@ class AttachmentProcessor:
         if len(items) > MAX_ATTACHMENTS:
             raise AttachmentProcessingError(f"You can upload up to {MAX_ATTACHMENTS} files at a time.")
 
-        processed = [self._process_single_file(file_info, language) for file_info in items]
+        processed = [self._process_single_file(file_info, language, user_message) for file_info in items]
         return {
             "summary": self._build_combined_summary(processed, language, user_message),
             "attachments": [item.to_payload() for item in processed],
@@ -114,7 +116,7 @@ class AttachmentProcessor:
             "used_vision": any(bool(item.vision_summary) for item in processed),
         }
 
-    def _process_single_file(self, file_info: dict[str, Any], language: str) -> ProcessedAttachment:
+    def _process_single_file(self, file_info: dict[str, Any], language: str, user_message: str) -> ProcessedAttachment:
         filename = str(file_info.get("filename") or "attachment")
         content_type = str(file_info.get("content_type") or "application/octet-stream").lower()
         data = file_info.get("bytes")
@@ -131,7 +133,7 @@ class AttachmentProcessor:
             return self._process_pdf(attachment_id, filename, content_type or "application/pdf", raw_bytes, language)
         if content_type in SUPPORTED_IMAGE_MIME_TYPES or self._looks_like_image_filename(filename):
             normalized_type = content_type if content_type in SUPPORTED_IMAGE_MIME_TYPES else "image/png"
-            return self._process_image(attachment_id, filename, normalized_type, raw_bytes, language)
+            return self._process_image(attachment_id, filename, normalized_type, raw_bytes, language, user_message)
         raise AttachmentProcessingError(f"Unsupported file type for {filename}. Use PDF or common image formats.")
 
     def _process_pdf(
@@ -184,6 +186,7 @@ class AttachmentProcessor:
         content_type: str,
         raw_bytes: bytes,
         language: str,
+        user_message: str,
     ) -> ProcessedAttachment:
         warnings: list[str] = []
         width: Optional[int] = None
@@ -195,7 +198,8 @@ class AttachmentProcessor:
             raise AttachmentProcessingError(f"Could not decode image {filename}.") from exc
 
         ocr_text = self._extract_ocr(raw_bytes)
-        vision_summary = self._analyze_image(raw_bytes, content_type, filename, language, ocr_text)
+        prefer_ocr_only = self._query_prefers_ocr(user_message) and len(ocr_text.strip()) >= 20
+        vision_summary = "" if prefer_ocr_only else self._analyze_image(raw_bytes, content_type, filename, language, ocr_text)
         if not vision_summary and not ocr_text:
             warnings.append(
                 "Vision analysis is unavailable for the active model, and no readable text was found in the image."
@@ -255,14 +259,35 @@ class AttachmentProcessor:
         language: str,
         ocr_text: str,
     ) -> str:
+        prepared_bytes = self._prepare_image_for_vision(raw_bytes, content_type)
         prompt = self._image_analysis_prompt(filename, language, ocr_text)
         try:
-            result = self.llm_client.analyze_image(raw_bytes, content_type, prompt, max_tokens=420)
+            result = self.llm_client.analyze_image(prepared_bytes, content_type, prompt, max_tokens=FAST_VISION_MAX_TOKENS)
         except Exception:
             result = None
         if not result:
             return ""
         return self._trim_text(str(result).strip(), limit=3000)
+
+    def _prepare_image_for_vision(self, raw_bytes: bytes, content_type: str) -> bytes:
+        try:
+            with Image.open(io.BytesIO(raw_bytes)) as image:
+                converted = image.convert("RGB")
+                width, height = converted.size
+                longest = max(width, height)
+                if longest > MAX_VISION_IMAGE_DIMENSION:
+                    scale = MAX_VISION_IMAGE_DIMENSION / float(longest)
+                    resized = converted.resize(
+                        (max(1, int(width * scale)), max(1, int(height * scale))),
+                        Image.Resampling.LANCZOS,
+                    )
+                else:
+                    resized = converted
+                buffer = io.BytesIO()
+                resized.save(buffer, format="JPEG", quality=88, optimize=True)
+                return buffer.getvalue()
+        except Exception:
+            return raw_bytes
 
     def _summarize_pdf(self, filename: str, extracted_text: str, page_count: int, language: str) -> str:
         if extracted_text:
@@ -357,14 +382,41 @@ class AttachmentProcessor:
         return Path(filename).suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
 
     @staticmethod
+    def _query_prefers_ocr(user_message: str) -> bool:
+        normalized = (user_message or "").strip().lower()
+        keywords = {
+            "read",
+            "text",
+            "label",
+            "report",
+            "scan",
+            "screenshot",
+            "what does this say",
+            "ingredients",
+            "nutrition facts",
+            "calories",
+            "اقرأ",
+            "اقرا",
+            "النص",
+            "ماذا مكتوب",
+            "مكتوب",
+            "تقرير",
+            "تحليل",
+            "لقطة شاشة",
+            "صورة شاشة",
+            "ملصق",
+        }
+        return any(keyword in normalized for keyword in keywords)
+
+    @staticmethod
     def _image_analysis_prompt(filename: str, language: str, ocr_text: str) -> str:
         base = (
-            "Analyze this uploaded image for a professional AI fitness coach. "
-            "Describe what is visually present, call out food items, document/report content, workout posture, supplements, measurements, or labels when visible, and explain the coaching implications. "
-            "If something is uncertain, say so clearly."
+            "Analyze this uploaded image for a fitness coach. "
+            "Respond quickly and precisely. Identify the main visible subject, any readable labels or report details, and the most useful coaching implication. "
+            "If something is uncertain, say so briefly."
             if not language.startswith("ar")
-            else "حلل هذه الصورة المرفوعة لمدرب لياقة ذكي بشكل احترافي. صف ما يظهر بصرياً، وحدد الطعام أو التقرير أو وضعية التمرين أو المكملات أو القياسات أو الملصقات عند الإمكان، ثم اشرح الدلالة التدريبية أو الغذائية. إذا كان هناك شيء غير مؤكد فاذكره بوضوح."
+            else "حلل هذه الصورة المرفوعة لمدرب لياقة. رد بسرعة وبدقة. حدّد الشيء الأساسي الظاهر، وأي نص أو تقرير أو ملصق واضح، ثم اذكر أهم فائدة تدريبية أو غذائية. إذا كان هناك شيء غير مؤكد فاذكره باختصار."
         )
         if ocr_text:
-            return f"{base}\n\nFilename: {filename}\n\nOCR text already extracted from the image:\n{ocr_text[:1500]}"
+            return f"{base}\n\nFilename: {filename}\n\nOCR text already extracted from the image:\n{ocr_text[:700]}"
         return f"{base}\n\nFilename: {filename}"

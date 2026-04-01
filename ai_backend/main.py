@@ -9435,6 +9435,80 @@ def _parse_json_form_field(raw_value: Optional[str], fallback: Any) -> Any:
     return parsed if parsed is not None else fallback
 
 
+def _is_direct_attachment_request(message: str, attachment_context: Optional[dict[str, Any]]) -> bool:
+    attachments = attachment_context.get("attachments") if isinstance(attachment_context, dict) else None
+    if not isinstance(attachments, list) or not attachments:
+        return False
+
+    normalized = normalize_text(message or "")
+    if not normalized:
+        return True
+
+    direct_keywords = {
+        "what is in this image",
+        "what is in the image",
+        "what's in this image",
+        "what is this",
+        "analyze this image",
+        "analyze this pdf",
+        "read this",
+        "read this pdf",
+        "summarize this pdf",
+        "what do you see",
+        "what does this say",
+        "describe this image",
+        "ماذا يوجد بالصورة",
+        "ماذا في الصورة",
+        "ما في الصورة",
+        "حلل الصورة",
+        "اقرأ الصورة",
+        "اقرأ هذا",
+        "اقرأ الpdf",
+        "لخص هذا pdf",
+        "ماذا ترى",
+        "ماذا مكتوب",
+    }
+    return any(keyword in normalized for keyword in direct_keywords) or len(normalized.split()) <= 6
+
+
+def _attachment_direct_reply(attachment_context: dict[str, Any], language: str) -> str:
+    attachments = attachment_context.get("attachments") if isinstance(attachment_context, dict) else None
+    if not isinstance(attachments, list) or not attachments:
+        return _lang_reply(
+            language,
+            "I received the attachment, but I could not extract anything useful from it yet.",
+            "استلمت المرفق، لكنني لم أستطع استخراج شيء مفيد منه حتى الآن.",
+            "وصلني المرفق، بس لسا ما قدرت أطلع منه معلومة مفيدة.",
+        )
+
+    lines: list[str] = []
+    intro = _lang_reply(
+        language,
+        "Here is the fastest read of your uploaded file:",
+        "هذه أسرع قراءة للمرفق الذي رفعته:",
+        "هاي أسرع قراءة للمرفق اللي رفعته:",
+    )
+    lines.append(intro)
+    for item in attachments[:3]:
+        if not isinstance(item, dict):
+            continue
+        filename = str(item.get("filename") or "attachment")
+        summary = str(item.get("summary") or "").strip()
+        if summary:
+            lines.append(f"- {filename}: {summary}")
+        else:
+            lines.append(f"- {filename}")
+
+    outro = _lang_reply(
+        language,
+        "If you want, I can now turn this into fitness advice, meal guidance, or a clear action plan.",
+        "إذا أردت، أستطيع الآن تحويل هذه القراءة إلى نصيحة لياقة أو تغذية أو خطة عمل واضحة.",
+        "إذا بدك، بقدر هسا أحول هالقراءة لنصيحة لياقة أو تغذية أو خطة واضحة.",
+    )
+    lines.append(outro)
+    return "\n".join(lines)
+
+
 @app.post("/chat-with-attachments", response_model=ChatResponse)
 async def chat_with_attachments(
     message: str = Form(""),
@@ -9480,10 +9554,19 @@ async def chat_with_attachments(
             else "حلل الملفات المرفوعة وقل لي أهم النتائج وما الذي يجب أن أفعله بعد ذلك."
         )
 
+    uid = _normalize_user_id(user_id)
+    conv_id = _normalize_conversation_id(conversation_id, uid)
+    if _is_direct_attachment_request(effective_message, attachment_context):
+        memory = _get_memory_session(uid, conv_id)
+        memory.add_user_message(effective_message)
+        fast_reply = _attachment_direct_reply(attachment_context, language)
+        memory.add_assistant_message(fast_reply)
+        return ChatResponse(reply=fast_reply, conversation_id=conv_id, language=language)
+
     req = ChatRequest(
         message=effective_message,
-        user_id=user_id,
-        conversation_id=conversation_id,
+        user_id=uid,
+        conversation_id=conv_id,
         language=language,
         user_profile=_parse_json_form_field(user_profile, None),
         tracking_summary=_parse_json_form_field(tracking_summary, None),
