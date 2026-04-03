@@ -1342,6 +1342,57 @@ def _get_user_state(user_id: str) -> Dict[str, Any]:
     return USER_STATE[user_id]
 
 
+def _remember_latest_attachment_context(
+    state: dict[str, Any],
+    conversation_id: str,
+    attachment_context: Optional[dict[str, Any]],
+) -> None:
+    if not isinstance(attachment_context, dict):
+        return
+    cached_contexts = state.setdefault("latest_attachment_contexts", {})
+    if isinstance(cached_contexts, dict):
+        cached_contexts[conversation_id] = attachment_context
+
+
+def _get_latest_attachment_context(state: dict[str, Any], conversation_id: str) -> Optional[dict[str, Any]]:
+    cached_contexts = state.get("latest_attachment_contexts")
+    if not isinstance(cached_contexts, dict):
+        return None
+    cached = cached_contexts.get(conversation_id)
+    return cached if isinstance(cached, dict) else None
+
+
+def _looks_like_attachment_followup(message: str) -> bool:
+    normalized = normalize_text(message or "")
+    if not normalized:
+        return False
+    keywords = {
+        "this image",
+        "the image",
+        "this photo",
+        "the photo",
+        "this picture",
+        "the picture",
+        "this pdf",
+        "the pdf",
+        "this file",
+        "the file",
+        "attached",
+        "attachment",
+        "الصورة",
+        "الصوره",
+        "صورة",
+        "صوره",
+        "الملف",
+        "المرفق",
+        "المرفقة",
+        "المرفقات",
+        "الpdf",
+        "pdf",
+    }
+    return any(keyword in normalized for keyword in keywords)
+
+
 def _contains_any(text: str, keywords: set[str]) -> bool:
     return fuzzy_contains_any(text, keywords)
 
@@ -8384,6 +8435,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
     profile = _build_profile(req, state)
     language = _detect_language(req.language or "en", req.message, profile)
     recent_messages = _merge_recent_messages(database_context.get("recent_messages"), req.recent_messages)
+    active_attachment_context = req.attachment_context
+    if not isinstance(active_attachment_context, dict) and _looks_like_attachment_followup(req.message):
+        active_attachment_context = _get_latest_attachment_context(state, conversation_id)
 
     _persist_profile_context(profile, state, explicit_keys)
     db_tracking_summary = database_context.get("tracking_summary") if isinstance(database_context.get("tracking_summary"), dict) else None
@@ -8415,7 +8469,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         state.get("plan_snapshot") or req.plan_snapshot,
         req.website_context,
         recent_messages,
-        req.attachment_context,
+        active_attachment_context,
     )
 
     user_input = _repair_mojibake(req.message.strip())
@@ -8443,7 +8497,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             state.get("plan_snapshot") or req.plan_snapshot,
             req.website_context,
             recent_messages,
-            req.attachment_context,
+            active_attachment_context,
         )
 
     memory = _get_memory_session(user_id, conversation_id)
@@ -8990,7 +9044,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                     state=state,
                     recent_messages=recent_messages,
                     website_context=req.website_context,
-                    attachment_context=req.attachment_context,
+                    attachment_context=active_attachment_context,
                 )
                 if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
                     llm_reply = _ollama_unavailable_reply(language)
@@ -9035,7 +9089,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             state=state,
             recent_messages=recent_messages,
             website_context=req.website_context,
-            attachment_context=req.attachment_context,
+            attachment_context=active_attachment_context,
         )
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
             llm_reply = _ollama_unavailable_reply(language)
@@ -9160,7 +9214,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             memory=memory,
             state=state,
             recent_messages=recent_messages,
-            attachment_context=req.attachment_context,
+            attachment_context=active_attachment_context,
         )
         state["pending_diagnostic"] = None
         state["pending_diagnostic_conversation_id"] = None
@@ -9408,7 +9462,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         memory=memory,
         state=state,
         recent_messages=recent_messages,
-        attachment_context=req.attachment_context,
+        attachment_context=active_attachment_context,
     )
     if llm_reply.startswith("Ollama error:"):
         llm_reply = _lang_reply(
@@ -9573,6 +9627,8 @@ async def chat_with_attachments(
 
     uid = _normalize_user_id(user_id)
     conv_id = _normalize_conversation_id(conversation_id, uid)
+    state = _get_user_state(uid)
+    _remember_latest_attachment_context(state, conv_id, attachment_context)
     if isinstance(parsed_user_profile, dict):
         _refresh_persistent_rag_context(
             uid,

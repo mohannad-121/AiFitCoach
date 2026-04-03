@@ -336,13 +336,27 @@ class AttachmentProcessor:
     ) -> str:
         prepared_bytes = self._prepare_image_for_vision(raw_bytes, content_type)
         prompt = self._image_analysis_prompt(filename, language, ocr_text)
-        try:
-            result = self.llm_client.analyze_image(prepared_bytes, content_type, prompt, max_tokens=FAST_VISION_MAX_TOKENS)
-        except Exception:
-            result = None
-        if not result:
-            return ""
-        return self._trim_text(str(result).strip(), limit=3000)
+        fallback_prompt = self._fallback_image_analysis_prompt(filename, language, ocr_text)
+
+        attempts = [
+            (prepared_bytes, "image/png", prompt),
+            (prepared_bytes, "image/png", fallback_prompt),
+            (raw_bytes, content_type, fallback_prompt),
+        ]
+        for candidate_bytes, candidate_type, candidate_prompt in attempts:
+            try:
+                result = self.llm_client.analyze_image(
+                    candidate_bytes,
+                    candidate_type,
+                    candidate_prompt,
+                    max_tokens=FAST_VISION_MAX_TOKENS,
+                )
+            except Exception:
+                result = None
+            cleaned = self._trim_text(str(result or "").strip(), limit=3000)
+            if cleaned:
+                return cleaned
+        return ""
 
     def _prepare_image_for_vision(self, raw_bytes: bytes, content_type: str) -> bytes:
         try:
@@ -359,7 +373,7 @@ class AttachmentProcessor:
                 else:
                     resized = converted
                 buffer = io.BytesIO()
-                resized.save(buffer, format="JPEG", quality=88, optimize=True)
+                resized.save(buffer, format="PNG", optimize=True)
                 return buffer.getvalue()
         except Exception:
             return raw_bytes
@@ -521,6 +535,19 @@ class AttachmentProcessor:
             "If something is uncertain, say so briefly."
             if not language.startswith("ar")
             else "حلل هذه الصورة المرفوعة لمدرب لياقة. رد بسرعة وبدقة. حدّد الشيء الأساسي الظاهر، وأي نص أو تقرير أو ملصق واضح، ثم اذكر أهم فائدة تدريبية أو غذائية. إذا كان هناك شيء غير مؤكد فاذكره باختصار."
+        )
+        if ocr_text:
+            return f"{base}\n\nFilename: {filename}\n\nOCR text already extracted from the image:\n{ocr_text[:700]}"
+        return f"{base}\n\nFilename: {filename}"
+
+    @staticmethod
+    def _fallback_image_analysis_prompt(filename: str, language: str, ocr_text: str) -> str:
+        base = (
+            "Describe exactly what is visible in this image. "
+            "If it is a diagram, body map, progress photo, food image, report, or product label, say that directly. "
+            "Mention the main shapes, highlighted regions, or body parts even if there is no readable text."
+            if not language.startswith("ar")
+            else "صف بدقة ما يظهر في هذه الصورة. إذا كانت مخططاً أو خريطة جسم أو صورة تقدم أو صورة طعام أو تقريراً أو ملصق منتج فاذكر ذلك مباشرة. اذكر الأشكال الأساسية أو المناطق المظللة أو أجزاء الجسم حتى لو لم يوجد نص واضح."
         )
         if ocr_text:
             return f"{base}\n\nFilename: {filename}\n\nOCR text already extracted from the image:\n{ocr_text[:700]}"
