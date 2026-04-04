@@ -5464,17 +5464,9 @@ def _extract_generated_plan_payload(reply_text: str, profile: dict[str, Any], la
             inferred_type = str(nested_plan.get("type") or "").strip().lower()
             if inferred_type not in {"workout", "nutrition"}:
                 inferred_type = "nutrition" if any(key in nested_plan for key in ("meals", "daily_calories", "meals_per_day")) else "workout"
-            return inferred_type, _sanitize_plan_payload(inferred_type, nested_plan, language)
-
-    inferred_type = _detect_generated_plan_type(reply_text)
-    if inferred_type == "nutrition":
-        plan = _build_generated_nutrition_plan_from_reply(reply_text, language)
-        if plan:
-            return "nutrition", _sanitize_plan_payload("nutrition", plan, language)
-    if inferred_type == "workout":
-        plan = _build_generated_workout_plan_from_reply(reply_text, profile, language)
-        if plan:
-            return "workout", _sanitize_plan_payload("workout", plan, language)
+            cleaned_plan = _sanitize_plan_payload(inferred_type, nested_plan, language)
+            if _is_valid_structured_plan_payload(inferred_type, cleaned_plan):
+                return inferred_type, cleaned_plan
     return None, None
 
 
@@ -5591,6 +5583,111 @@ def _sanitize_plan_payload(plan_type: str, plan: dict[str, Any], language: Optio
     if language == "ar_fusha" and plan_type == "nutrition" and cleaned.get("title") == default_title_en:
         cleaned["title"] = default_title_ar
     return cleaned
+
+
+def _plan_item_name_looks_valid(name: Any) -> bool:
+    text = _repair_mojibake(str(name or "")).strip()
+    if not text:
+        return False
+    if len(text) > 80:
+        return False
+
+    normalized = normalize_text(text)
+    blocked_markers = {
+        "do you want",
+        "approve this plan",
+        "sample session",
+        "sample meals",
+        "training days",
+        "rest days",
+        "weekly frequency",
+        "daily calories",
+        "estimated protein",
+        "meals per day",
+        "reply with",
+        "choose the option",
+        "هل تريد",
+        "اعتماد هذه الخطة",
+        "مثال",
+        "أيام التمرين",
+        "أيام الراحة",
+        "عدد أيام التدريب",
+        "السعرات اليومية",
+        "عدد الوجبات",
+        "البروتين التقديري",
+        "اختر الخطة",
+        "أرسل رقم الخيار",
+    }
+    if _contains_any(normalized, blocked_markers):
+        return False
+
+    if len(re.findall(r"[.!?؟]{2,}", text)) > 0:
+        return False
+
+    word_count = len([part for part in re.split(r"\s+", text) if part])
+    return 1 <= word_count <= 10
+
+
+def _is_valid_structured_plan_payload(plan_type: str, plan: dict[str, Any]) -> bool:
+    if not isinstance(plan, dict) or not plan:
+        return False
+
+    if plan_type == "workout":
+        items: list[dict[str, Any]] = []
+        for day in plan.get("days", []):
+            if not isinstance(day, dict):
+                continue
+            day_items = day.get("exercises", [])
+            if isinstance(day_items, list):
+                items.extend(item for item in day_items if isinstance(item, dict))
+        root_items = plan.get("exercises", [])
+        if isinstance(root_items, list):
+            items.extend(item for item in root_items if isinstance(item, dict))
+
+        valid_items = []
+        structured_items = 0
+        for item in items:
+            name = item.get("name") or item.get("nameAr")
+            if not _plan_item_name_looks_valid(name):
+                continue
+            valid_items.append(item)
+            if str(item.get("sets") or "").strip() or str(item.get("reps") or "").strip() or int(_to_float(item.get("rest_seconds")) or 0) > 0:
+                structured_items += 1
+
+        if len(valid_items) < 3:
+            return False
+        if structured_items < 2:
+            return False
+
+        training_days = int(_to_float(plan.get("training_days_per_week") or plan.get("trainingDaysPerWeek")) or 0)
+        if training_days and not 1 <= training_days <= 7:
+            return False
+        return True
+
+    meals: list[dict[str, Any]] = []
+    for day in plan.get("days", []):
+        if not isinstance(day, dict):
+            continue
+        day_meals = day.get("meals", [])
+        if isinstance(day_meals, list):
+            meals.extend(item for item in day_meals if isinstance(item, dict))
+    root_meals = plan.get("meals", [])
+    if isinstance(root_meals, list):
+        meals.extend(item for item in root_meals if isinstance(item, dict))
+
+    valid_meals = [meal for meal in meals if _plan_item_name_looks_valid(meal.get("name") or meal.get("nameAr"))]
+    if len(valid_meals) < 3:
+        return False
+
+    meals_per_day = int(_to_float(plan.get("meals_per_day")) or 0)
+    if meals_per_day and not 1 <= meals_per_day <= 8:
+        return False
+
+    daily_calories = int(_to_float(plan.get("daily_calories")) or 0)
+    if daily_calories and daily_calories < 600:
+        return False
+
+    return True
 
 
 def _generate_workout_plan_options(profile: dict[str, Any], language: str, count: int = 5) -> list[dict[str, Any]]:
