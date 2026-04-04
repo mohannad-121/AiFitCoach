@@ -777,6 +777,14 @@ WORKOUT_PLAN_KEYWORDS = {
     "workout plan",
     "training plan",
     "program",
+    "exercise plan",
+    "fitness plan",
+    "خطة تمارين",
+    "برنامج تمارين",
+    "جدول تمارين",
+    "خطة تدريب",
+    "برنامج تدريب",
+    "جدول تدريب",
     "Ø®Ø·Ø© ØªÙ…Ø§Ø±ÙŠÙ†",
     "Ø¨Ø±Ù†Ø§Ù…Ø¬ ØªÙ…Ø§Ø±ÙŠÙ†",
     "Ø¬Ø¯ÙˆÙ„ ØªÙ…Ø§Ø±ÙŠÙ†",
@@ -785,6 +793,19 @@ NUTRITION_PLAN_KEYWORDS = {
     "nutrition plan",
     "meal plan",
     "diet plan",
+    "food plan",
+    "macro plan",
+    "خطة غذائية",
+    "خطة تغذية",
+    "خطة اكل",
+    "خطة أكل",
+    "برنامج غذائي",
+    "برنامج تغذية",
+    "برنامج أكل",
+    "جدول وجبات",
+    "جدول غذائي",
+    "نظام غذائي",
+    "نظام أكل",
     "Ø®Ø·Ø© ØºØ°Ø§Ø¦ÙŠØ©",
     "Ø®Ø·Ø© ØªØºØ°ÙŠØ©",
     "Ø¬Ø¯ÙˆÙ„ ÙˆØ¬Ø¨Ø§Øª",
@@ -1608,6 +1629,8 @@ def _is_workout_plan_request(user_input: str) -> bool:
     normalized = normalize_text(user_input)
     if _is_performance_analysis_request(user_input):
         return False
+    if _contains_phrase(normalized, WORKOUT_PLAN_KEYWORDS):
+        return True
     rehab_markers = {
         "rehab",
         "recovery",
@@ -1685,6 +1708,8 @@ def _is_nutrition_plan_request(user_input: str) -> bool:
     normalized = normalize_text(user_input)
     if _is_performance_analysis_request(user_input):
         return False
+    if _contains_phrase(normalized, NUTRITION_PLAN_KEYWORDS):
+        return True
     return (
         _contains_any(normalized, NUTRITION_PLAN_TERMS) or _contains_any(normalized, PLAN_BUILD_TERMS)
     ) and _contains_any(normalized, NUTRITION_REQUEST_TERMS)
