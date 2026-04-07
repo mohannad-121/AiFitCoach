@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
-from nlp_utils import repair_mojibake_deep
+from nlp_utils import normalize_text, repair_mojibake_deep
 
 
 DEFAULT_INTENTS_PATH = Path(__file__).resolve().parent / "data" / "chat data" / "conversation_intents.json"
@@ -66,7 +66,15 @@ def _build_candidate_pipelines() -> list[tuple[str, Pipeline]]:
             "tfidf_logistic_regression",
             Pipeline(
                 steps=[
-                    ("tfidf", TfidfVectorizer(ngram_range=(1, 2), max_features=30000, sublinear_tf=True)),
+                    (
+                        "tfidf",
+                        TfidfVectorizer(
+                            ngram_range=(1, 2),
+                            max_features=30000,
+                            sublinear_tf=True,
+                            preprocessor=normalize_text,
+                        ),
+                    ),
                     ("model", LogisticRegression(max_iter=4000, class_weight="balanced")),
                 ]
             ),
@@ -77,7 +85,13 @@ def _build_candidate_pipelines() -> list[tuple[str, Pipeline]]:
                 steps=[
                     (
                         "tfidf",
-                        TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 6), min_df=2, sublinear_tf=True),
+                        TfidfVectorizer(
+                            analyzer="char_wb",
+                            ngram_range=(3, 6),
+                            min_df=2,
+                            sublinear_tf=True,
+                            preprocessor=normalize_text,
+                        ),
                     ),
                     ("model", LinearSVC(class_weight="balanced", C=1.0)),
                 ]
@@ -91,7 +105,14 @@ def _build_candidate_pipelines() -> list[tuple[str, Pipeline]]:
                         "features",
                         FeatureUnion(
                             [
-                                ("word", TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True)),
+                                (
+                                    "word",
+                                    TfidfVectorizer(
+                                        ngram_range=(1, 2),
+                                        sublinear_tf=True,
+                                        preprocessor=normalize_text,
+                                    ),
+                                ),
                                 (
                                     "char",
                                     TfidfVectorizer(
@@ -99,6 +120,7 @@ def _build_candidate_pipelines() -> list[tuple[str, Pipeline]]:
                                         ngram_range=(3, 6),
                                         min_df=2,
                                         sublinear_tf=True,
+                                        preprocessor=normalize_text,
                                     ),
                                 ),
                             ]

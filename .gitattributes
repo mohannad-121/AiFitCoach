@@ -1,2 +1,4 @@
 *.pkl filter=lfs diff=lfs merge=lfs -text
 ai_backend/voice_assets/** filter=lfs diff=lfs merge=lfs -text
+ai_backend/datasets/branded_food.csv filter=lfs diff=lfs merge=lfs -text
+ai_backend/datasets/programs_detailed_boostcamp_kaggle.csv filter=lfs diff=lfs merge=lfs -text

@@ -5480,18 +5480,6 @@ def _build_generated_nutrition_plan_from_reply(reply_text: str, language: str) -
 
 
 def _extract_generated_plan_payload(reply_text: str, profile: dict[str, Any], language: str) -> tuple[Optional[str], Optional[dict[str, Any]]]:
-    for candidate in _extract_json_objects(reply_text):
-        payload = _try_parse_json_object(candidate)
-        if not payload:
-            continue
-        nested_plan = payload.get("plan") if isinstance(payload.get("plan"), dict) else payload
-        if any(key in nested_plan for key in ("days", "exercises", "meals", "daily_calories", "meals_per_day")):
-            inferred_type = str(nested_plan.get("type") or "").strip().lower()
-            if inferred_type not in {"workout", "nutrition"}:
-                inferred_type = "nutrition" if any(key in nested_plan for key in ("meals", "daily_calories", "meals_per_day")) else "workout"
-            cleaned_plan = _sanitize_plan_payload(inferred_type, nested_plan, language)
-            if _is_valid_structured_plan_payload(inferred_type, cleaned_plan):
-                return inferred_type, cleaned_plan
     return None, None
 
 
@@ -9171,21 +9159,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
                     llm_reply = _ollama_unavailable_reply(language)
 
-                llm_plan_type, llm_plan_payload = _extract_generated_plan_payload(llm_reply, profile, language)
-                if llm_plan_type and llm_plan_payload:
-                    return _build_pending_plan_response(
-                        llm_plan_type,
-                        profile,
-                        tracking_summary,
-                        language,
-                        user_id,
-                        conversation_id,
-                        state,
-                        memory,
-                        plan_override=llm_plan_payload,
-                        reply_override=llm_reply,
-                    )
-
                 filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
                 memory.add_assistant_message(filtered_reply)
                 return ChatResponse(reply=filtered_reply, conversation_id=conversation_id, language=language)
@@ -9215,21 +9188,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
         )
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
             llm_reply = _ollama_unavailable_reply(language)
-
-        llm_plan_type, llm_plan_payload = _extract_generated_plan_payload(llm_reply, profile, language)
-        if llm_plan_type and llm_plan_payload:
-            return _build_pending_plan_response(
-                llm_plan_type,
-                profile,
-                tracking_summary,
-                language,
-                user_id,
-                conversation_id,
-                state,
-                memory,
-                plan_override=llm_plan_payload,
-                reply_override=llm_reply,
-            )
 
         filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
         memory.add_assistant_message(filtered_reply)
@@ -9592,20 +9550,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
             "Local AI model is temporarily unavailable. Please make sure Ollama is running, then try again.",
             "نموذج الذكاء المحلي غير متاح مؤقتًا. تأكد من تشغيل Ollama ثم أعد المحاولة.",
             "نموذج الذكاء المحلي واقف مؤقتًا. شغّل Ollama وارجع جرّب.",
-        )
-    llm_plan_type, llm_plan_payload = _extract_generated_plan_payload(llm_reply, profile, language)
-    if llm_plan_type and llm_plan_payload:
-        return _build_pending_plan_response(
-            llm_plan_type,
-            profile,
-            tracking_summary,
-            language,
-            user_id,
-            conversation_id,
-            state,
-            memory,
-            plan_override=llm_plan_payload,
-            reply_override=llm_reply,
         )
     filtered_reply, _ = MODERATION.filter_content(llm_reply, language=language)
     memory.add_assistant_message(filtered_reply)
