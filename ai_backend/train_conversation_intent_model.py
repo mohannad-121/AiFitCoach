@@ -6,11 +6,13 @@ import pickle
 from pathlib import Path
 from typing import Any
 
+from sklearn.pipeline import FeatureUnion
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVC
 
 from nlp_utils import repair_mojibake_deep
 
@@ -58,6 +60,57 @@ def _load_training_pairs(intents_path: Path, include_responses: bool) -> list[tu
     return pairs
 
 
+def _build_candidate_pipelines() -> list[tuple[str, Pipeline]]:
+    return [
+        (
+            "tfidf_logistic_regression",
+            Pipeline(
+                steps=[
+                    ("tfidf", TfidfVectorizer(ngram_range=(1, 2), max_features=30000, sublinear_tf=True)),
+                    ("model", LogisticRegression(max_iter=4000, class_weight="balanced")),
+                ]
+            ),
+        ),
+        (
+            "char_svc",
+            Pipeline(
+                steps=[
+                    (
+                        "tfidf",
+                        TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 6), min_df=2, sublinear_tf=True),
+                    ),
+                    ("model", LinearSVC(class_weight="balanced", C=1.0)),
+                ]
+            ),
+        ),
+        (
+            "word_char_logistic_regression",
+            Pipeline(
+                steps=[
+                    (
+                        "features",
+                        FeatureUnion(
+                            [
+                                ("word", TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True)),
+                                (
+                                    "char",
+                                    TfidfVectorizer(
+                                        analyzer="char_wb",
+                                        ngram_range=(3, 6),
+                                        min_df=2,
+                                        sublinear_tf=True,
+                                    ),
+                                ),
+                            ]
+                        ),
+                    ),
+                    ("model", LogisticRegression(max_iter=5000, class_weight="balanced", C=3.0)),
+                ]
+            ),
+        ),
+    ]
+
+
 def train_and_save(
     intents_path: Path,
     output_path: Path,
@@ -84,27 +137,33 @@ def train_and_save(
         X_train, y_train = list(texts), labels_list
         X_test, y_test = [], []
 
-    pipeline = Pipeline(
-        steps=[
-            ("tfidf", TfidfVectorizer(ngram_range=(1, 2), max_features=20000)),
-            ("model", LogisticRegression(max_iter=2000, class_weight="balanced")),
-        ]
-    )
-    pipeline.fit(X_train, y_train)
+    best_model_name = "tfidf_logistic_regression"
+    best_pipeline: Pipeline | None = None
+    best_metrics: dict[str, float] = {}
 
-    metrics = {}
-    if X_test:
-        y_pred = pipeline.predict(X_test)
-        metrics = {
-            "accuracy": float(accuracy_score(y_test, y_pred)),
-            "weighted_f1": float(f1_score(y_test, y_pred, average="weighted")),
-        }
+    for model_name, pipeline in _build_candidate_pipelines():
+        pipeline.fit(X_train, y_train)
+        metrics: dict[str, float] = {}
+        if X_test:
+            y_pred = pipeline.predict(X_test)
+            metrics = {
+                "accuracy": float(accuracy_score(y_test, y_pred)),
+                "weighted_f1": float(f1_score(y_test, y_pred, average="weighted")),
+            }
+
+        if best_pipeline is None or metrics.get("weighted_f1", 0.0) > best_metrics.get("weighted_f1", 0.0):
+            best_model_name = model_name
+            best_pipeline = pipeline
+            best_metrics = metrics
+
+    if best_pipeline is None:
+        raise ValueError("Unable to train conversation intent model.")
 
     artifact = {
-        "model": pipeline,
-        "model_name": "tfidf_logistic_regression",
+        "model": best_pipeline,
+        "model_name": best_model_name,
         "labels": sorted(set(labels_list)),
-        "metrics": metrics,
+        "metrics": best_metrics,
         "dataset_path": str(intents_path),
         "dataset_rows": int(len(labels_list)),
         "include_responses": bool(include_responses),
@@ -120,7 +179,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Train intent classifier from conversation_intents.json.")
     parser.add_argument("--intents", type=Path, default=DEFAULT_INTENTS_PATH)
     parser.add_argument("--output", type=Path, default=DEFAULT_MODEL_OUTPUT)
-    parser.add_argument("--include-responses", action="store_true")
+    parser.add_argument("--include-responses", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--test-size", type=float, default=0.2)
     parser.add_argument("--random-state", type=int, default=42)
     args = parser.parse_args()

@@ -13,11 +13,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVC
 from dataset_paths import resolve_dataset_root
 
 
 DEFAULT_DATASET_ROOT = resolve_dataset_root()
-DEFAULT_WEEK2_DIR = Path(__file__).resolve().parent / "data" / "week2"
+DEFAULT_WEEK2_DIR = Path(__file__).resolve().parent / "data" / "chat data"
 DEFAULT_MODEL_OUTPUT = Path(__file__).resolve().parent / "model_plan_intent.pkl"
 
 
@@ -217,7 +218,51 @@ def _synthetic_pairs() -> list[tuple[str, str]]:
     return pairs
 
 
+def _resolve_training_source_dir(source_dir: Path) -> Path:
+    if source_dir.exists():
+        return source_dir
+
+    candidates = [
+        Path(__file__).resolve().parent / "data" / "chat data",
+        Path(__file__).resolve().parent / "data" / "week2",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return source_dir
+
+
+def _build_candidate_pipelines() -> list[tuple[str, Pipeline]]:
+    return [
+        (
+            "char_logistic_regression",
+            Pipeline(
+                steps=[
+                    (
+                        "tfidf",
+                        TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 6), min_df=2, sublinear_tf=True),
+                    ),
+                    ("model", LogisticRegression(max_iter=4000, class_weight="balanced", C=2.0)),
+                ]
+            ),
+        ),
+        (
+            "char_svc",
+            Pipeline(
+                steps=[
+                    (
+                        "tfidf",
+                        TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 6), min_df=2, sublinear_tf=True),
+                    ),
+                    ("model", LinearSVC(class_weight="balanced", C=1.0)),
+                ]
+            ),
+        ),
+    ]
+
+
 def build_training_dataset(dataset_root: Path, week2_dir: Path) -> pd.DataFrame:
+    week2_dir = _resolve_training_source_dir(week2_dir)
     pairs = []
     pairs.extend(_load_week2_training_pairs(week2_dir))
     pairs.extend(_load_external_training_pairs(dataset_root))
@@ -235,32 +280,40 @@ def build_training_dataset(dataset_root: Path, week2_dir: Path) -> pd.DataFrame:
 
 
 def train_and_save_plan_intent_model(dataset_root: Path, week2_dir: Path, output_path: Path) -> dict[str, Any]:
-    df = build_training_dataset(dataset_root, week2_dir)
+    resolved_week2_dir = _resolve_training_source_dir(week2_dir)
+    df = build_training_dataset(dataset_root, resolved_week2_dir)
     X = df["text"]
     y = df["label"]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    pipeline = Pipeline(
-        steps=[
-            ("tfidf", TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), min_df=2)),
-            ("model", LogisticRegression(max_iter=2000, class_weight="balanced")),
-        ]
-    )
-    pipeline.fit(X_train, y_train)
-    y_pred = pipeline.predict(X_test)
+    best_model_name = "char_logistic_regression"
+    best_pipeline: Pipeline | None = None
+    best_metrics: dict[str, float] = {}
 
-    artifact = {
-        "model": pipeline,
-        "model_name": "tfidf_logistic_regression",
-        "metrics": {
+    for model_name, pipeline in _build_candidate_pipelines():
+        pipeline.fit(X_train, y_train)
+        y_pred = pipeline.predict(X_test)
+        metrics = {
             "accuracy": float(accuracy_score(y_test, y_pred)),
             "weighted_f1": float(f1_score(y_test, y_pred, average="weighted")),
-        },
+        }
+        if best_pipeline is None or metrics["weighted_f1"] > best_metrics.get("weighted_f1", 0.0):
+            best_model_name = model_name
+            best_pipeline = pipeline
+            best_metrics = metrics
+
+    if best_pipeline is None:
+        raise ValueError("Unable to train plan-intent model.")
+
+    artifact = {
+        "model": best_pipeline,
+        "model_name": best_model_name,
+        "metrics": best_metrics,
         "dataset_rows": int(len(df)),
         "labels": sorted(set(y.tolist())),
         "dataset_root": str(dataset_root),
-        "week2_dir": str(week2_dir),
+        "week2_dir": str(resolved_week2_dir),
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
