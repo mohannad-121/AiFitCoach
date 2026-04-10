@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -120,7 +120,39 @@ interface PendingAttachment {
   previewUrl: string | null;
 }
 
+const EMOJI_REGEX = /([\p{Extended_Pictographic}\uFE0F]+)/gu;
+
+const renderTextWithEmoji = (text: string, keyPrefix: string) => {
+  const parts = text.split(EMOJI_REGEX);
+  return parts.filter(Boolean).map((part, index) => {
+    if (EMOJI_REGEX.test(part)) {
+      EMOJI_REGEX.lastIndex = 0;
+      return (
+        <span key={`${keyPrefix}-emoji-${index}`} className="chat-emoji" aria-hidden="true">
+          {part}
+        </span>
+      );
+    }
+    EMOJI_REGEX.lastIndex = 0;
+    return <React.Fragment key={`${keyPrefix}-text-${index}`}>{part}</React.Fragment>;
+  });
+};
+
+const renderEmojiAwareChildren = (children: React.ReactNode, keyPrefix: string): React.ReactNode =>
+  React.Children.map(children, (child, index) => {
+    const nextKey = `${keyPrefix}-${index}`;
+    if (typeof child === 'string') {
+      return renderTextWithEmoji(child, nextKey);
+    }
+    if (Array.isArray(child)) {
+      return renderEmojiAwareChildren(child, nextKey);
+    }
+    return child;
+  });
+
 const AI_BACKEND_URL = import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002';
+const CHAT_REQUEST_TIMEOUT_MS = 120000;
+const ATTACHMENT_REQUEST_TIMEOUT_MS = 240000;
 const NUTRITION_PREFIX = '\u{1F37D}\uFE0F';
 const BACKEND_ARABIC_VOICE_ID = '__backend_arabic_ai__';
 const MAX_CHAT_ATTACHMENTS = 4;
@@ -527,6 +559,23 @@ export function CoachPage() {
   const [selectedAttachments, setSelectedAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState('');
   const [copiedMessageKey, setCopiedMessageKey] = useState<string | null>(null);
+
+  const markdownComponents = useMemo(
+    () => ({
+      p: ({ children }: { children?: React.ReactNode }) => <p>{renderEmojiAwareChildren(children, 'md-p')}</p>,
+      li: ({ children }: { children?: React.ReactNode }) => <li>{renderEmojiAwareChildren(children, 'md-li')}</li>,
+      strong: ({ children }: { children?: React.ReactNode }) => <strong>{renderEmojiAwareChildren(children, 'md-strong')}</strong>,
+      em: ({ children }: { children?: React.ReactNode }) => <em>{renderEmojiAwareChildren(children, 'md-em')}</em>,
+      h1: ({ children }: { children?: React.ReactNode }) => <h1>{renderEmojiAwareChildren(children, 'md-h1')}</h1>,
+      h2: ({ children }: { children?: React.ReactNode }) => <h2>{renderEmojiAwareChildren(children, 'md-h2')}</h2>,
+      h3: ({ children }: { children?: React.ReactNode }) => <h3>{renderEmojiAwareChildren(children, 'md-h3')}</h3>,
+      blockquote: ({ children }: { children?: React.ReactNode }) => <blockquote>{renderEmojiAwareChildren(children, 'md-quote')}</blockquote>,
+      code: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+        <code className={className}>{renderEmojiAwareChildren(children, 'md-code')}</code>
+      ),
+    }),
+    []
+  );
 
 
   const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
@@ -2093,6 +2142,7 @@ export function CoachPage() {
       if (hasConversation) return updated;
       return [{ id: activeConversationId, title: '', messages: newMessages, updated_at: new Date().toISOString() }, ...updated];
     });
+    let timeoutId: number | null = null;
     try {
       const user_profile = await buildCombinedUserProfile();
       const tracking_summary = await buildTrackingSummary();
@@ -2117,7 +2167,8 @@ export function CoachPage() {
       };
 
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 120000);
+      const requestTimeoutMs = attachments.length > 0 ? ATTACHMENT_REQUEST_TIMEOUT_MS : CHAT_REQUEST_TIMEOUT_MS;
+      timeoutId = window.setTimeout(() => controller.abort(), requestTimeoutMs);
       const apiResponse = attachments.length > 0
         ? await (async () => {
             const formData = new FormData();
@@ -2147,7 +2198,10 @@ export function CoachPage() {
             body: JSON.stringify(payload),
             signal: controller.signal,
           });
-      window.clearTimeout(timeoutId);
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
 
       if (!apiResponse.ok) {
         throw new Error(`Backend error: ${apiResponse.status}`);
@@ -2224,9 +2278,13 @@ export function CoachPage() {
       console.error('Error:', error);
       setIsTypingReply(false);
       const timeoutMessage = error?.name === 'AbortError'
-        ? (language === 'ar'
-          ? 'الرد تأخر. تأكد أن السيرفر شغال على المنفذ الصحيح ثم جرّب مرة ثانية.'
-          : 'The response is taking too long. Make sure the backend is running on the correct port and try again.')
+        ? (attachments.length > 0
+          ? (language === 'ar'
+            ? 'تحليل المرفق استغرق وقتاً أطول من المتوقع. حسّنت المسار ليعتمد على OCR أسرع للصور النصية، لكن إذا استمر التأخير فغالباً نموذج الرؤية المحلي ما زال بطيئاً.'
+            : 'Attachment analysis is taking longer than expected. The flow now prefers faster OCR for text-heavy images, but if this keeps happening the local vision model is still the bottleneck.')
+          : (language === 'ar'
+            ? 'الرد تأخر. تأكد أن السيرفر شغال على المنفذ الصحيح ثم جرّب مرة ثانية.'
+            : 'The response is taking too long. Make sure the backend is running on the correct port and try again.'))
         : null;
       const errMsg: ChatMessage = {
         role: 'assistant',
@@ -2239,6 +2297,9 @@ export function CoachPage() {
       };
       setCurrentMessages(prev => [...prev, errMsg]);
     } finally {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
       setIsTypingReply(false);
       setIsLoading(false);
       if (!voiceModeRef.current) focusInput();
@@ -2332,8 +2393,8 @@ export function CoachPage() {
     setPendingPlanOptions(null);
 
     const successText = language === 'ar'
-      ? 'تم اعتماد الخطة وحفظها في صفحة الجدول.'
-      : 'Plan approved and saved to your Schedule page.';
+      ? '✅ تم اعتماد الخطة وحفظها في صفحة الجدول.'
+      : '✅ Plan approved and saved to your Schedule page.';
     try {
       await appendAssistantMessage(successText);
     } finally {
@@ -2355,8 +2416,8 @@ export function CoachPage() {
     setPendingPlan(null);
     setPendingPlanOptions(null);
     const rejectText = language === 'ar'
-      ? 'تم رفض الخطة. اكتب لي التعديلات التي تريدها وسأعيد بناء خطة جديدة.'
-      : 'Plan rejected. Tell me what to change and I will regenerate it.';
+      ? '🔁 تم رفض الخطة. اكتب لي التعديلات التي تريدها وسأعيد بناء خطة جديدة.'
+      : '🔁 Plan rejected. Tell me what to change and I will regenerate it.';
     await appendAssistantMessage(rejectText);
   };
 
@@ -2628,7 +2689,7 @@ export function CoachPage() {
           </AnimatePresence>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto scrollbar-thin space-y-5 py-5">
             {currentMessages.map((message, index) => (
               (() => {
                 const messageKey = `${currentId}-${index}-${message.timestamp}`;
@@ -2638,27 +2699,27 @@ export function CoachPage() {
                 const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
                 return (
               <motion.div key={`${currentId}-${index}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+                className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
                   message.role === 'user' ? 'bg-accent' : 'bg-gradient-primary'
                 }`}>
                   {message.role === 'user' ? <User className="w-4 h-4 text-accent-foreground" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
                 </div>
-                <div className="max-w-[80%]">
+                <div className="max-w-[82%] md:max-w-[78%]">
                   {hasAttachments && (
                     <div className={`mb-2 flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
                       {message.attachments!.map((attachment) => renderAttachmentBadge(attachment))}
                     </div>
                   )}
                   {visibleMessageText && (
-                    <div className={`p-4 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
+                    <div className={`px-5 py-4.5 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
                       {message.role === 'assistant' ? (
-                        <div className="prose prose-sm prose-invert max-w-none">
-                          <ReactMarkdown>{cleanMessageContent(message.content)}</ReactMarkdown>
+                        <div className={`chat-message-content prose prose-sm prose-invert max-w-none ${language === 'ar' ? 'chat-message-content-ar' : ''}`}>
+                          <ReactMarkdown components={markdownComponents}>{cleanMessageContent(message.content)}</ReactMarkdown>
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap">{message.content}</p>
+                        <p className="chat-message-content whitespace-pre-wrap">{renderEmojiAwareChildren(message.content, `user-${messageKey}`)}</p>
                       )}
                     </div>
                   )}

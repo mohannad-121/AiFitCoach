@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
 from pypdf import PdfReader
 
 try:
@@ -28,8 +28,131 @@ MAX_ATTACHMENT_SUMMARY_CHARS = 24000
 MAX_ATTACHMENT_RAG_CHUNK_CHARS = 3500
 MAX_ATTACHMENT_RAG_CHUNKS = 24
 MAX_PDF_OCR_PAGES = 120
-MAX_VISION_IMAGE_DIMENSION = 896
+MAX_VISION_IMAGE_DIMENSION = 768
+SCREENSHOT_VISION_IMAGE_DIMENSION = 1536
 FAST_VISION_MAX_TOKENS = 180
+GENERAL_VISION_MAX_TOKENS = 64
+SCREENSHOT_VISION_MAX_TOKENS = 140
+OCR_ONLY_MIN_CHARS = 20
+TEXT_HEAVY_OCR_MIN_CHARS = 120
+SCREENSHOT_OCR_MIN_CHARS = 40
+SCREENSHOT_HINT_KEYWORDS = {
+    "screenshot",
+    "screen shot",
+    "screen-shot",
+    "capture",
+    "snip",
+    "snipping",
+    "ui",
+    "interface",
+    "dashboard",
+    "app",
+    "website",
+    "page",
+    "لقطة",
+    "سكرين",
+}
+REPORT_HINT_KEYWORDS = {
+    "report",
+    "lab",
+    "labs",
+    "blood",
+    "test",
+    "result",
+    "results",
+    "scan",
+    "mri",
+    "xray",
+    "x-ray",
+    "dexa",
+    "inbody",
+    "body composition",
+    "medical",
+    "cbc",
+    "glucose",
+    "cholesterol",
+    "hemoglobin",
+    "تقرير",
+    "تحليل",
+    "نتيجة",
+    "نتائج",
+    "مختبر",
+    "فحص",
+}
+LABEL_HINT_KEYWORDS = {
+    "label",
+    "nutrition facts",
+    "ingredients",
+    "serving",
+    "servings",
+    "barcode",
+    "package",
+    "packaging",
+    "calories",
+    "protein",
+    "carb",
+    "carbs",
+    "fat",
+    "sugar",
+    "sodium",
+    "fiber",
+    "product",
+    "ملصق",
+    "مكونات",
+    "سعرات",
+    "بروتين",
+    "دهون",
+    "كارب",
+    "سكر",
+}
+PROGRESS_PHOTO_HINT_KEYWORDS = {
+    "progress",
+    "before after",
+    "before/after",
+    "physique",
+    "body",
+    "pose",
+    "posing",
+    "front relaxed",
+    "back relaxed",
+    "shirtless",
+    "mirror selfie",
+    "check-in",
+    "check in",
+    "comparison",
+    "progress photo",
+    "photo update",
+    "صورة تقدم",
+    "تقدم",
+    "مقارنة",
+    "جسم",
+}
+FOOD_HINT_KEYWORDS = {
+    "food",
+    "meal",
+    "plate",
+    "dish",
+    "snack",
+    "drink",
+    "smoothie",
+    "breakfast",
+    "lunch",
+    "dinner",
+    "fruit",
+    "rice",
+    "chicken",
+    "beef",
+    "salad",
+    "burger",
+    "pizza",
+    "وجبة",
+    "طعام",
+    "طبق",
+    "أكل",
+    "فطور",
+    "غداء",
+    "عشاء",
+}
 SUPPORTED_IMAGE_MIME_TYPES = {
     "image/jpeg",
     "image/jpg",
@@ -257,9 +380,24 @@ class AttachmentProcessor:
         except UnidentifiedImageError as exc:
             raise AttachmentProcessingError(f"Could not decode image {filename}.") from exc
 
-        ocr_text = self._extract_ocr(raw_bytes)
-        prefer_ocr_only = self._query_prefers_ocr(user_message) and len(ocr_text.strip()) >= 20
-        vision_summary = "" if prefer_ocr_only else self._analyze_image(raw_bytes, content_type, filename, language, ocr_text)
+        mode_hint = self._infer_image_analysis_mode(filename, user_message, "")
+        should_attempt_ocr = self._should_attempt_ocr(filename, user_message, mode_hint)
+        ocr_text = ""
+        if should_attempt_ocr:
+            ocr_text = self._extract_ocr(raw_bytes, filename=filename, user_message=user_message)
+        prefer_ocr_only = self._should_prefer_ocr_only(filename, width, height, user_message, ocr_text)
+        vision_summary = "" if prefer_ocr_only else self._analyze_image(
+            raw_bytes,
+            content_type,
+            filename,
+            language,
+            user_message,
+            ocr_text,
+        )
+        if not vision_summary and not prefer_ocr_only:
+            warnings.append("Vision model did not return a usable description for this image.")
+        if should_attempt_ocr and not ocr_text:
+            warnings.append("OCR did not extract readable text from this image.")
         if not vision_summary and not ocr_text:
             warnings.append(
                 "Vision analysis is unavailable for the active model, and no readable text was found in the image."
@@ -280,23 +418,63 @@ class AttachmentProcessor:
             warnings=warnings,
         )
 
-    def _extract_ocr(self, raw_bytes: bytes) -> str:
+    def _extract_ocr(
+        self,
+        raw_bytes: bytes,
+        filename: str = "",
+        user_message: str = "",
+    ) -> str:
         engine = self._get_ocr_engine()
         if engine is None:
             return ""
+
+        best_text = ""
+        for candidate_bytes in self._ocr_candidate_images(raw_bytes, filename, user_message):
+            try:
+                result, _elapsed = engine(candidate_bytes)
+            except Exception:
+                continue
+            lines: list[str] = []
+            for item in result or []:
+                if isinstance(item, (list, tuple)) and len(item) >= 2:
+                    text_info = item[1]
+                    if isinstance(text_info, (list, tuple)) and text_info:
+                        text = str(text_info[0] or "").strip()
+                        if text:
+                            lines.append(text)
+            joined = self._trim_text("\n".join(lines), limit=4000)
+            if len(self._normalize_ocr_text(joined)) > len(self._normalize_ocr_text(best_text)):
+                best_text = joined
+            if len(self._normalize_ocr_text(best_text)) >= TEXT_HEAVY_OCR_MIN_CHARS:
+                break
+        return best_text
+
+    def _ocr_candidate_images(self, raw_bytes: bytes, filename: str, user_message: str) -> list[bytes]:
+        candidates = [raw_bytes]
+        if not self._looks_like_screenshot(filename) and not self._query_prefers_ocr(user_message):
+            return candidates
         try:
-            result, _elapsed = engine(raw_bytes)
+            with Image.open(io.BytesIO(raw_bytes)) as image:
+                grayscale = ImageOps.grayscale(image)
+                enhanced = ImageOps.autocontrast(grayscale)
+                base_width, base_height = enhanced.size
+                upscale = 2 if max(base_width, base_height) < 2200 else 1
+                if upscale > 1:
+                    enhanced = enhanced.resize(
+                        (max(1, base_width * upscale), max(1, base_height * upscale)),
+                        Image.Resampling.LANCZOS,
+                    )
+                sharpened = enhanced.filter(ImageFilter.SHARPEN)
+                thresholded = sharpened.point(lambda px: 255 if px > 160 else 0)
+                for variant in (enhanced, sharpened, thresholded):
+                    buffer = io.BytesIO()
+                    variant.save(buffer, format="PNG", optimize=True)
+                    candidate = buffer.getvalue()
+                    if candidate and candidate not in candidates:
+                        candidates.append(candidate)
         except Exception:
-            return ""
-        lines: list[str] = []
-        for item in result or []:
-            if isinstance(item, (list, tuple)) and len(item) >= 2:
-                text_info = item[1]
-                if isinstance(text_info, (list, tuple)) and text_info:
-                    text = str(text_info[0] or "").strip()
-                    if text:
-                        lines.append(text)
-        return self._trim_text("\n".join(lines), limit=4000)
+            return candidates
+        return candidates
 
     def _get_ocr_engine(self) -> Any:
         if self._ocr_attempted:
@@ -332,24 +510,33 @@ class AttachmentProcessor:
         content_type: str,
         filename: str,
         language: str,
+        user_message: str,
         ocr_text: str,
     ) -> str:
-        prepared_bytes = self._prepare_image_for_vision(raw_bytes, content_type)
-        prompt = self._image_analysis_prompt(filename, language, ocr_text)
-        fallback_prompt = self._fallback_image_analysis_prompt(filename, language, ocr_text)
+        mode = self._infer_image_analysis_mode(filename, user_message, ocr_text)
+        prepared_bytes = self._prepare_image_for_vision(raw_bytes, content_type, mode)
+        prompt = self._image_analysis_prompt(filename, language, user_message, ocr_text)
+        fallback_prompt = self._fallback_image_analysis_prompt(filename, language, user_message, ocr_text)
+        has_meaningful_ocr = len(self._normalize_ocr_text(ocr_text)) >= TEXT_HEAVY_OCR_MIN_CHARS
 
-        attempts = [
-            (prepared_bytes, "image/png", prompt),
-            (prepared_bytes, "image/png", fallback_prompt),
-            (raw_bytes, content_type, fallback_prompt),
-        ]
+        attempts = [(prepared_bytes, "image/png", prompt)]
+        if not has_meaningful_ocr:
+            attempts.append((prepared_bytes, "image/png", fallback_prompt))
+        if mode == "screenshot" and not has_meaningful_ocr:
+            attempts.append(
+                (
+                    prepared_bytes,
+                    "image/png",
+                    self._fallback_image_analysis_prompt(filename, language, user_message, ocr_text, mode_override="general"),
+                )
+            )
         for candidate_bytes, candidate_type, candidate_prompt in attempts:
             try:
                 result = self.llm_client.analyze_image(
                     candidate_bytes,
                     candidate_type,
                     candidate_prompt,
-                    max_tokens=FAST_VISION_MAX_TOKENS,
+                    max_tokens=self._vision_max_tokens(mode, has_meaningful_ocr),
                 )
             except Exception:
                 result = None
@@ -358,14 +545,22 @@ class AttachmentProcessor:
                 return cleaned
         return ""
 
-    def _prepare_image_for_vision(self, raw_bytes: bytes, content_type: str) -> bytes:
+    def _vision_max_tokens(self, mode: str, has_meaningful_ocr: bool) -> int:
+        if mode == "general":
+            return GENERAL_VISION_MAX_TOKENS
+        if mode in {"screenshot", "report", "label"} and not has_meaningful_ocr:
+            return SCREENSHOT_VISION_MAX_TOKENS
+        return FAST_VISION_MAX_TOKENS
+
+    def _prepare_image_for_vision(self, raw_bytes: bytes, content_type: str, mode: str) -> bytes:
         try:
             with Image.open(io.BytesIO(raw_bytes)) as image:
                 converted = image.convert("RGB")
                 width, height = converted.size
                 longest = max(width, height)
-                if longest > MAX_VISION_IMAGE_DIMENSION:
-                    scale = MAX_VISION_IMAGE_DIMENSION / float(longest)
+                max_dimension = SCREENSHOT_VISION_IMAGE_DIMENSION if mode in {"screenshot", "report"} else MAX_VISION_IMAGE_DIMENSION
+                if longest > max_dimension:
+                    scale = max_dimension / float(longest)
                     resized = converted.resize(
                         (max(1, int(width * scale)), max(1, int(height * scale))),
                         Image.Resampling.LANCZOS,
@@ -510,12 +705,19 @@ class AttachmentProcessor:
             "report",
             "scan",
             "screenshot",
+            "question",
+            "answer this",
+            "answer the question",
             "what does this say",
             "ingredients",
             "nutrition facts",
             "calories",
             "اقرأ",
             "اقرا",
+            "السؤال",
+            "جاوب",
+            "أجب",
+            "اجب",
             "النص",
             "ماذا مكتوب",
             "مكتوب",
@@ -528,27 +730,145 @@ class AttachmentProcessor:
         return any(keyword in normalized for keyword in keywords)
 
     @staticmethod
-    def _image_analysis_prompt(filename: str, language: str, ocr_text: str) -> str:
-        base = (
-            "Analyze this uploaded image for a fitness coach. "
-            "Respond quickly and precisely. Identify the main visible subject, any readable labels or report details, and the most useful coaching implication. "
-            "If something is uncertain, say so briefly."
-            if not language.startswith("ar")
-            else "حلل هذه الصورة المرفوعة لمدرب لياقة. رد بسرعة وبدقة. حدّد الشيء الأساسي الظاهر، وأي نص أو تقرير أو ملصق واضح، ثم اذكر أهم فائدة تدريبية أو غذائية. إذا كان هناك شيء غير مؤكد فاذكره باختصار."
-        )
-        if ocr_text:
-            return f"{base}\n\nFilename: {filename}\n\nOCR text already extracted from the image:\n{ocr_text[:700]}"
-        return f"{base}\n\nFilename: {filename}"
+    def _normalize_ocr_text(value: str) -> str:
+        return re.sub(r"\s+", " ", value or "").strip()
 
     @staticmethod
-    def _fallback_image_analysis_prompt(filename: str, language: str, ocr_text: str) -> str:
-        base = (
-            "Describe exactly what is visible in this image. "
-            "If it is a diagram, body map, progress photo, food image, report, or product label, say that directly. "
-            "Mention the main shapes, highlighted regions, or body parts even if there is no readable text."
-            if not language.startswith("ar")
-            else "صف بدقة ما يظهر في هذه الصورة. إذا كانت مخططاً أو خريطة جسم أو صورة تقدم أو صورة طعام أو تقريراً أو ملصق منتج فاذكر ذلك مباشرة. اذكر الأشكال الأساسية أو المناطق المظللة أو أجزاء الجسم حتى لو لم يوجد نص واضح."
-        )
+    def _normalize_for_matching(*parts: str) -> str:
+        return " ".join(str(part or "").strip().lower() for part in parts if str(part or "").strip())
+
+    def _should_prefer_ocr_only(
+        self,
+        filename: str,
+        width: Optional[int],
+        height: Optional[int],
+        user_message: str,
+        ocr_text: str,
+    ) -> bool:
+        normalized_ocr = self._normalize_ocr_text(ocr_text)
+        if len(normalized_ocr) < OCR_ONLY_MIN_CHARS:
+            return False
+        if self._query_prefers_ocr(user_message):
+            return True
+        if self._looks_like_screenshot(filename) and len(normalized_ocr) >= SCREENSHOT_OCR_MIN_CHARS:
+            return True
+        if width and height and max(width, height) >= 900 and len(normalized_ocr) >= TEXT_HEAVY_OCR_MIN_CHARS:
+            return True
+        return False
+
+    @staticmethod
+    def _looks_like_screenshot(filename: str) -> bool:
+        normalized = (filename or "").strip().lower()
+        keywords = ("screenshot", "screen shot", "screen-shot", "capture", "snip", "snipping", "لقطة", "سكرين")
+        return any(keyword in normalized for keyword in keywords)
+
+    def _should_attempt_ocr(self, filename: str, user_message: str, mode_hint: str) -> bool:
+        normalized_message = self._normalize_for_matching(user_message)
+        if self._query_prefers_ocr(user_message):
+            return True
+        if mode_hint in {"report", "label", "screenshot"}:
+            return True
+        if self._looks_like_screenshot(filename) and any(
+            keyword in normalized_message
+            for keyword in ("read", "text", "question", "answer", "what does this say", "ماذا مكتوب", "اقرا", "اقرأ")
+        ):
+            return True
+        return False
+
+    def _infer_image_analysis_mode(self, filename: str, user_message: str, ocr_text: str) -> str:
+        combined = self._normalize_for_matching(filename, user_message, ocr_text)
+        if self._should_treat_as_ui_screenshot(filename, user_message, ocr_text):
+            return "screenshot"
+        if any(keyword in combined for keyword in REPORT_HINT_KEYWORDS):
+            return "report"
+        if any(keyword in combined for keyword in LABEL_HINT_KEYWORDS):
+            return "label"
+        if any(keyword in combined for keyword in PROGRESS_PHOTO_HINT_KEYWORDS):
+            return "progress_photo"
+        if any(keyword in combined for keyword in FOOD_HINT_KEYWORDS):
+            return "food"
+        return "general"
+
+    def _should_treat_as_ui_screenshot(self, filename: str, user_message: str, ocr_text: str) -> bool:
+        combined = self._normalize_for_matching(user_message, ocr_text)
+        if any(keyword in combined for keyword in SCREENSHOT_HINT_KEYWORDS):
+            return True
+        if not self._looks_like_screenshot(filename):
+            return False
+        normalized_ocr = self._normalize_ocr_text(ocr_text)
+        if len(normalized_ocr) >= SCREENSHOT_OCR_MIN_CHARS:
+            return True
+        if self._query_prefers_ocr(user_message):
+            return True
+        return False
+
+    def _image_analysis_prompt(self, filename: str, language: str, user_message: str, ocr_text: str) -> str:
+        mode = self._infer_image_analysis_mode(filename, user_message, ocr_text)
+        instructions_en = {
+            "screenshot": (
+                "Analyze this screenshot for a fitness coach. Respond in 3 short bullets: "
+                "1) what screen or workflow this appears to show, 2) the key visible text, values, warnings, or UI state, "
+                "3) the most useful action or answer for the user's question. Do not invent hidden content."
+            ),
+            "report": (
+                "Analyze this report image for a fitness coach. Respond in 4 short bullets: "
+                "1) report type, 2) the most important measurable values or findings visible, 3) any flagged risks, restrictions, or abnormal items, "
+                "4) the most relevant coaching implication. Quote visible values when possible."
+            ),
+            "label": (
+                "Analyze this food or product label for a fitness coach. Respond in 4 short bullets: "
+                "1) product or food type, 2) the clearest nutrition facts or ingredient details visible, 3) any red flags for calories, sugar, sodium, or ultra-processed ingredients, "
+                "4) the practical nutrition recommendation. Use only visible text."
+            ),
+            "progress_photo": (
+                "Analyze this progress photo for a fitness coach. Respond in 4 short bullets: "
+                "1) pose and photo angle, 2) visible muscularity, body-fat distribution, or symmetry cues, 3) posture or presentation issues that affect interpretation, "
+                "4) the most useful training or nutrition implication. Avoid identity, age, or medical diagnosis claims."
+            ),
+            "food": (
+                "Analyze this food image for a fitness coach. Respond in 4 short bullets: "
+                "1) likely meal or food items, 2) portion-size estimate with uncertainty noted, 3) likely calorie and protein impact in broad terms, "
+                "4) the most practical nutrition coaching advice."
+            ),
+            "general": (
+                "Analyze this uploaded image for a fitness coach. Respond in 3 short bullets: "
+                "1) the main visible subject, 2) any readable labels, values, or notable details, 3) the most useful coaching implication. If uncertain, say so briefly."
+            ),
+        }
+        instructions_ar = {
+            "screenshot": "حلل لقطة الشاشة هذه لمدرب لياقة. رد في 3 نقاط قصيرة: 1) ما الشاشة أو الواجهة الظاهرة، 2) أهم النصوص أو القيم أو التحذيرات أو حالة الواجهة، 3) أفضل إجراء أو إجابة مفيدة لسؤال المستخدم. لا تخترع محتوى غير ظاهر.",
+            "report": "حلل صورة التقرير هذه لمدرب لياقة. رد في 4 نقاط قصيرة: 1) نوع التقرير، 2) أهم القيم أو النتائج الظاهرة، 3) أي مخاطر أو قيود أو عناصر غير طبيعية واضحة، 4) أهم فائدة تدريبية أو صحية عملية. اذكر القيم الظاهرة إن أمكن.",
+            "label": "حلل ملصق الطعام أو المنتج هذا لمدرب لياقة. رد في 4 نقاط قصيرة: 1) نوع المنتج أو الطعام، 2) أوضح معلومات التغذية أو المكونات الظاهرة، 3) أي ملاحظات مهمة حول السعرات أو السكر أو الصوديوم أو التصنيع العالي، 4) التوصية الغذائية العملية. استخدم فقط النص الظاهر.",
+            "progress_photo": "حلل صورة التقدم هذه لمدرب لياقة. رد في 4 نقاط قصيرة: 1) الوقفة وزاوية التصوير، 2) مؤشرات الكتلة العضلية أو توزيع الدهون أو التناسق الظاهر، 3) أي مشكلة في الوقفة أو العرض تؤثر على التقييم، 4) أهم دلالة تدريبية أو غذائية. تجنب ادعاء الهوية أو العمر أو التشخيص الطبي.",
+            "food": "حلل صورة الطعام هذه لمدرب لياقة. رد في 4 نقاط قصيرة: 1) نوع الوجبة أو الأصناف المحتملة، 2) تقدير حجم الحصة مع توضيح عدم اليقين، 3) الأثر التقريبي على السعرات والبروتين بشكل عام، 4) أفضل نصيحة غذائية عملية.",
+            "general": "حلل هذه الصورة المرفوعة لمدرب لياقة. رد في 3 نقاط قصيرة: 1) الشيء الأساسي الظاهر، 2) أي نص أو قيم أو تفاصيل مهمة ظاهرة، 3) أهم فائدة تدريبية أو غذائية. إذا كان هناك شيء غير مؤكد فاذكره باختصار.",
+        }
+        base = instructions_ar[mode] if language.startswith("ar") else instructions_en[mode]
+        parts = [base, f"Filename: {filename}"]
+        if user_message.strip():
+            parts.append(f"User request: {user_message.strip()[:400]}")
         if ocr_text:
-            return f"{base}\n\nFilename: {filename}\n\nOCR text already extracted from the image:\n{ocr_text[:700]}"
-        return f"{base}\n\nFilename: {filename}"
+            parts.append(f"OCR text already extracted from the image:\n{ocr_text[:900]}")
+        return "\n\n".join(parts)
+
+    def _fallback_image_analysis_prompt(
+        self,
+        filename: str,
+        language: str,
+        user_message: str,
+        ocr_text: str,
+        mode_override: Optional[str] = None,
+    ) -> str:
+        mode = mode_override or self._infer_image_analysis_mode(filename, user_message, ocr_text)
+        base = (
+            "Describe only what is directly visible in this image. Name the image type first, then list the most important visible elements. "
+            "If it is a screenshot, report, label, food image, or progress photo, say that explicitly."
+            if not language.startswith("ar")
+            else "صف فقط ما يظهر مباشرة في هذه الصورة. ابدأ بنوع الصورة ثم اذكر أهم العناصر الظاهرة. إذا كانت لقطة شاشة أو تقريراً أو ملصقاً أو صورة طعام أو صورة تقدم فاذكر ذلك بوضوح."
+        )
+        parts = [base, f"Filename: {filename}", f"Detected image type hint: {mode}"]
+        if user_message.strip():
+            parts.append(f"User request: {user_message.strip()[:400]}")
+        if ocr_text:
+            parts.append(f"OCR text already extracted from the image:\n{ocr_text[:900]}")
+        return "\n\n".join(parts)

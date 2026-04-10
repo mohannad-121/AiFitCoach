@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, BellRing, Calendar, Check, CheckCircle2, ChevronLeft, ChevronRight, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
+import { Activity, BellRing, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -661,6 +661,56 @@ export function SchedulePage() {
 
   const workoutDetectedToday = viewTab === 'workout' && workoutAdherence?.detection.workout_detected_today;
   const showMissedWorkoutReminder = viewTab === 'workout' && workoutAdherence?.reminder.show_banner;
+  const planCollection = viewTab === 'workout' ? workoutPlans : nutritionPlans;
+  const selectedDayTitle = matchingDay
+    ? (language === 'ar' ? matchingDay.day.dayAr || matchingDay.day.day : matchingDay.day.day)
+    : (language === 'ar' ? 'بدون عناصر مجدولة' : 'No scheduled items');
+  const selectedItemsTotal = (dayExercises?.length || 0) + (dayMeals?.length || 0);
+  const selectedItemsRemaining = dailyProgress ? Math.max(0, dailyProgress.total - dailyProgress.completed) : 0;
+  const overviewCards = [
+    {
+      key: 'plan',
+      label: language === 'ar' ? 'الخطة النشطة' : 'Active plan',
+      value: currentPlan
+        ? (language === 'ar' ? currentPlan.title_ar || currentPlan.title : currentPlan.title)
+        : (language === 'ar' ? 'لا توجد خطة' : 'No active plan'),
+      helper: language === 'ar'
+        ? (viewTab === 'workout' ? 'التركيز الحالي للتمارين' : 'التركيز الحالي للتغذية')
+        : (viewTab === 'workout' ? 'Current workout track' : 'Current nutrition track'),
+    },
+    {
+      key: 'day',
+      label: language === 'ar' ? 'اليوم المختار' : 'Selected day',
+      value: selectedDayTitle,
+      helper: language === 'ar'
+        ? `التاريخ ${selectedLogDate}`
+        : `Date ${selectedLogDate}`,
+    },
+    {
+      key: 'overall',
+      label: language === 'ar' ? 'التقدم الكلي' : 'Overall progress',
+      value: planProgress
+        ? `${planProgress.percent}%`
+        : '0%',
+      helper: planProgress
+        ? (language === 'ar'
+            ? `${planProgress.completedItems} من ${planProgress.totalItems} عناصر`
+            : `${planProgress.completedItems} of ${planProgress.totalItems} items`)
+        : (language === 'ar' ? 'بانتظار خطة نشطة' : 'Waiting for an active plan'),
+    },
+    {
+      key: 'today',
+      label: language === 'ar' ? 'تقدم اليوم' : 'Today progress',
+      value: dailyProgress
+        ? `${dailyProgress.percent}%`
+        : '0%',
+      helper: dailyProgress
+        ? (language === 'ar'
+            ? `${dailyProgress.completed}/${dailyProgress.total} مكتمل`
+            : `${dailyProgress.completed}/${dailyProgress.total} completed`)
+        : (language === 'ar' ? 'لا يوجد عناصر لهذا اليوم' : 'No items for this day'),
+    },
+  ];
 
   useEffect(() => {
     if (currentDailyLog) {
@@ -827,19 +877,21 @@ export function SchedulePage() {
   return (
     <div className="min-h-screen pb-24 md:pb-8">
       <Navbar />
-      <main className="container mx-auto px-4 pt-24 max-w-4xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
-          <h1 className="font-display text-4xl md:text-5xl text-foreground mb-2">
-            {language === 'ar' ? 'الجدول اليومي' : 'DAILY SCHEDULE'}
-          </h1>
-          <p className="text-muted-foreground">
-            {language === 'ar' ? 'تابع تمارينك وغذاءك يومياً' : 'Track your workouts & nutrition daily'}
-          </p>
-        </motion.div>
+      <main className="container mx-auto px-4 pt-24 max-w-6xl">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 space-y-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="font-display text-4xl md:text-5xl text-foreground mb-2">
+                {language === 'ar' ? 'الجدول اليومي' : 'DAILY SCHEDULE'}
+              </h1>
+              <p className="text-muted-foreground max-w-2xl">
+                {language === 'ar'
+                  ? 'رتب أسبوعك بوضوح: راقب اليوم المختار، العناصر المكتملة، ملاحظاتك، والخطط النشطة في مكان واحد.'
+                  : 'Keep the page organized around one selected day, clear progress, your notes, and your active plans.'}
+              </p>
+            </div>
 
-        {/* Tab Toggle */}
-        <div className="flex justify-center mb-6">
-          <div className="flex bg-card/80 rounded-xl p-1 gap-1 border border-border/50">
+            <div className="flex bg-card/80 rounded-xl p-1 gap-1 border border-border/50 self-start lg:self-auto">
             <button onClick={() => setViewTab('workout')}
               className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
                 viewTab === 'workout' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
@@ -855,59 +907,88 @@ export function SchedulePage() {
               {language === 'ar' ? 'التغذية' : 'Nutrition'}
             </button>
           </div>
-        </div>
-
-        {/* Week Navigation */}
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w - 1)}>
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <div className="text-center">
-            <p className="text-sm font-semibold text-foreground">{formatWeekRange()}</p>
-            {weekOffset !== 0 && (
-              <button onClick={() => setWeekOffset(0)} className="text-xs text-primary hover:underline">
-                {language === 'ar' ? 'العودة لليوم' : 'Back to today'}
-              </button>
-            )}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w + 1)}>
-            <ChevronRight className="w-5 h-5" />
-          </Button>
-        </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {overviewCards.map((card) => (
+              <div key={card.key} className="glass-card rounded-2xl p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{card.label}</p>
+                <p className="mt-2 text-base font-semibold text-foreground line-clamp-2">{card.value}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{card.helper}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
-        {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-1.5 mb-6">
-          {weekDates.map((date, idx) => {
-            const today = isToday(date);
-            const selected = idx === selectedDateIdx;
-            const hasMatch = getMatchingPlanDay(currentPlan, date) !== null;
-            const hasActivity = hasDailyActivity(date);
-            return (
-              <button
-                key={idx}
-                onClick={() => setSelectedDateIdx(idx)}
-                className={`flex flex-col items-center py-3 px-1 rounded-xl transition-all text-xs ${
-                  selected
-                    ? 'bg-primary text-primary-foreground shadow-glow'
-                    : today
-                      ? 'bg-primary/10 text-primary border border-primary/30'
-                      : 'bg-card/50 text-muted-foreground hover:bg-card border border-border/20'
-                }`}
-              >
-                <span className="font-medium">{formatDayName(date)}</span>
-                <span className={`text-lg font-bold ${selected ? '' : 'text-foreground'}`}>{formatDateShort(date)}</span>
-                {!selected && (hasMatch || hasActivity) && (
-                  <div className="mt-1 flex items-center gap-1">
-                    {hasMatch && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                    {hasActivity && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
-                  </div>
+        <section className="glass-card rounded-2xl p-5 mb-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                {language === 'ar' ? 'التقويم الأسبوعي' : 'Weekly calendar'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {language === 'ar'
+                  ? 'اختر اليوم لترى ما هو مخطط وما الذي تم إنجازه بالفعل.'
+                  : 'Pick any day to inspect what is planned and what has already been completed.'}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 md:justify-end">
+              <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w - 1)}>
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              <div className="text-center min-w-[180px]">
+                <p className="text-sm font-semibold text-foreground">{formatWeekRange()}</p>
+                {weekOffset !== 0 && (
+                  <button onClick={() => setWeekOffset(0)} className="text-xs text-primary hover:underline">
+                    {language === 'ar' ? 'العودة لليوم' : 'Back to today'}
+                  </button>
                 )}
-              </button>
-            );
-          })}
-        </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w + 1)}>
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
 
-        {/* Day Content */}
+          <div className="grid grid-cols-7 gap-2">
+            {weekDates.map((date, idx) => {
+              const today = isToday(date);
+              const selected = idx === selectedDateIdx;
+              const hasMatch = getMatchingPlanDay(currentPlan, date) !== null;
+              const hasActivity = hasDailyActivity(date);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedDateIdx(idx)}
+                  className={`flex flex-col items-center py-3 px-1 rounded-xl transition-all text-xs min-h-[84px] ${
+                    selected
+                      ? 'bg-primary text-primary-foreground shadow-glow'
+                      : today
+                        ? 'bg-primary/10 text-primary border border-primary/30'
+                        : 'bg-card/50 text-muted-foreground hover:bg-card border border-border/20'
+                  }`}
+                >
+                  <span className="font-medium">{formatDayName(date)}</span>
+                  <span className={`text-lg font-bold ${selected ? '' : 'text-foreground'}`}>{formatDateShort(date)}</span>
+                  {!selected && (hasMatch || hasActivity) && (
+                    <div className="mt-auto pt-2 flex items-center gap-1">
+                      {hasMatch && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      {hasActivity && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-primary" />{language === 'ar' ? 'يوجد عنصر مجدول' : 'Planned item exists'}</div>
+            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-accent" />{language === 'ar' ? 'يوجد نشاط أو ملاحظة' : 'Activity or note recorded'}</div>
+          </div>
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
+          <section>
         {currentPlan ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
             {!adherenceLoading && workoutDetectedToday && workoutAdherence && (
@@ -967,14 +1048,48 @@ export function SchedulePage() {
             )}
 
             <div className="glass-card rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-foreground">
-                  {language === 'ar' ? currentPlan.title_ar || currentPlan.title : currentPlan.title}
-                </h2>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary">
-                  {language === 'ar' ? 'نشط' : 'Active'}
-                </span>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-5">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                    {language === 'ar' ? 'منطقة اليوم المختار' : 'Selected day workspace'}
+                  </p>
+                  <h2 className="text-xl font-bold text-foreground">
+                    {language === 'ar' ? currentPlan.title_ar || currentPlan.title : currentPlan.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {language === 'ar'
+                      ? `${selectedDayTitle} • ${selectedLogDate}`
+                      : `${selectedDayTitle} • ${selectedLogDate}`}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                    {language === 'ar' ? 'نشط' : 'Active'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-secondary/70 text-foreground">
+                    {language === 'ar'
+                      ? `${selectedItemsTotal} عناصر اليوم`
+                      : `${selectedItemsTotal} items today`}
+                  </span>
+                </div>
               </div>
+
+              <div className="grid gap-3 md:grid-cols-3 mb-5">
+                <div className="rounded-2xl border border-border/40 bg-card/40 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'المكتمل اليوم' : 'Completed today'}</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">{dailyProgress?.completed ?? 0}</p>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-card/40 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'المتبقي اليوم' : 'Remaining today'}</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">{selectedItemsRemaining}</p>
+                </div>
+                <div className="rounded-2xl border border-border/40 bg-card/40 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'عناصر اليوم' : 'Scheduled today'}</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">{selectedItemsTotal}</p>
+                </div>
+              </div>
+
               {viewTab === 'workout' && workoutAdherence && !workoutDetectedToday && !showMissedWorkoutReminder && workoutAdherence.schedule.has_workout_planned_today && (
                 <div className="mb-5 flex items-start gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/10 p-4 text-left">
                   <div className="rounded-xl bg-sky-500/20 p-2 text-sky-600">
@@ -1058,6 +1173,21 @@ export function SchedulePage() {
                   </Button>
                 </div>
               )}
+
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {language === 'ar'
+                      ? (viewTab === 'workout' ? 'عناصر التمرين لهذا اليوم' : 'عناصر التغذية لهذا اليوم')
+                      : (viewTab === 'workout' ? 'Workout items for this day' : 'Nutrition items for this day')}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {language === 'ar'
+                      ? 'علّم العناصر المكتملة، واترك الباقي واضحاً لليوم.'
+                      : 'Check off completed items and keep the rest visible for the day.'}
+                  </p>
+                </div>
+              </div>
 
               <AnimatePresence mode="wait">
                 <motion.div
@@ -1190,87 +1320,124 @@ export function SchedulePage() {
             </Button>
           </div>
         )}
+          </section>
 
-        <div className="glass-card rounded-2xl p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-foreground">
-              {language === 'ar' ? 'ملاحظات اليوم' : 'Daily Log'}
-            </h3>
-            <span className="text-xs text-muted-foreground">{selectedLogDate}</span>
-          </div>
+          <aside className="space-y-6">
+            <div className="glass-card rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {language === 'ar' ? 'ملخص اليوم' : 'Day summary'}
+                </h3>
+                <span className="text-xs text-muted-foreground">{selectedLogDate}</span>
+              </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-2">
-                {language === 'ar' ? 'شو تمرنت اليوم؟' : 'What did you train today?'}
-              </label>
-              <Textarea
-                value={logDraft.workout_notes}
-                onChange={(e) => setLogDraft(prev => ({ ...prev, workout_notes: e.target.value }))}
-                placeholder={language === 'ar' ? 'اكتب تفاصيل التمرين...' : 'Add workout notes...'}
-                className="bg-secondary/40 border-border"
-                rows={3}
-              />
+              <div className="space-y-3 text-sm">
+                <div className="rounded-xl border border-border/40 bg-card/40 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'نوع العرض' : 'Current view'}</p>
+                  <p className="font-medium text-foreground">{language === 'ar' ? (viewTab === 'workout' ? 'التمارين' : 'التغذية') : (viewTab === 'workout' ? 'Workouts' : 'Nutrition')}</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-card/40 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'العناصر المكتملة' : 'Completed items'}</p>
+                  <p className="font-medium text-foreground">{dailyProgress ? dailyProgress.completed : 0}</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-card/40 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'العناصر الناقصة' : 'Missing items'}</p>
+                  <p className="font-medium text-foreground">{selectedItemsRemaining}</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-card/40 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'إجمالي الخطط من هذا النوع' : 'Plans in this section'}</p>
+                  <p className="font-medium text-foreground">{planCollection.length}</p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-2">
-                {language === 'ar' ? 'شو أكلت اليوم؟' : 'How was your nutrition today?'}
-              </label>
-              <Textarea
-                value={logDraft.nutrition_notes}
-                onChange={(e) => setLogDraft(prev => ({ ...prev, nutrition_notes: e.target.value }))}
-                placeholder={language === 'ar' ? 'اكتب ملاحظات التغذية...' : 'Add nutrition notes...'}
-                className="bg-secondary/40 border-border"
-                rows={3}
-              />
-            </div>
+            <div className="glass-card rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {language === 'ar' ? 'ملاحظات اليوم' : 'Daily log'}
+                </h3>
+                <span className="text-xs text-muted-foreground">{selectedLogDate}</span>
+              </div>
 
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-2">
-                {language === 'ar' ? 'مزاجك/طاقتك اليوم' : 'Mood / Energy'}
-              </label>
-              <Input
-                value={logDraft.mood}
-                onChange={(e) => setLogDraft(prev => ({ ...prev, mood: e.target.value }))}
-                placeholder={language === 'ar' ? 'مثال: طاقة عالية، مرهق...' : 'e.g. High energy, tired...'}
-                className="bg-secondary/40 border-border"
-              />
-            </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2">
+                    {language === 'ar' ? 'شو تمرنت اليوم؟' : 'What did you train today?'}
+                  </label>
+                  <Textarea
+                    value={logDraft.workout_notes}
+                    onChange={(e) => setLogDraft(prev => ({ ...prev, workout_notes: e.target.value }))}
+                    placeholder={language === 'ar' ? 'اكتب تفاصيل التمرين...' : 'Add workout notes...'}
+                    className="bg-secondary/40 border-border"
+                    rows={3}
+                  />
+                </div>
 
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                {language === 'ar'
-                  ? 'هذه الملاحظات تساعد المدرب الذكي على فهم تقدمك اليومي.'
-                  : 'These notes help the AI coach track your daily progress.'}
-              </p>
-              <Button variant="hero" size="sm" onClick={saveDailyLog} disabled={savingLog}>
-                {savingLog
-                  ? (language === 'ar' ? 'جارٍ الحفظ...' : 'Saving...')
-                  : (language === 'ar' ? 'حفظ' : 'Save')}
-              </Button>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2">
+                    {language === 'ar' ? 'شو أكلت اليوم؟' : 'How was your nutrition today?'}
+                  </label>
+                  <Textarea
+                    value={logDraft.nutrition_notes}
+                    onChange={(e) => setLogDraft(prev => ({ ...prev, nutrition_notes: e.target.value }))}
+                    placeholder={language === 'ar' ? 'اكتب ملاحظات التغذية...' : 'Add nutrition notes...'}
+                    className="bg-secondary/40 border-border"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-2">
+                    {language === 'ar' ? 'مزاجك/طاقتك اليوم' : 'Mood / Energy'}
+                  </label>
+                  <Input
+                    value={logDraft.mood}
+                    onChange={(e) => setLogDraft(prev => ({ ...prev, mood: e.target.value }))}
+                    placeholder={language === 'ar' ? 'مثال: طاقة عالية، مرهق...' : 'e.g. High energy, tired...'}
+                    className="bg-secondary/40 border-border"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    {language === 'ar'
+                      ? 'هذه الملاحظات تساعد المدرب الذكي على فهم تقدمك اليومي.'
+                      : 'These notes help the AI coach track your daily progress.'}
+                  </p>
+                  <Button variant="hero" size="sm" onClick={saveDailyLog} disabled={savingLog} className="self-start">
+                    {savingLog
+                      ? (language === 'ar' ? 'جارٍ الحفظ...' : 'Saving...')
+                      : (language === 'ar' ? 'حفظ' : 'Save')}
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
 
         {/* All Plans */}
-        {(viewTab === 'workout' ? workoutPlans : nutritionPlans).length > 0 && (
-          <div>
+        {planCollection.length > 0 && (
+          <section>
             <h3 className="text-lg font-semibold mb-4 text-foreground">
-              {language === 'ar' ? 'جميع الخطط' : 'All Plans'}
+              {language === 'ar' ? 'مكتبة الخطط' : 'Plan library'}
             </h3>
-            <div className="space-y-3">
-              {(viewTab === 'workout' ? workoutPlans : nutritionPlans).map(plan => (
-                <div key={plan.id} className="glass-card rounded-xl p-4 flex items-center justify-between">
-                  <div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {planCollection.map(plan => (
+                <div key={plan.id} className="glass-card rounded-xl p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
                     <p className="font-medium text-foreground">
                       {language === 'ar' ? plan.title_ar || plan.title : plan.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(plan.created_at).toLocaleDateString(language === 'ar' ? 'ar' : 'en')}
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {language === 'ar'
+                        ? `${plan.plan_data.filter(day => planDayHasItems(day)).length} أيام فيها عناصر`
+                        : `${plan.plan_data.filter(day => planDayHasItems(day)).length} scheduled days`}
+                    </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 self-start md:self-auto">
                     {!plan.is_active && (
                       <Button size="sm" variant="outline" onClick={() => activatePlan(plan)}>
                         {language === 'ar' ? 'تفعيل' : 'Activate'}
@@ -1283,7 +1450,7 @@ export function SchedulePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
       </main>
     </div>

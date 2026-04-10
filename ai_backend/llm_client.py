@@ -17,6 +17,7 @@ from config import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT_SECONDS,
+    OLLAMA_VISION_TIMEOUT_SECONDS,
     OLLAMA_VISION_MODEL,
     OPENAI_API_KEY,
     OPENAI_VISION_MODEL,
@@ -334,7 +335,15 @@ class LLMClient:
         vision_model = str(OLLAMA_VISION_MODEL or "").strip() or OLLAMA_MODEL
         if not self._ollama_model_supports_vision(vision_model):
             return None
+        return self._analyze_image_ollama_with_model(vision_model, image_bytes, prompt, max_tokens)
 
+    def _analyze_image_ollama_with_model(
+        self,
+        vision_model: str,
+        image_bytes: bytes,
+        prompt: str,
+        max_tokens: int | None,
+    ) -> str | None:
         payload = {
             "model": vision_model,
             "messages": [
@@ -356,7 +365,7 @@ class LLMClient:
             response = requests.post(
                 f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
                 json=payload,
-                timeout=OLLAMA_TIMEOUT_SECONDS,
+                timeout=OLLAMA_VISION_TIMEOUT_SECONDS,
             )
             if response.status_code >= 400:
                 return None

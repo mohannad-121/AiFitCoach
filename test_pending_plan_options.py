@@ -47,7 +47,104 @@ def _build_workout_option(title: str, title_ar: str, focus: str, training_days: 
     }
 
 
+def _build_nutrition_option(title: str, calories: int, protein: int, meals: list[tuple[str, int]]) -> dict:
+    return {
+        "id": f"nutrition_{title.lower().replace(' ', '_')}",
+        "title": title,
+        "title_ar": title,
+        "daily_calories": calories,
+        "estimated_protein": protein,
+        "meals_per_day": len(meals),
+        "days": [
+            {
+                "day": "Monday",
+                "dayAr": "Monday",
+                "meals": [
+                    {
+                        "name": meal_name,
+                        "nameAr": meal_name,
+                        "calories": str(meal_calories),
+                    }
+                    for meal_name, meal_calories in meals
+                ],
+            }
+        ],
+    }
+
+
 class PendingPlanOptionsRegressionTest(unittest.TestCase):
+    def test_cutting_plan_phrase_prefers_nutrition_over_workout(self):
+        self.assertFalse(backend_main._is_workout_plan_request("بدي خطة تنشيف"))
+        self.assertTrue(backend_main._is_nutrition_plan_request("بدي خطة تنشيف"))
+        self.assertEqual(backend_main._resolve_plan_type_from_message("بدي خطة تنشيف")[0], "nutrition")
+
+    def test_repeated_direct_nutrition_requests_rotate_recommended_plan(self):
+        user_id = "repeat-nutrition-user"
+        conversation_id = "repeat-nutrition-conversation"
+
+        backend_main.USER_STATE.clear()
+        backend_main.MEMORY_SESSIONS.clear()
+
+        options = [
+            _build_nutrition_option(
+                "Cutting Option A",
+                1700,
+                180,
+                [("Greek Yogurt Bowl", 350), ("Chicken Rice", 600), ("Salmon Salad", 750)],
+            ),
+            _build_nutrition_option(
+                "Cutting Option B",
+                1720,
+                176,
+                [("Egg Wrap", 340), ("Turkey Bowl", 620), ("Steak Salad", 760)],
+            ),
+            _build_nutrition_option(
+                "Cutting Option C",
+                1750,
+                172,
+                [("Oats Protein Bowl", 360), ("Chicken Pasta", 640), ("Tuna Plate", 750)],
+            ),
+        ]
+
+        state = backend_main._get_user_state(user_id)
+        memory = backend_main.MemorySystem(user_id=user_id, max_short_term=10)
+        profile = {
+            "goal": "fat_loss",
+            "weight": 90,
+            "height": 180,
+            "age": 28,
+            "gender": "male",
+            "meals_per_day": 3,
+            "allergies": [],
+            "chronic_diseases": [],
+        }
+
+        with mock.patch.object(backend_main, "_generate_nutrition_plan_options", return_value=options):
+            first = backend_main._build_single_recommended_plan_response(
+                "nutrition",
+                profile,
+                None,
+                "en",
+                user_id,
+                conversation_id,
+                state,
+                memory,
+            )
+            second = backend_main._build_single_recommended_plan_response(
+                "nutrition",
+                profile,
+                None,
+                "en",
+                user_id,
+                conversation_id,
+                state,
+                memory,
+            )
+
+        self.assertIsNotNone(first)
+        self.assertIsNotNone(second)
+        self.assertNotEqual(first.data["plan"]["title"], second.data["plan"]["title"])
+
     def test_pending_plan_options_supports_arabic_comparison_without_losing_state(self):
         user_id = "pending-plan-test-user"
         conversation_id = "pending-plan-conversation"

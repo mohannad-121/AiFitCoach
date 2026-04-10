@@ -1,7 +1,7 @@
 [
   {
     "id": "debug-user_profile",
-    "text": "User profile: {\"id\": \"debug-user\", \"user_id\": \"debug-user\", \"goal\": \"\"}",
+    "text": "User profile: {\"goal\": \"muscle_gain\", \"trainingDaysPerWeek\": 4, \"fitnessLevel\": \"intermediate\", \"weight\": 110, \"height\": 185, \"age\": 28, \"fitness_level\": \"intermediate\", \"training_days_per_week\": 4, \"id\": \"debug-user\", \"user_id\": \"debug-user\"}",
     "metadata": {
       "kind": "profile"
     }
