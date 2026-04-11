@@ -2472,6 +2472,69 @@ def _dataset_level_key(value: Any) -> str:
     return "beginner"
 
 
+def _dataset_location_key(value: Any) -> str:
+    normalized = normalize_text(_dataset_text(value, "en") + " " + _dataset_text(value, "ar_fusha"))
+    if fuzzy_contains_any(normalized, {"gym", "جيم", "gymnasium", "club", "نادي"}):
+        return "gym"
+    if fuzzy_contains_any(normalized, {"home", "منزل", "بيت"}):
+        return "home"
+    return ""
+
+
+def _dataset_gender_key(value: Any) -> str:
+    normalized = normalize_text(_dataset_text(value, "en") + " " + _dataset_text(value, "ar_fusha"))
+    if fuzzy_contains_any(normalized, {"female", "women", "woman", "انثى", "أنثى", "نساء", "امرأة"}):
+        return "female"
+    if fuzzy_contains_any(normalized, {"male", "men", "man", "ذكر", "رجال"}):
+        return "male"
+    return ""
+
+
+def _profile_age_value(profile: dict[str, Any]) -> Optional[int]:
+    age_value = _to_float(profile.get("age"))
+    if age_value is None:
+        return None
+    age = int(round(age_value))
+    if age <= 0 or age > 120:
+        return None
+    return age
+
+
+def _dataset_age_group_bounds(value: Any) -> tuple[Optional[int], Optional[int]]:
+    text = str(value or "").strip()
+    if not text:
+        return None, None
+    range_match = re.search(r"(\d+)\s*-\s*(\d+)", text)
+    if range_match:
+        return int(range_match.group(1)), int(range_match.group(2))
+    plus_match = re.search(r"(\d+)\s*\+", text)
+    if plus_match:
+        return int(plus_match.group(1)), None
+    return None, None
+
+
+def _age_group_match_score(age: Optional[int], age_group: Any) -> int:
+    if age is None:
+        return 0
+    min_age, max_age = _dataset_age_group_bounds(age_group)
+    if min_age is None and max_age is None:
+        return 0
+    if (min_age is None or age >= min_age) and (max_age is None or age <= max_age):
+        return 4
+    gap = 0
+    if min_age is not None and age < min_age:
+        gap = min_age - age
+    elif max_age is not None and age > max_age:
+        gap = age - max_age
+    if gap <= 2:
+        return 1
+    if gap <= 5:
+        return -2
+    if gap <= 10:
+        return -5
+    return -9
+
+
 def _dataset_intent_matches(user_input: str, tag: str) -> bool:
     return RESPONSE_DATASETS.matches_intent(user_input, tag)
 
@@ -2592,6 +2655,10 @@ def _generate_workout_plan_options_from_dataset(
     level_key = str(profile.get("fitness_level", "beginner")).lower()
     if level_key not in {"beginner", "intermediate", "advanced"}:
         level_key = "beginner"
+    profile_age = _profile_age_value(profile)
+    profile_location = str(profile.get("location") or "").strip().lower()
+    profile_gender = str(profile.get("gender") or "").strip().lower()
+    requested_days = int(_to_float(profile.get("training_days_per_week") or profile.get("trainingDaysPerWeek")) or 0)
 
     scored_programs: list[tuple[int, dict[str, Any]]] = []
     for program in programs:
@@ -2600,14 +2667,28 @@ def _generate_workout_plan_options_from_dataset(
         score = 0
         program_goal = _dataset_goal_key(program.get("goal"))
         if program_goal == goal_key:
-            score += 2
+            score += 8
+        elif program_goal:
+            score -= 6
         program_level = _dataset_level_key(program.get("level"))
         if program_level == level_key:
-            score += 1
+            score += 2
+        program_location = _dataset_location_key(program.get("location"))
+        if profile_location and program_location:
+            score += 4 if program_location == profile_location else -5
+        program_gender = _dataset_gender_key(program.get("gender"))
+        if profile_gender and program_gender:
+            score += 3 if program_gender == profile_gender else -5
+        score += _age_group_match_score(profile_age, program.get("age_group")) * 2
+        program_days = int(_to_float(program.get("training_days_per_week") or program.get("days_per_week")) or 0)
+        if requested_days and program_days:
+            score += max(-3, 3 - abs(program_days - requested_days))
         scored_programs.append((score, program))
 
     scored_programs.sort(key=lambda item: item[0], reverse=True)
-    selected = [item[1] for item in scored_programs[: max(1, min(count, len(scored_programs)))]]
+    exact_goal_programs = [item for item in scored_programs if _dataset_goal_key(item[1].get("goal")) == goal_key]
+    candidate_programs = exact_goal_programs or scored_programs
+    selected = [item[1] for item in candidate_programs[: max(1, min(count, len(candidate_programs)))]]
 
     rest_days = [d for d in profile.get("rest_days", []) if isinstance(d, str) and any(d == wd[0] for wd in WEEK_DAYS)]
     options: list[dict[str, Any]] = []
@@ -2792,6 +2873,10 @@ def _generate_workout_plan_options_from_dataset(
                 "title_ar": title_ar,
                 "goal": goal,
                 "fitness_level": _dataset_level_key(program.get("level")),
+                "age_group": str(program.get("age_group") or ""),
+                "gender_target": _dataset_gender_key(program.get("gender")),
+                "location_target": _dataset_location_key(program.get("location")),
+                "training_days_per_week": len(normalized_days),
                 "rest_days": [day_en for day_en, _ in WEEK_DAYS if day_en not in active_days],
                 "duration_days": 7,
                 "days": normalized_days,
@@ -2831,7 +2916,9 @@ def _generate_nutrition_plan_options_from_dataset(
         scored_programs.append((score, program))
 
     scored_programs.sort(key=lambda item: item[0], reverse=True)
-    selected = [item[1] for item in scored_programs[: max(1, min(count, len(scored_programs)))]]
+    exact_goal_programs = [item for item in scored_programs if _dataset_goal_key(item[1].get("goal")) == goal_key]
+    candidate_programs = exact_goal_programs or scored_programs
+    selected = [item[1] for item in candidate_programs[: max(1, min(count, len(candidate_programs)))]]
 
     options: list[dict[str, Any]] = []
     for program in selected:
@@ -3054,7 +3141,7 @@ def _focus_keywords_for_goal(goal: str) -> list[str]:
         return ["full body", "cardio", "core", "legs"]
     if goal_norm == "endurance":
         return ["cardio", "legs", "core"]
-    return ["full body", "chest", "back", "legs", "shoulders"]
+    return ["full body", "core", "legs", "back", "shoulders"]
 
 
 def _pick_training_exercises_for_focus(
@@ -3372,41 +3459,115 @@ def _generate_workout_plan_options_from_training(
         options.append(base_option)
 
     goal_focus = _focus_keywords_for_goal(str(profile.get("goal") or "general_fitness"))
-    variants = [
-        {
-            "key": "strength_data",
-            "title": "Data-Driven Strength Split",
-            "title_ar": "خطة قوة مبنية على البيانات",
-            "focus_cycle": goal_focus,
-            "exercise_count": 5,
-            "sets": "4",
-            "reps": "6-10",
-            "rest_seconds": 90,
-            "focus_titles": {"full body": "Full Body", "cardio": "Conditioning", "core": "Core"},
-        },
-        {
-            "key": "volume_data",
-            "title": "Multi-Dataset Hypertrophy Plan",
-            "title_ar": "خطة تضخيم متعددة البيانات",
-            "focus_cycle": goal_focus[::-1] or goal_focus,
-            "exercise_count": 6,
-            "sets": "4",
-            "reps": "8-15",
-            "rest_seconds": 75,
-            "focus_titles": {"full body": "Volume Session", "cardio": "Metabolic Session", "core": "Core Builder"},
-        },
-        {
-            "key": "efficient_data",
-            "title": "Efficient Equipment-Based Plan",
-            "title_ar": "خطة فعالة حسب المعدات",
-            "focus_cycle": ["full body", *goal_focus[:3]],
-            "exercise_count": 4,
-            "sets": "3",
-            "reps": "10-12",
-            "rest_seconds": 60,
-            "focus_titles": {"full body": "Equipment-Efficient", "cardio": "Conditioning", "core": "Core"},
-        },
-    ]
+    goal_key = _normalize_goal(profile.get("goal") or "general_fitness")
+    if goal_key == "muscle_gain":
+        variants = [
+            {
+                "key": "strength_data",
+                "title": "Data-Driven Strength Split",
+                "title_ar": "خطة قوة مبنية على البيانات",
+                "focus_cycle": goal_focus,
+                "exercise_count": 5,
+                "sets": "4",
+                "reps": "6-10",
+                "rest_seconds": 90,
+                "focus_titles": {"full body": "Full Body", "cardio": "Conditioning", "core": "Core"},
+            },
+            {
+                "key": "volume_data",
+                "title": "Multi-Dataset Hypertrophy Plan",
+                "title_ar": "خطة تضخيم متعددة البيانات",
+                "focus_cycle": goal_focus[::-1] or goal_focus,
+                "exercise_count": 6,
+                "sets": "4",
+                "reps": "8-15",
+                "rest_seconds": 75,
+                "focus_titles": {"full body": "Volume Session", "cardio": "Metabolic Session", "core": "Core Builder"},
+            },
+            {
+                "key": "efficient_data",
+                "title": "Efficient Equipment-Based Plan",
+                "title_ar": "خطة فعالة حسب المعدات",
+                "focus_cycle": ["full body", *goal_focus[:3]],
+                "exercise_count": 4,
+                "sets": "3",
+                "reps": "10-12",
+                "rest_seconds": 60,
+                "focus_titles": {"full body": "Equipment-Efficient", "cardio": "Conditioning", "core": "Core"},
+            },
+        ]
+    elif goal_key == "fat_loss":
+        variants = [
+            {
+                "key": "conditioning_data",
+                "title": "Data-Driven Fat-Loss Split",
+                "title_ar": "خطة تنشيف مبنية على البيانات",
+                "focus_cycle": goal_focus,
+                "exercise_count": 5,
+                "sets": "3",
+                "reps": "10-15",
+                "rest_seconds": 60,
+                "focus_titles": {"full body": "Full Body Burn", "cardio": "Conditioning", "core": "Core Stability"},
+            },
+            {
+                "key": "metabolic_data",
+                "title": "Conditioning and Calorie-Burn Plan",
+                "title_ar": "خطة تكييف وحرق سعرات",
+                "focus_cycle": goal_focus[::-1] or goal_focus,
+                "exercise_count": 5,
+                "sets": "3",
+                "reps": "12-18",
+                "rest_seconds": 45,
+                "focus_titles": {"full body": "Conditioning Circuit", "cardio": "Cardio Session", "core": "Core Builder"},
+            },
+            {
+                "key": "efficient_data",
+                "title": "Efficient Fat-Loss Plan",
+                "title_ar": "خطة فعالة للتنشيف",
+                "focus_cycle": ["full body", *goal_focus[:3]],
+                "exercise_count": 4,
+                "sets": "3",
+                "reps": "10-14",
+                "rest_seconds": 50,
+                "focus_titles": {"full body": "Efficient Full Body", "cardio": "Conditioning", "core": "Core"},
+            },
+        ]
+    else:
+        variants = [
+            {
+                "key": "balanced_data",
+                "title": "Data-Driven General Fitness Split",
+                "title_ar": "خطة لياقة عامة مبنية على البيانات",
+                "focus_cycle": goal_focus,
+                "exercise_count": 5,
+                "sets": "3",
+                "reps": "8-12",
+                "rest_seconds": 75,
+                "focus_titles": {"full body": "Full Body", "cardio": "Conditioning", "core": "Core"},
+            },
+            {
+                "key": "balanced_full_body",
+                "title": "Balanced Full-Body Fitness Plan",
+                "title_ar": "خطة لياقة متوازنة لكامل الجسم",
+                "focus_cycle": goal_focus[::-1] or goal_focus,
+                "exercise_count": 5,
+                "sets": "3",
+                "reps": "10-14",
+                "rest_seconds": 60,
+                "focus_titles": {"full body": "Balanced Full Body", "cardio": "Conditioning", "core": "Core Builder"},
+            },
+            {
+                "key": "efficient_data",
+                "title": "Efficient General Fitness Plan",
+                "title_ar": "خطة لياقة عامة فعالة",
+                "focus_cycle": ["full body", *goal_focus[:3]],
+                "exercise_count": 4,
+                "sets": "3",
+                "reps": "10-12",
+                "rest_seconds": 60,
+                "focus_titles": {"full body": "Efficient Full Body", "cardio": "Conditioning", "core": "Core"},
+            },
+        ]
 
     for variant in variants:
         option = _build_training_variant_workout_option(profile, language, variant, exercise_pool)
@@ -4650,6 +4811,12 @@ def _generate_workout_plan(profile: dict[str, Any], language: str) -> dict[str, 
     difficulty = str(profile.get("fitness_level", "beginner")).lower()
     requested_days = int(_to_float(profile.get("training_days_per_week")) or 0)
     training_days = max(1, min(7, requested_days)) if requested_days > 0 else 6
+    age = _profile_age_value(profile)
+    if age is not None:
+        if age <= 20:
+            training_days = min(training_days, 4)
+        elif age >= 51:
+            training_days = min(training_days, 3)
     rest_days = profile.get("rest_days") or []
     rest_days = [day for day in rest_days if isinstance(day, str)]
     if not rest_days:
@@ -4662,8 +4829,11 @@ def _generate_workout_plan(profile: dict[str, Any], language: str) -> dict[str, 
         weekly_focus = ["legs", "core", "back", "chest", "shoulders"]
         default_sets, default_reps = 3, "12-15"
     else:
-        weekly_focus = ["core", "legs", "back", "chest", "shoulders"]
+        weekly_focus = ["full body", "core", "legs", "back", "shoulders"]
         default_sets, default_reps = 3, "10-12"
+    if age is not None and age >= 51:
+        default_sets = min(default_sets, 3)
+        default_reps = "10-15" if goal != "muscle_gain" else "8-10"
 
     plan_days: list[dict[str, Any]] = []
     focus_index = 0
@@ -6447,12 +6617,25 @@ def _plan_option_signature(plan_type: str, plan: dict[str, Any]) -> str:
 def _plan_option_recommendation_score(plan_type: str, option: dict[str, Any], profile: dict[str, Any]) -> float:
     goal = _normalize_goal(profile.get("goal"))
     preferred_days = int(_to_float(profile.get("training_days_per_week") or profile.get("trainingDaysPerWeek")) or 0)
+    profile_age = _profile_age_value(profile)
+    profile_gender = str(profile.get("gender") or "").strip().lower()
+    profile_location = str(profile.get("location") or "").strip().lower()
 
     if plan_type == "workout":
         target_days = preferred_days or {"muscle_gain": 4, "fat_loss": 4}.get(goal, 3)
         metrics = _workout_plan_option_metrics(option)
         focus_text = normalize_text(metrics["focus"])
         score = -abs(int(metrics["training_days"]) - target_days) * 3
+        option_goal = _normalize_goal(option.get("goal"))
+        if option_goal:
+            score += 5 if option_goal == goal else -8
+        option_gender = str(option.get("gender_target") or "").strip().lower()
+        if profile_gender and option_gender:
+            score += 3 if option_gender == profile_gender else -6
+        option_location = str(option.get("location_target") or "").strip().lower()
+        if profile_location and option_location:
+            score += 3 if option_location == profile_location else -6
+        score += _age_group_match_score(profile_age, option.get("age_group")) * 2
         if goal == "muscle_gain":
             score += metrics["training_days"]
             score += 1 if _contains_any(focus_text, {"upper", "lower", "push", "pull", "strength", "hypertrophy", "صدر", "ظهر", "ارجل", "أرجل"}) else 0
@@ -6483,7 +6666,16 @@ def _plan_option_recommendation_reason(plan_type: str, option: dict[str, Any], p
         target_days = preferred_days or {"muscle_gain": 4, "fat_loss": 4}.get(goal, 3)
         selected = _workout_plan_option_metrics(option)
         rhythm_label = "balanced" if 3 <= int(selected["training_days"]) <= 4 else ("more intense" if int(selected["training_days"]) >= 5 else "lighter")
-        return f"it is closest to {target_days} training days and gives you a {rhythm_label} weekly rhythm"
+        reasons: list[str] = [f"it is closest to {target_days} training days and gives you a {rhythm_label} weekly rhythm"]
+        option_goal = _normalize_goal(option.get("goal"))
+        if goal == "general_fitness" and option_goal == "general_fitness":
+            reasons.append("it stays aligned with general fitness instead of a bulking-focused split")
+        elif option_goal and option_goal == goal:
+            reasons.append("it matches your saved goal")
+        age_match = _age_group_match_score(_profile_age_value(profile), option.get("age_group"))
+        if age_match >= 4:
+            reasons.append("it matches your age range better")
+        return " and ".join(reasons)
 
     selected = _nutrition_plan_option_metrics(option)
     if goal == "muscle_gain":
@@ -6654,15 +6846,32 @@ def _expand_workout_option_pool(
         )
         if isinstance(item, dict)
     ]
-    schemes = [
-        {"key": "hypertrophy", "label_en": "Hypertrophy", "label_ar": "تضخيم", "sets": "4", "reps": "8-12", "rest_seconds": 75, "exercise_count": 5},
-        {"key": "conditioning", "label_en": "Conditioning", "label_ar": "تكييف", "sets": "3", "reps": "12-18", "rest_seconds": 45, "exercise_count": 5},
-        {"key": "volume", "label_en": "Volume Build", "label_ar": "بناء حجم", "sets": "5", "reps": "10-15", "rest_seconds": 60, "exercise_count": 6},
-        {"key": "power", "label_en": "Power Emphasis", "label_ar": "تركيز قدرة", "sets": "4", "reps": "4-6", "rest_seconds": 135, "exercise_count": 4},
-        {"key": "balanced", "label_en": "Balanced Week", "label_ar": "أسبوع متوازن", "sets": "4", "reps": "8-10", "rest_seconds": 80, "exercise_count": 5},
-        {"key": "efficient", "label_en": "Efficient Split", "label_ar": "تقسيم فعال", "sets": "3", "reps": "10-12", "rest_seconds": 60, "exercise_count": 4},
-        {"key": "athletic", "label_en": "Athletic Performance", "label_ar": "أداء رياضي", "sets": "4", "reps": "6-10", "rest_seconds": 90, "exercise_count": 5},
-    ]
+    goal_key = _normalize_goal(profile.get("goal") or "general_fitness")
+    if goal_key == "muscle_gain":
+        schemes = [
+            {"key": "hypertrophy", "label_en": "Hypertrophy", "label_ar": "تضخيم", "sets": "4", "reps": "8-12", "rest_seconds": 75, "exercise_count": 5},
+            {"key": "volume", "label_en": "Volume Build", "label_ar": "بناء حجم", "sets": "5", "reps": "10-15", "rest_seconds": 60, "exercise_count": 6},
+            {"key": "power", "label_en": "Power Emphasis", "label_ar": "تركيز قدرة", "sets": "4", "reps": "4-6", "rest_seconds": 135, "exercise_count": 4},
+            {"key": "balanced", "label_en": "Balanced Week", "label_ar": "أسبوع متوازن", "sets": "4", "reps": "8-10", "rest_seconds": 80, "exercise_count": 5},
+            {"key": "efficient", "label_en": "Efficient Split", "label_ar": "تقسيم فعال", "sets": "3", "reps": "10-12", "rest_seconds": 60, "exercise_count": 4},
+            {"key": "athletic", "label_en": "Athletic Performance", "label_ar": "أداء رياضي", "sets": "4", "reps": "6-10", "rest_seconds": 90, "exercise_count": 5},
+        ]
+    elif goal_key == "fat_loss":
+        schemes = [
+            {"key": "conditioning", "label_en": "Conditioning", "label_ar": "تكييف", "sets": "3", "reps": "12-18", "rest_seconds": 45, "exercise_count": 5},
+            {"key": "fat_loss", "label_en": "Fat-Loss Circuit", "label_ar": "دائرة تنشيف", "sets": "3", "reps": "12-16", "rest_seconds": 45, "exercise_count": 5},
+            {"key": "athletic", "label_en": "Athletic Performance", "label_ar": "أداء رياضي", "sets": "4", "reps": "6-10", "rest_seconds": 90, "exercise_count": 5},
+            {"key": "balanced", "label_en": "Balanced Week", "label_ar": "أسبوع متوازن", "sets": "3", "reps": "8-12", "rest_seconds": 70, "exercise_count": 5},
+            {"key": "efficient", "label_en": "Efficient Split", "label_ar": "تقسيم فعال", "sets": "3", "reps": "10-14", "rest_seconds": 55, "exercise_count": 4},
+        ]
+    else:
+        schemes = [
+            {"key": "balanced", "label_en": "Balanced Week", "label_ar": "أسبوع متوازن", "sets": "3", "reps": "8-12", "rest_seconds": 75, "exercise_count": 5},
+            {"key": "conditioning", "label_en": "Conditioning", "label_ar": "تكييف", "sets": "3", "reps": "12-16", "rest_seconds": 50, "exercise_count": 5},
+            {"key": "athletic", "label_en": "Athletic Performance", "label_ar": "أداء رياضي", "sets": "4", "reps": "6-10", "rest_seconds": 90, "exercise_count": 5},
+            {"key": "efficient", "label_en": "Efficient Split", "label_ar": "تقسيم فعال", "sets": "3", "reps": "10-12", "rest_seconds": 60, "exercise_count": 4},
+            {"key": "full_body", "label_en": "Full-Body Fitness", "label_ar": "لياقة لكامل الجسم", "sets": "3", "reps": "10-14", "rest_seconds": 60, "exercise_count": 5},
+        ]
 
     variant_index = 0
     max_attempts = target_count * 12
