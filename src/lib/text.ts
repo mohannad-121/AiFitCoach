@@ -1,7 +1,8 @@
 const MOJIBAKE_PATTERN = /(?:Ã.|Ø.|Ù.|ðŸ|â€|â€™|â€œ|â€\u009d|Â|[\u201a-\u201e\u2020-\u2022\u2026\u2030\u2039\u203a\u20AC\u2122\u0152\u0153\u0160\u0161\u0178\u017D\u017E])/;
 const ARABIC_CHAR_PATTERN = /[\u0600-\u06FF]/g;
+const ARABIC_CHAR_DETECTION_PATTERN = /[\u0600-\u06FF]/;
 const MOJIBAKE_MARKERS = ['Ø', 'Ù', 'Ã', 'Â', 'Ð', 'â', 'ï»¿'] as const;
-const BIDI_NUMBER_RUN_PATTERN = /(\d[\d.,/%:+\-]*\d|\d{2,})/g;
+const BIDI_LTR_RUN_PATTERN = /\d[\d.,/%:+\-]*(?:\s+[A-Za-z][A-Za-z0-9/%:+\-]*)*/g;
 const LTR_ISOLATE = '\u2066';
 const POP_DIRECTIONAL_ISOLATE = '\u2069';
 
@@ -92,11 +93,11 @@ export function bilingualLabel(english: string, arabic: string, language: 'en' |
 
 export function stabilizeBidiNumbers(value: string): string {
   if (!value) return value;
-  if (!ARABIC_CHAR_PATTERN.test(value) || !BIDI_NUMBER_RUN_PATTERN.test(value)) {
-    BIDI_NUMBER_RUN_PATTERN.lastIndex = 0;
+  if (!ARABIC_CHAR_DETECTION_PATTERN.test(value) || !BIDI_LTR_RUN_PATTERN.test(value)) {
+    BIDI_LTR_RUN_PATTERN.lastIndex = 0;
     return value;
   }
 
-  BIDI_NUMBER_RUN_PATTERN.lastIndex = 0;
-  return value.replace(BIDI_NUMBER_RUN_PATTERN, (match) => `${LTR_ISOLATE}${match}${POP_DIRECTIONAL_ISOLATE}`);
+  BIDI_LTR_RUN_PATTERN.lastIndex = 0;
+  return value.replace(BIDI_LTR_RUN_PATTERN, (match) => `${LTR_ISOLATE}${match}${POP_DIRECTIONAL_ISOLATE}`);
 }
