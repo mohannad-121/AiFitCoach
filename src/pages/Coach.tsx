@@ -120,6 +120,18 @@ interface PendingAttachment {
   previewUrl: string | null;
 }
 
+interface FitbitSummarySection {
+  title: string;
+  rows: Array<{ label: string; value: string }>;
+  paragraphs: string[];
+}
+
+interface FitbitSummaryCardData {
+  heading: string;
+  intro: string[];
+  sections: FitbitSummarySection[];
+}
+
 const EMOJI_REGEX = /([\p{Extended_Pictographic}\uFE0F]+)/gu;
 
 const renderTextWithEmoji = (text: string, keyPrefix: string) => {
@@ -517,6 +529,10 @@ const normalizeChatMessage = (message: Partial<ChatMessage>): ChatMessage => {
 
 const buildMessageCopyText = (message: ChatMessage, language: 'en' | 'ar') => {
   const visibleText = getDisplayMessageContent(message.content, language).trim();
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6fe03c2 (Fix Fitbit Arabic summary rendering)
   const attachments = message.attachments || [];
   const parts: string[] = [];
   if (attachments.length) {
@@ -528,6 +544,155 @@ const buildMessageCopyText = (message: ChatMessage, language: 'en' | 'ar') => {
   }
   return parts.join('\n\n').trim();
 };
+
+const FITBIT_SUMMARY_HEADINGS = [
+  'الحالة الخاصة ببيانات fitbit',
+  'الحالة الخاصة ببيانات fitbit:',
+  'fitbit summary',
+  'fitbit data summary',
+];
+
+const FITBIT_SECTION_TITLES = [
+  'خلاصة اليوم',
+  'ملخص اليوم',
+  'متوسط آخر أسبوع',
+  'متوسط آخر 7 أيام',
+  'ملاحظات إضافية',
+  'الخطوة التالية',
+  'today summary',
+  '7-day average',
+  'weekly average',
+  'notes',
+  'next step',
+];
+
+const normalizeFitbitLine = (line: string) =>
+  line
+    .trim()
+    .replace(/^[-*•]\s*/, '')
+    .replace(/^[\p{Extended_Pictographic}\uFE0F\u200D]+\s*/u, '')
+    .trim();
+
+const isFitbitSummaryMessage = (content: string) => {
+  const normalized = content.trim().toLowerCase();
+  return FITBIT_SUMMARY_HEADINGS.some((heading) => normalized.includes(heading));
+};
+
+const isFitbitSectionTitle = (line: string) => {
+  const normalized = normalizeFitbitLine(line).toLowerCase().replace(/:$/, '').trim();
+  return FITBIT_SECTION_TITLES.some((title) => normalized === title);
+};
+
+const splitFitbitMetricLine = (line: string) => {
+  const normalized = normalizeFitbitLine(line);
+  const separatorIndex = normalized.indexOf(':');
+  if (separatorIndex <= 0 || separatorIndex >= normalized.length - 1) {
+    return null;
+  }
+
+  const label = normalized.slice(0, separatorIndex).trim();
+  const value = normalized.slice(separatorIndex + 1).trim();
+  if (!label || !value) {
+    return null;
+  }
+
+  return { label, value };
+};
+
+const parseFitbitSummaryCard = (content: string): FitbitSummaryCardData | null => {
+  if (!isFitbitSummaryMessage(content)) {
+    return null;
+  }
+
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return null;
+  }
+
+  const heading = normalizeFitbitLine(lines[0]);
+  const sections: FitbitSummarySection[] = [];
+  const intro: string[] = [];
+  let currentSection: FitbitSummarySection | null = null;
+
+  for (const rawLine of lines.slice(1)) {
+    const line = normalizeFitbitLine(rawLine);
+    if (!line) {
+      continue;
+    }
+
+    if (isFitbitSectionTitle(line)) {
+      currentSection = {
+        title: line.replace(/:$/, '').trim(),
+        rows: [],
+        paragraphs: [],
+      };
+      sections.push(currentSection);
+      continue;
+    }
+
+    const metric = splitFitbitMetricLine(line);
+    if (metric && currentSection) {
+      currentSection.rows.push(metric);
+      continue;
+    }
+
+    if (currentSection) {
+      currentSection.paragraphs.push(line);
+    } else {
+      intro.push(line);
+    }
+  }
+
+  if (!sections.length && !intro.length) {
+    return null;
+  }
+
+  return { heading, intro, sections };
+};
+
+const FitbitSummaryCard = ({ data }: { data: FitbitSummaryCardData }) => (
+  <section className="fitbit-summary-card" dir="rtl">
+    <header className="fitbit-summary-header">
+      <h3>{data.heading}</h3>
+      {data.intro.length > 0 && (
+        <div className="fitbit-summary-intro">
+          {data.intro.map((paragraph, index) => (
+            <p key={`fitbit-intro-${index}`}>{paragraph}</p>
+          ))}
+        </div>
+      )}
+    </header>
+
+    <div className="fitbit-summary-sections">
+      {data.sections.map((section, sectionIndex) => (
+        <section key={`fitbit-section-${sectionIndex}`} className="fitbit-summary-section">
+          <h4>{section.title}</h4>
+          {section.rows.length > 0 && (
+            <dl className="fitbit-summary-grid">
+              {section.rows.map((row, rowIndex) => (
+                <div key={`fitbit-row-${sectionIndex}-${rowIndex}`} className="fitbit-summary-row">
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {section.paragraphs.length > 0 && (
+            <div className="fitbit-summary-notes">
+              {section.paragraphs.map((paragraph, paragraphIndex) => (
+                <p key={`fitbit-note-${sectionIndex}-${paragraphIndex}`}>{paragraph}</p>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  </section>
+);
 
 export function CoachPage() {
   const { t, language } = useLanguage();
@@ -2701,6 +2866,10 @@ export function CoachPage() {
                 const isCopied = copiedMessageKey === messageKey;
                 const displayMessageText = getDisplayMessageContent(message.content, language);
                 const visibleMessageText = displayMessageText.trim();
+<<<<<<< HEAD
+=======
+                                const fitbitSummaryCard = message.role === 'assistant' ? parseFitbitSummaryCard(displayMessageText) : null;
+>>>>>>> 6fe03c2 (Fix Fitbit Arabic summary rendering)
                 const copyText = buildMessageCopyText(message, language);
                 const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
                 return (
@@ -2720,7 +2889,9 @@ export function CoachPage() {
                   )}
                   {visibleMessageText && (
                     <div className={`px-5 py-4.5 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
-                      {message.role === 'assistant' ? (
+                      {message.role === 'assistant' && fitbitSummaryCard ? (
+                        <FitbitSummaryCard data={fitbitSummaryCard} />
+                      ) : message.role === 'assistant' ? (
                         <div className={`chat-message-content prose prose-sm prose-invert max-w-none ${language === 'ar' ? 'chat-message-content-ar' : ''}`}>
                           <ReactMarkdown components={markdownComponents}>{displayMessageText}</ReactMarkdown>
                         </div>
