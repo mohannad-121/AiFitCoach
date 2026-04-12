@@ -6,7 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { repairMojibake } from '@/lib/text';
+import { repairMojibake, stabilizeBidiNumbers } from '@/lib/text';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useUser } from '@/contexts/UserContext';
@@ -429,6 +429,11 @@ const getAttachmentKind = (file: File): PendingAttachment['kind'] | null => {
 
 const cleanMessageContent = (content: string) => content;
 
+const getDisplayMessageContent = (content: string, language: 'en' | 'ar') => {
+  const cleaned = cleanMessageContent(content);
+  return language === 'ar' ? stabilizeBidiNumbers(cleaned) : cleaned;
+};
+
 const buildOutgoingUserMessage = (message: ChatMessage, language: 'en' | 'ar') => {
   const trimmed = cleanMessageContent(message.content).trim();
   const attachments = message.attachments || [];
@@ -511,7 +516,7 @@ const normalizeChatMessage = (message: Partial<ChatMessage>): ChatMessage => {
 };
 
 const buildMessageCopyText = (message: ChatMessage, language: 'en' | 'ar') => {
-  const visibleText = cleanMessageContent(message.content).trim();
+  const visibleText = getDisplayMessageContent(message.content, language).trim();
   const attachments = message.attachments || [];
   const parts: string[] = [];
   if (attachments.length) {
@@ -2694,7 +2699,8 @@ export function CoachPage() {
               (() => {
                 const messageKey = `${currentId}-${index}-${message.timestamp}`;
                 const isCopied = copiedMessageKey === messageKey;
-                const visibleMessageText = cleanMessageContent(message.content).trim();
+                const displayMessageText = getDisplayMessageContent(message.content, language);
+                const visibleMessageText = displayMessageText.trim();
                 const copyText = buildMessageCopyText(message, language);
                 const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
                 return (
@@ -2716,10 +2722,10 @@ export function CoachPage() {
                     <div className={`px-5 py-4.5 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
                       {message.role === 'assistant' ? (
                         <div className={`chat-message-content prose prose-sm prose-invert max-w-none ${language === 'ar' ? 'chat-message-content-ar' : ''}`}>
-                          <ReactMarkdown components={markdownComponents}>{cleanMessageContent(message.content)}</ReactMarkdown>
+                          <ReactMarkdown components={markdownComponents}>{displayMessageText}</ReactMarkdown>
                         </div>
                       ) : (
-                        <p className="chat-message-content whitespace-pre-wrap">{renderEmojiAwareChildren(message.content, `user-${messageKey}`)}</p>
+                        <p className="chat-message-content whitespace-pre-wrap">{renderEmojiAwareChildren(displayMessageText, `user-${messageKey}`)}</p>
                       )}
                     </div>
                   )}
