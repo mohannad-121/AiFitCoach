@@ -10425,7 +10425,7 @@ def _is_direct_attachment_request(message: str, attachment_context: Optional[dic
         "ماذا ترى",
         "ماذا مكتوب",
     }
-    return any(keyword in normalized for keyword in direct_keywords) or len(normalized.split()) <= 6
+    return any(keyword in normalized for keyword in direct_keywords)
 
 
 def _attachment_direct_reply(attachment_context: dict[str, Any], language: str) -> str:
