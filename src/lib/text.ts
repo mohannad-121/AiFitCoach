@@ -2,11 +2,7 @@ const MOJIBAKE_PATTERN = /(?:Ã.|Ø.|Ù.|ðŸ|â€|â€™|â€œ|â€\u009d
 const ARABIC_CHAR_PATTERN = /[\u0600-\u06FF]/g;
 const ARABIC_CHAR_DETECTION_PATTERN = /[\u0600-\u06FF]/;
 const MOJIBAKE_MARKERS = ['Ø', 'Ù', 'Ã', 'Â', 'Ð', 'â', 'ï»¿'] as const;
-<<<<<<< HEAD
-const BIDI_LTR_RUN_PATTERN = /\d[\d.,/%:+\-]*(?:\s+[A-Za-z][A-Za-z0-9/%:+\-]*)*/g;
-=======
 const BIDI_LTR_RUN_PATTERN = /\d[\d.,/%:+\-]*(?:\s+(?:[A-Za-z\u0600-\u06FF][A-Za-z0-9\u0600-\u06FF/%:+\-]*)){0,2}/g;
->>>>>>> 6fe03c2 (Fix Fitbit Arabic summary rendering)
 const LTR_ISOLATE = '\u2066';
 const POP_DIRECTIONAL_ISOLATE = '\u2069';
 

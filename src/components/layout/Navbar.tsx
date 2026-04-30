@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Home, Dumbbell, MessageCircle, User, Globe, Calendar, LogOut, LogIn } from 'lucide-react';
+import { Home, Dumbbell, MessageCircle, User, Globe, Calendar, LogOut, LogIn, Shield, BellRing } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { buttonVariants, Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ export function Navbar() {
     { path: '/workouts', icon: Dumbbell, label: t('nav.workouts') },
     { path: '/coach', icon: MessageCircle, label: t('nav.coach') },
     { path: '/schedule', icon: Calendar, label: language === 'ar' ? 'الجدول' : 'Schedule' },
+    { path: '/coach-notifications', icon: BellRing, label: language === 'ar' ? 'إشعارات المدرب' : 'Coach Notes' },
     { path: '/profile', icon: User, label: t('nav.profile') },
   ];
 
@@ -68,6 +69,19 @@ export function Navbar() {
               <Globe className="w-4 h-4 mr-1" />
               {language === 'en' ? 'عربي' : 'EN'}
             </Button>
+
+            <Link
+              to="/admin"
+              className={cn(
+                buttonVariants({ variant: location.pathname === '/admin' ? 'default' : 'outline', size: 'sm' }),
+                location.pathname === '/admin'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border-border/50 text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Shield className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">{language === 'ar' ? 'الإدارة' : 'Admin'}</span>
+            </Link>
 
             {user ? (
               <Button variant="ghost" size="sm" onClick={signOut} className="hidden md:flex text-muted-foreground hover:text-foreground">

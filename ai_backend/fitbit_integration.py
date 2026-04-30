@@ -173,6 +173,7 @@ class FitbitConnectionStore:
 
 class FitbitIntegration:
     def __init__(self, supabase_context: SupabaseContextRepository, fallback_path: Path) -> None:
+        self.supabase_context = supabase_context
         self.client_id = str(os.getenv("FITBIT_CLIENT_ID", "")).strip()
         self.client_secret = str(os.getenv("FITBIT_CLIENT_SECRET", "")).strip()
         self.redirect_uri = str(os.getenv("FITBIT_REDIRECT_URI", "")).strip()
@@ -376,7 +377,7 @@ class FitbitIntegration:
             record = self._refresh_if_needed(record)
             profile_payload = self._fetch_profile(record["access_token"])
             sync_payload = self._fetch_sync_payload(record["access_token"])
-            return self.store.upsert(
+            updated_record = self.store.upsert(
                 user_id,
                 {
                     **record,
@@ -386,6 +387,16 @@ class FitbitIntegration:
                     "last_sync_at": _utc_now().isoformat(),
                 },
             )
+            try:
+                self.supabase_context.evaluate_workout_adherence(
+                    user_id,
+                    fitbit_summary=self._coach_payload(updated_record),
+                    issue_reminder=False,
+                    persist_result=True,
+                )
+            except Exception:
+                logger.warning("Failed persisting Fitbit workout evidence", exc_info=True)
+            return updated_record
         except ValueError as exc:
             self._raise_sync_error(user_id, exc)
 
@@ -817,6 +828,7 @@ class FitbitIntegration:
         profile_data = record.get("profile_data") if isinstance(record.get("profile_data"), dict) else {}
         last_sync_data = record.get("last_sync_data") if isinstance(record.get("last_sync_data"), dict) else {}
         today_summary = last_sync_data.get("today_summary") if isinstance(last_sync_data.get("today_summary"), dict) else last_sync_data
+        coach_payload = self._coach_payload(record)
         return {
             "configured": True,
             "connected": True,
@@ -826,6 +838,7 @@ class FitbitIntegration:
             "last_sync_at": record.get("last_sync_at"),
             "profile": profile_data,
             "today_summary": today_summary,
+            "coach_summary": coach_payload.get("coach_summary") if isinstance(coach_payload.get("coach_summary"), dict) else {},
             "fitbit_data": last_sync_data,
         }
 
@@ -869,6 +882,14 @@ class FitbitIntegration:
             for item in heart_history
             if isinstance(item, dict) and item.get("resting_heart_rate") is not None
         ]
+        latest_resting_heart_rate = next(
+            (
+                float(item.get("resting_heart_rate"))
+                for item in reversed(heart_history)
+                if isinstance(item, dict) and item.get("resting_heart_rate") is not None
+            ),
+            None,
+        )
         weight_values = [
             float(item.get("weight_kg"))
             for item in weight_history
@@ -899,6 +920,7 @@ class FitbitIntegration:
                 "avg_calories_in_7d": _avg(calories_in_values),
                 "avg_sleep_hours_7d": round((_avg(sleep_values) or 0) / 60, 2) if sleep_values else None,
                 "avg_resting_heart_rate_7d": _avg(resting_hr_values),
+                "latest_resting_heart_rate": latest_resting_heart_rate,
                 "avg_weight_7d": _avg(weight_values),
                 "avg_water_ml_7d": _avg(water_values),
                 "latest_weight_kg": weight_values[-1] if weight_values else None,

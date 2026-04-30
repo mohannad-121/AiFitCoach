@@ -23,6 +23,12 @@ type FitbitStatus = {
     member_since?: string;
     weight_kg?: number | null;
   };
+  coach_summary?: {
+    avg_resting_heart_rate_7d?: number | null;
+    latest_resting_heart_rate?: number | null;
+    total_very_active_minutes_7d?: number;
+    total_fairly_active_minutes_7d?: number;
+  };
   today_summary?: {
     date?: string;
     steps?: number;
@@ -55,6 +61,21 @@ function getFitbitErrorMessage(error: unknown, language: string) {
 }
 
 const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
+
+async function loadLatestProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.[0] ?? null;
+}
 
 export function ProfilePage() {
   const { t, language } = useLanguage();
@@ -135,12 +156,8 @@ export function ProfilePage() {
   // Sync profile from DB on mount
   useEffect(() => {
     if (user) {
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle()
-        .then(({ data }) => {
+      loadLatestProfile(user.id)
+        .then((data) => {
           if (data && data.onboarding_completed) {
             updateProfile({
               name: data.name,
@@ -161,9 +178,12 @@ export function ProfilePage() {
               onboardingCompleted: data.onboarding_completed,
             });
           }
+        })
+        .catch((error) => {
+          console.warn('Failed loading profile from Supabase:', error);
         });
     }
-  }, [user]);
+  }, [user, updateProfile]);
 
   if (!profile || !profile.onboardingCompleted) {
     return (
@@ -381,8 +401,12 @@ export function ProfilePage() {
                   <p className="text-xl font-semibold">{fitbitStatus.today_summary?.distance_km ?? 0} km</p>
                 </div>
                 <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبض الراحة' : 'Resting HR'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? '--'}</p>
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبضات القلب/الدقيقة' : 'Heart Beats / Min'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? fitbitStatus.coach_summary?.latest_resting_heart_rate ?? '--'}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'متوسط نبضات 7 أيام' : 'Avg Heart Beats (7d)'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.coach_summary?.avg_resting_heart_rate_7d ?? '--'}</p>
                 </div>
                 <div className="bg-secondary/50 rounded-xl p-4">
                   <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الوزن المتزامن' : 'Synced weight'}</p>

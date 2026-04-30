@@ -51,6 +51,21 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 const LEGACY_PROFILE_STORAGE_KEY = 'fitcoach_profile';
 const getProfileStorageKey = (userId: string) => `fitcoach_profile_${userId}`;
 
+async function loadLatestProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.[0] ?? null;
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [profile, setProfileState] = useState<UserProfile | null>(null);
@@ -94,12 +109,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
+    loadLatestProfile(user.id)
+      .then((data) => {
         if (!isMounted || !data) return;
 
         setProfileState({

@@ -10,6 +10,58 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
+async function saveProfileForUser(userId: string, finalProfile: UserProfile) {
+  const payload = {
+    user_id: userId,
+    name: finalProfile.name,
+    age: finalProfile.age,
+    gender: finalProfile.gender,
+    weight: finalProfile.weight,
+    height: finalProfile.height,
+    goal: finalProfile.goal,
+    location: finalProfile.location,
+    fitness_level: finalProfile.fitnessLevel,
+    training_days_per_week: finalProfile.trainingDaysPerWeek,
+    equipment: finalProfile.equipment || '',
+    injuries: finalProfile.injuries || '',
+    activity_level: finalProfile.activityLevel,
+    dietary_preferences: finalProfile.dietaryPreferences || '',
+    chronic_conditions: finalProfile.chronicConditions || '',
+    allergies: finalProfile.allergies || '',
+    onboarding_completed: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const existingId = existingRows?.[0]?.id;
+  if (existingId) {
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', existingId);
+
+    if (updateError) {
+      throw updateError;
+    }
+    return;
+  }
+
+  const { error: insertError } = await supabase.from('profiles').insert(payload);
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 const steps = ['basic', 'body', 'health', 'goals', 'training', 'location'] as const;
 
 export function OnboardingPage() {
@@ -35,25 +87,7 @@ export function OnboardingPage() {
 
         if (user && supabase && supabase.from) {
           try {
-            await supabase.from('profiles').upsert({
-              user_id: user.id,
-              name: finalProfile.name,
-              age: finalProfile.age,
-              gender: finalProfile.gender,
-              weight: finalProfile.weight,
-              height: finalProfile.height,
-              goal: finalProfile.goal,
-              location: finalProfile.location,
-              fitness_level: finalProfile.fitnessLevel,
-              training_days_per_week: finalProfile.trainingDaysPerWeek,
-              equipment: finalProfile.equipment || '',
-              injuries: finalProfile.injuries || '',
-              activity_level: finalProfile.activityLevel,
-              dietary_preferences: finalProfile.dietaryPreferences || '',
-              chronic_conditions: finalProfile.chronicConditions || '',
-              allergies: finalProfile.allergies || '',
-              onboarding_completed: true,
-            });
+            await saveProfileForUser(user.id, finalProfile);
           } catch (error) {
             console.warn('Failed to save profile to Supabase:', error);
           }

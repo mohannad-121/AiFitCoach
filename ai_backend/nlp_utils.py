@@ -157,9 +157,10 @@ def fuzzy_contains_any(text: str, keywords: set[str]) -> bool:
         if keyword_norm and keyword_norm in normalized_text:
             return True
 
-    text_tokens = set(_tokenize_cached(normalized_text))
-    if not text_tokens:
+    ordered_tokens = _tokenize_cached(normalized_text)
+    if not ordered_tokens:
         return False
+    text_tokens = set(ordered_tokens)
 
     # Fuzzy token matching for misspellings (single-token keywords).
     token_keywords = [normalize_text(k) for k in keywords if " " not in normalize_text(k)]
@@ -168,17 +169,24 @@ def fuzzy_contains_any(text: str, keywords: set[str]) -> bool:
             if kw and fuzzy_token_match(tk, kw):
                 return True
 
-    # Fuzzy phrase matching: all phrase tokens should be approximately present.
+    # Fuzzy phrase matching: phrase tokens must appear in the same order.
     phrase_keywords = [normalize_text(k) for k in keywords if " " in normalize_text(k)]
     for phrase in phrase_keywords:
         phrase_tokens = [pt for pt in phrase.split(" ") if pt]
         if not phrase_tokens:
             continue
+        search_index = 0
         matched_all = True
         for phrase_token in phrase_tokens:
-            if not any(fuzzy_token_match(tk, phrase_token) for tk in text_tokens):
+            found_index = None
+            for idx in range(search_index, len(ordered_tokens)):
+                if fuzzy_token_match(ordered_tokens[idx], phrase_token):
+                    found_index = idx
+                    break
+            if found_index is None:
                 matched_all = False
                 break
+            search_index = found_index + 1
         if matched_all:
             return True
     return False

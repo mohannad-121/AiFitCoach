@@ -21,6 +21,7 @@ from nlp_utils import repair_mojibake
 logger = logging.getLogger(__name__)
 
 NUTRITION_PREFIX = "\U0001F37D\uFE0F"
+WORKOUT_EVIDENCE_TABLE = "workout_evidence"
 WORKOUT_REMINDER_TABLE = "workout_reminder_events"
 WORKOUT_REMINDER_TYPE = "missed_workout"
 DEFAULT_WORKOUT_REMINDER_CUTOFF_HOUR = 18
@@ -168,6 +169,12 @@ def _resolve_local_now(timezone_name: str) -> tuple[datetime, str]:
     return datetime.now(timezone.utc), "UTC"
 
 
+def _normalize_fitbit_summary_payload(fitbit_summary: Any) -> dict[str, Any]:
+    payload = fitbit_summary if isinstance(fitbit_summary, dict) else {}
+    nested = payload.get("fitbit") if isinstance(payload.get("fitbit"), dict) else None
+    return nested if nested is not None else payload
+
+
 def _streak_days(day_values: list[str]) -> int:
     normalized_days = sorted({day for day in day_values if day}, reverse=True)
     if not normalized_days:
@@ -251,6 +258,78 @@ class SupabaseContextRepository:
         except Exception as exc:
             logger.warning("Supabase fetch failed for %s: %s", table, exc)
         return []
+
+    def _upsert_row(
+        self,
+        table: str,
+        payload: dict[str, Any],
+        *,
+        on_conflict: Optional[str] = None,
+    ) -> Optional[dict[str, Any]]:
+        if not self.client:
+            return None
+
+        try:
+            query = self.client.table(table).upsert(payload, on_conflict=on_conflict) if on_conflict else self.client.table(table).upsert(payload)
+            response = query.execute()
+            data = getattr(response, "data", None)
+            if isinstance(data, list) and data:
+                return data[0] if isinstance(data[0], dict) else None
+            if isinstance(data, dict):
+                return data
+        except Exception as exc:
+            logger.warning("Supabase upsert failed for %s: %s", table, exc)
+        return None
+
+    def table_ready(self, table: str) -> bool:
+        if not self.client:
+            return False
+
+        try:
+            self.client.table(table).select("id").limit(1).execute()
+            return True
+        except Exception as exc:
+            logger.warning("Supabase table check failed for %s: %s", table, exc)
+            return False
+
+    def persist_workout_evidence(self, user_id: str, evidence_report: dict[str, Any]) -> Optional[dict[str, Any]]:
+        user_id = str(user_id or "").strip()
+        if not user_id or not self.client:
+            return None
+
+        evaluated_at = _parse_datetime(evidence_report.get("evaluated_at")) or datetime.utcnow()
+        schedule = evidence_report.get("schedule") if isinstance(evidence_report.get("schedule"), dict) else {}
+        detection = evidence_report.get("detection") if isinstance(evidence_report.get("detection"), dict) else {}
+        reminder = evidence_report.get("reminder") if isinstance(evidence_report.get("reminder"), dict) else {}
+        fitbit_summary = evidence_report.get("fitbit_summary") if isinstance(evidence_report.get("fitbit_summary"), dict) else {}
+
+        payload = {
+            "user_id": user_id,
+            "report_type": "daily_workout_detection",
+            "evidence_date": evaluated_at.date().isoformat(),
+            "workout_detected_today": bool(detection.get("workout_detected_today")),
+            "confidence": _clean_text(detection.get("confidence")) or "none",
+            "evidence_score": _to_int(detection.get("evidence_score")),
+            "evidence_threshold": _to_int(detection.get("evidence_threshold") or 60),
+            "detection_reasons": detection.get("reasons") if isinstance(detection.get("reasons"), list) else [],
+            "schedule_summary": schedule,
+            "detection_summary": detection,
+            "reminder_summary": reminder,
+            "fitbit_summary": fitbit_summary,
+            "synced_at": evidence_report.get("fitbit_last_sync_at") or evaluated_at.isoformat(),
+        }
+        return self._upsert_row(WORKOUT_EVIDENCE_TABLE, payload, on_conflict="user_id,report_type,evidence_date")
+
+    def list_workout_evidence(self, user_id: str, *, limit: int = 14) -> list[dict[str, Any]]:
+        safe_limit = max(1, min(90, int(limit)))
+        return self._fetch_rows(
+            WORKOUT_EVIDENCE_TABLE,
+            user_id,
+            columns="id,report_type,evidence_date,workout_detected_today,confidence,evidence_score,evidence_threshold,detection_reasons,schedule_summary,detection_summary,reminder_summary,fitbit_summary,synced_at,created_at,updated_at",
+            order_by="evidence_date",
+            descending=True,
+            limit=safe_limit,
+        )
 
     def _load_profile(self, user_id: str) -> Optional[dict[str, Any]]:
         rows = self._fetch_rows("profiles", user_id, limit=1)
@@ -536,12 +615,13 @@ class SupabaseContextRepository:
         fitbit_summary: Optional[dict[str, Any]] = None,
         issue_reminder: bool = True,
         cutoff_hour_local: int = DEFAULT_WORKOUT_REMINDER_CUTOFF_HOUR,
+        persist_result: bool = False,
     ) -> dict[str, Any]:
         if not user_id:
             return {"enabled": False}
 
         cutoff_hour_local = max(0, min(23, int(cutoff_hour_local)))
-        fitbit_summary = fitbit_summary if isinstance(fitbit_summary, dict) else {}
+        fitbit_summary = _normalize_fitbit_summary_payload(fitbit_summary)
         timezone_name = _clean_text(
             ((fitbit_summary.get("profile") or {}) if isinstance(fitbit_summary.get("profile"), dict) else {}).get("timezone")
         )
@@ -742,10 +822,12 @@ class SupabaseContextRepository:
                 persistence_error = str(exc)
                 logger.warning("Failed storing workout reminder event: %s", exc)
 
-        return {
+        result = {
             "enabled": True,
             "evaluated_at": local_now.isoformat(),
             "timezone": resolved_timezone,
+            "fitbit_last_sync_at": fitbit_summary.get("last_sync_at"),
+            "fitbit_summary": fitbit_summary,
             "schedule": {
                 "has_active_workout_plan": bool(active_workout_plans),
                 "has_workout_planned_today": eligible_today,
@@ -789,6 +871,13 @@ class SupabaseContextRepository:
                 "persistence_error": persistence_error,
             },
         }
+
+        if persist_result:
+            stored = self.persist_workout_evidence(user_id, result)
+            if stored:
+                result["stored_evidence_id"] = stored.get("id")
+
+        return result
 
     def load_user_context(self, user_id: str, conversation_id: Optional[str] = None) -> dict[str, Any]:
         if not self.client or not user_id:

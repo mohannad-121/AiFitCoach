@@ -6,13 +6,16 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { useAuth } from "@/hooks/useAuth";
+import { CoachNotificationsListener } from "@/components/CoachNotificationsListener";
 import Index from "./pages/Index";
 import { AuthPage } from "./pages/Auth";
 import { OnboardingPage } from "./pages/Onboarding";
 import { WorkoutsPage } from "./pages/Workouts";
 import { CoachPage } from "./pages/Coach";
+import { CoachNotificationsPage } from "./pages/CoachNotifications";
 import { ProfilePage } from "./pages/Profile";
 import { SchedulePage } from "./pages/Schedule";
+import { AdminPage } from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const hasConfiguredSupabase = Boolean(
@@ -56,14 +59,18 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <CoachNotificationsListener />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
               <Route path="/workouts" element={<ProtectedRoute><WorkoutsPage /></ProtectedRoute>} />
               <Route path="/coach" element={<ProtectedRoute><CoachPage /></ProtectedRoute>} />
+              <Route path="/coach-notifications" element={<ProtectedRoute><CoachNotificationsPage /></ProtectedRoute>} />
+              <Route path="/reports" element={<Navigate to="/admin" replace />} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

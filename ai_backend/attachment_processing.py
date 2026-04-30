@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import io
+import os
 import re
+import subprocess
+import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -447,7 +450,83 @@ class AttachmentProcessor:
                 best_text = joined
             if len(self._normalize_ocr_text(best_text)) >= TEXT_HEAVY_OCR_MIN_CHARS:
                 break
+
+        if len(self._normalize_ocr_text(best_text)) >= SCREENSHOT_OCR_MIN_CHARS:
+            return best_text
+
+        if self._looks_like_screenshot(filename) or self._query_prefers_ocr(user_message):
+            for candidate_bytes in self._ocr_candidate_images(raw_bytes, filename, user_message):
+                windows_ocr = self._extract_windows_ocr(candidate_bytes)
+                if len(self._normalize_ocr_text(windows_ocr)) > len(self._normalize_ocr_text(best_text)):
+                    best_text = self._trim_text(windows_ocr, limit=4000)
+                if len(self._normalize_ocr_text(best_text)) >= SCREENSHOT_OCR_MIN_CHARS:
+                    break
+
         return best_text
+
+    def _extract_windows_ocr(self, raw_bytes: bytes) -> str:
+        if os.name != "nt":
+            return ""
+
+        powershell_script = r"""
+Add-Type -AssemblyName System.Runtime.WindowsRuntime
+$null = [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime]
+$null = [Windows.Storage.FileAccessMode, Windows.Storage, ContentType = WindowsRuntime]
+$null = [Windows.Storage.Streams.IRandomAccessStream, Windows.Storage.Streams, ContentType = WindowsRuntime]
+$null = [Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics.Imaging, ContentType = WindowsRuntime]
+$null = [Windows.Graphics.Imaging.SoftwareBitmap, Windows.Graphics.Imaging, ContentType = WindowsRuntime]
+$null = [Windows.Media.Ocr.OcrEngine, Windows.Media.Ocr, ContentType = WindowsRuntime]
+$asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.IsGenericMethod } | Select-Object -First 1)
+function Await($op, [type]$type) {
+  $task = $asTask.MakeGenericMethod($type).Invoke($null, @($op))
+  $task.Wait()
+  return $task.Result
+}
+$imagePath = $args[0]
+$outputPath = $args[1]
+$file = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync($imagePath)) ([Windows.Storage.StorageFile])
+$stream = Await ($file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
+$decoder = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
+$bitmap = Await ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
+$engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
+if ($null -eq $engine) {
+  Set-Content -Path $outputPath -Value ''
+  exit 0
+}
+$result = Await ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])
+Set-Content -Path $outputPath -Value $result.Text
+"""
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="fitcoach-winocr-") as temp_dir:
+                image_path = Path(temp_dir) / "input.png"
+                output_path = Path(temp_dir) / "output.txt"
+                script_path = Path(temp_dir) / "ocr.ps1"
+
+                with Image.open(io.BytesIO(raw_bytes)) as image:
+                    image.convert("RGB").save(image_path, format="PNG", optimize=True)
+
+                script_path.write_text(powershell_script, encoding="utf-8")
+                completed = subprocess.run(
+                    [
+                        "powershell",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(script_path),
+                        str(image_path),
+                        str(output_path),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=45,
+                    check=False,
+                )
+                if completed.returncode != 0 or not output_path.exists():
+                    return ""
+                return self._normalize_ocr_text(output_path.read_text(encoding="utf-8", errors="ignore"))
+        except Exception:
+            return ""
 
     def _ocr_candidate_images(self, raw_bytes: bytes, filename: str, user_message: str) -> list[bytes]:
         candidates = [raw_bytes]

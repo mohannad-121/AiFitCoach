@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, BellRing, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -260,6 +260,19 @@ function getWeekDates(weekOffset: number): Date[] {
   return dates;
 }
 
+function getWeekStart(date: Date): Date {
+  const currentDay = date.getDay();
+  const saturdayOffset = (currentDay + 1) % 7;
+  const start = new Date(date);
+  start.setDate(date.getDate() - saturdayOffset);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+function normalizeItemLabel(value: string) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function formatLogDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -287,6 +300,8 @@ export function SchedulePage() {
   const [viewTab, setViewTab] = useState<'workout' | 'nutrition'>('workout');
   const [workoutAdherence, setWorkoutAdherence] = useState<WorkoutAdherenceStatus | null>(null);
   const [adherenceLoading, setAdherenceLoading] = useState(false);
+  const [highlightItemName, setHighlightItemName] = useState('');
+  const targetItemRef = useRef<HTMLDivElement | null>(null);
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
@@ -310,6 +325,42 @@ export function SchedulePage() {
     setWeekOffset(0);
     if (idx >= 0) {
       setSelectedDateIdx(idx);
+    }
+
+    navigate('/schedule', { replace: true });
+  }, [location.search, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const focusDate = params.get('focusDate');
+    const nextView = params.get('view');
+    const nextHighlightItem = params.get('highlightItem') || '';
+
+    if (!focusDate && !nextView && !nextHighlightItem) {
+      return;
+    }
+
+    if (nextView === 'workout' || nextView === 'nutrition') {
+      setViewTab(nextView);
+    }
+    setHighlightItemName(nextHighlightItem);
+
+    if (focusDate) {
+      const parsedDate = new Date(focusDate);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        parsedDate.setHours(0, 0, 0, 0);
+        const currentWeekStart = getWeekStart(new Date());
+        const targetWeekStart = getWeekStart(parsedDate);
+        const diffDays = Math.round((targetWeekStart.getTime() - currentWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+        const nextWeekOffset = Math.round(diffDays / 7);
+        const targetWeekDates = getWeekDates(nextWeekOffset);
+        const idx = targetWeekDates.findIndex((date) => date.getTime() === parsedDate.getTime());
+
+        setWeekOffset(nextWeekOffset);
+        if (idx >= 0) {
+          setSelectedDateIdx(idx);
+        }
+      }
     }
 
     navigate('/schedule', { replace: true });
@@ -589,6 +640,12 @@ export function SchedulePage() {
       .map((meal) => language === 'ar' ? meal.nameAr || meal.name : meal.name)
       .filter(Boolean);
   }, [completedMealIndexesToday, dayMeals, language]);
+
+  useEffect(() => {
+    if (targetItemRef.current) {
+      targetItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightItemName, selectedDateIdx, weekOffset, viewTab, matchingDay?.index]);
 
   const overallMissingPlanItems = useMemo(() => {
     if (!currentPlan) return [] as string[];
@@ -1206,9 +1263,12 @@ export function SchedulePage() {
                       {/* Exercises */}
                       {matchingDay.day.exercises?.map((ex, exIdx) => {
                         const done = isCompleted(matchingDay.index, exIdx, currentPlan.id);
+                        const exerciseLabel = language === 'ar' ? ex.nameAr || ex.name : ex.name;
+                        const isHighlighted = Boolean(highlightItemName) && normalizeItemLabel(exerciseLabel) === normalizeItemLabel(highlightItemName);
                         return (
                           <div
                             key={`ex-${exIdx}`}
+                            ref={isHighlighted ? targetItemRef : null}
                             role="button"
                             tabIndex={0}
                             onClick={() => toggleCompletion(matchingDay.index, exIdx, currentPlan.id)}
@@ -1219,7 +1279,9 @@ export function SchedulePage() {
                               }
                             }}
                             className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-start ${
-                              done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
+                              isHighlighted
+                                ? 'border-accent bg-accent/10 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]'
+                                : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
                             }`}
                           >
                             <Checkbox
@@ -1233,8 +1295,9 @@ export function SchedulePage() {
                               <div className="flex items-center gap-2">
                                 <Dumbbell className="w-3.5 h-3.5 text-primary/70" />
                                 <p className={`font-medium ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                                  {language === 'ar' ? ex.nameAr || ex.name : ex.name}
+                                  {exerciseLabel}
                                 </p>
+                                {isHighlighted && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">{language === 'ar' ? 'مطلوب الآن' : 'Needed now'}</span>}
                               </div>
                               {ex.sets && <p className="text-xs text-muted-foreground mt-0.5">{ex.sets} × {ex.reps}</p>}
                             </div>
@@ -1246,9 +1309,12 @@ export function SchedulePage() {
                       {matchingDay.day.meals?.map((meal, mIdx) => {
                         const idx = (matchingDay.day.exercises?.length || 0) + mIdx;
                         const done = isCompleted(matchingDay.index, idx, currentPlan.id);
+                        const mealLabel = language === 'ar' ? meal.nameAr || meal.name : meal.name;
+                        const isHighlighted = Boolean(highlightItemName) && normalizeItemLabel(mealLabel) === normalizeItemLabel(highlightItemName);
                         return (
                           <div
                             key={`meal-${mIdx}`}
+                            ref={isHighlighted ? targetItemRef : null}
                             role="button"
                             tabIndex={0}
                             onClick={() => toggleCompletion(matchingDay.index, idx, currentPlan.id)}
@@ -1259,7 +1325,9 @@ export function SchedulePage() {
                               }
                             }}
                             className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-start ${
-                              done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
+                              isHighlighted
+                                ? 'border-accent bg-accent/10 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]'
+                                : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
                             }`}
                           >
                             <Checkbox
@@ -1273,8 +1341,9 @@ export function SchedulePage() {
                               <div className="flex items-center gap-2">
                                 <UtensilsCrossed className="w-3.5 h-3.5 text-accent-foreground/70" />
                                 <p className={`font-medium ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                                  {language === 'ar' ? meal.nameAr || meal.name : meal.name}
+                                  {mealLabel}
                                 </p>
+                                {isHighlighted && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">{language === 'ar' ? 'مطلوب الآن' : 'Needed now'}</span>}
                                 {meal.calories && <span className="text-xs text-muted-foreground">({meal.calories} cal)</span>}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">

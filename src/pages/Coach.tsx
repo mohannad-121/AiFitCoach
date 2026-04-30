@@ -529,10 +529,6 @@ const normalizeChatMessage = (message: Partial<ChatMessage>): ChatMessage => {
 
 const buildMessageCopyText = (message: ChatMessage, language: 'en' | 'ar') => {
   const visibleText = getDisplayMessageContent(message.content, language).trim();
-<<<<<<< HEAD
-=======
-
->>>>>>> 6fe03c2 (Fix Fitbit Arabic summary rendering)
   const attachments = message.attachments || [];
   const parts: string[] = [];
   if (attachments.length) {
@@ -1846,11 +1842,14 @@ export function CoachPage() {
     const merged: Record<string, any> = {};
 
     try {
-      const { data: profileData } = await supabase
+      const { data: profileRows } = await supabase
         .from('profiles')
         .select('name,age,gender,weight,height,goal,location,fitness_level,training_days_per_week,equipment,injuries,activity_level,dietary_preferences,chronic_conditions,allergies')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      const profileData = profileRows?.[0];
 
       if (profileData) {
         merged.id = user.id;
@@ -2866,10 +2865,7 @@ export function CoachPage() {
                 const isCopied = copiedMessageKey === messageKey;
                 const displayMessageText = getDisplayMessageContent(message.content, language);
                 const visibleMessageText = displayMessageText.trim();
-<<<<<<< HEAD
-=======
-                                const fitbitSummaryCard = message.role === 'assistant' ? parseFitbitSummaryCard(displayMessageText) : null;
->>>>>>> 6fe03c2 (Fix Fitbit Arabic summary rendering)
+                const fitbitSummaryCard = message.role === 'assistant' ? parseFitbitSummaryCard(displayMessageText) : null;
                 const copyText = buildMessageCopyText(message, language);
                 const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
                 return (
