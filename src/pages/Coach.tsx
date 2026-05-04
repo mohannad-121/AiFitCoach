@@ -166,7 +166,8 @@ const AI_BACKEND_URL = import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:
 const CHAT_REQUEST_TIMEOUT_MS = 120000;
 const ATTACHMENT_REQUEST_TIMEOUT_MS = 240000;
 const NUTRITION_PREFIX = '\u{1F37D}\uFE0F';
-const BACKEND_ARABIC_VOICE_ID = '__backend_arabic_ai__';
+const ARABIC_VOICE_AGENT_ID = '__arabic_voice_agent__';
+const LEGACY_ARABIC_VOICE_AGENT_ID = '__backend_arabic_ai__';
 const MAX_CHAT_ATTACHMENTS = 4;
 const MAX_CHAT_ATTACHMENT_BYTES = 12 * 1024 * 1024;
 const ATTACHMENT_META_PREFIX = '[[fitcoach_attachments:';
@@ -387,6 +388,16 @@ const getCurrentConversationStorageKey = (userId: string) => `fitcoach_current_c
 const getLocalPlansStorageKey = (userId: string) => `fitcoach_schedule_plans_${userId}`;
 const getLocalCompletionsStorageKey = (userId: string) => `fitcoach_schedule_completions_${userId}`;
 const getVoiceStorageKey = (language: 'en' | 'ar') => `fitcoach_voice_${language}`;
+
+const normalizeStoredVoice = (voiceName: string, targetLanguage: 'en' | 'ar') => {
+  if (voiceName === LEGACY_ARABIC_VOICE_AGENT_ID) {
+    return ARABIC_VOICE_AGENT_ID;
+  }
+  if (!voiceName && targetLanguage === 'ar') {
+    return ARABIC_VOICE_AGENT_ID;
+  }
+  return voiceName;
+};
 
 const readLocalConversations = (userId: string): { conversations: Conversation[]; currentId: string | null } => {
   try {
@@ -716,7 +727,8 @@ export function CoachPage() {
   const [ragDebugLoading, setRagDebugLoading] = useState(false);
   const [ragDebugError, setRagDebugError] = useState('');
   const [selectedVoice, setSelectedVoice] = useState<string>(() => {
-    return localStorage.getItem(getVoiceStorageKey(language)) || localStorage.getItem('fitcoach_voice') || '';
+    const savedVoice = localStorage.getItem(getVoiceStorageKey(language)) || localStorage.getItem('fitcoach_voice') || '';
+    return normalizeStoredVoice(savedVoice, language);
   });
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
@@ -749,6 +761,7 @@ export function CoachPage() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const selectedAttachmentsRef = useRef<PendingAttachment[]>([]);
+  const currentMessagesRef = useRef<ChatMessage[]>([]);
   const voiceModeRef = useRef(false);
   const assistantAudioRef = useRef<HTMLAudioElement | null>(null);
   const processedCoachPromptRef = useRef<string | null>(null);
@@ -1005,7 +1018,14 @@ export function CoachPage() {
 
   useEffect(() => {
     const savedVoice = localStorage.getItem(getVoiceStorageKey(language)) || '';
-    setSelectedVoice(savedVoice);
+    const normalizedVoice = normalizeStoredVoice(savedVoice, language);
+
+    if (savedVoice !== normalizedVoice) {
+      localStorage.setItem(getVoiceStorageKey(language), normalizedVoice);
+      localStorage.setItem('fitcoach_voice', normalizedVoice);
+    }
+
+    setSelectedVoice(normalizedVoice);
   }, [language]);
 
   // Filter voices by language
@@ -1021,7 +1041,7 @@ export function CoachPage() {
   }, []);
 
   const resolvePreferredVoice = useCallback(() => {
-    if (selectedVoice === BACKEND_ARABIC_VOICE_ID) {
+    if (selectedVoice === ARABIC_VOICE_AGENT_ID) {
       return undefined;
     }
 
@@ -1071,6 +1091,14 @@ export function CoachPage() {
     startListening();
   }, [isSupported, isLoading, isVoiceProcessing, isListening, isAssistantSpeaking, clearError, startListening]);
 
+  const endVoiceModeTurn = useCallback(() => {
+    if (!voiceModeRef.current) {
+      return;
+    }
+    setVoiceMode(false);
+    focusInput();
+  }, [focusInput]);
+
   const stopAllSpeech = useCallback(() => {
     cancelVoiceRequest();
     if (assistantAudioRef.current) {
@@ -1087,9 +1115,7 @@ export function CoachPage() {
 
   const playBackendAudio = useCallback((relativePath?: string) => {
     if (!relativePath) {
-      if (voiceModeRef.current) {
-        window.setTimeout(() => startListeningIfPossible(), 250);
-      }
+      endVoiceModeTurn();
       return;
     }
 
@@ -1108,29 +1134,21 @@ export function CoachPage() {
 
       audio.onended = () => {
         setIsAssistantSpeaking(false);
-        if (voiceModeRef.current) {
-          window.setTimeout(() => startListeningIfPossible(), 250);
-        }
+        endVoiceModeTurn();
       };
       audio.onerror = () => {
         setIsAssistantSpeaking(false);
-        if (voiceModeRef.current) {
-          window.setTimeout(() => startListeningIfPossible(), 250);
-        }
+        endVoiceModeTurn();
       };
       audio.play().catch(() => {
         setIsAssistantSpeaking(false);
-        if (voiceModeRef.current) {
-          window.setTimeout(() => startListeningIfPossible(), 250);
-        }
+        endVoiceModeTurn();
       });
     } catch {
       setIsAssistantSpeaking(false);
-      if (voiceModeRef.current) {
-        window.setTimeout(() => startListeningIfPossible(), 250);
-      }
+      endVoiceModeTurn();
     }
-  }, [startListeningIfPossible]);
+  }, [endVoiceModeTurn]);
 
   const speakWithBackendTts = useCallback(async (text: string, targetLanguage?: 'en' | 'ar') => {
     const response = await fetch(`${AI_BACKEND_URL}/tts/speak`, {
@@ -1169,7 +1187,7 @@ export function CoachPage() {
 
     const resolvedVoice = resolvePreferredVoice();
 
-    if (selectedVoice === BACKEND_ARABIC_VOICE_ID) {
+    if (selectedVoice === ARABIC_VOICE_AGENT_ID) {
       try {
         await speakWithBackendTts(cleanText, 'ar');
         return;
@@ -1201,16 +1219,17 @@ export function CoachPage() {
     utterance.onstart = () => setIsAssistantSpeaking(true);
     utterance.onend = () => {
       setIsAssistantSpeaking(false);
-      if (voiceModeRef.current) {
-        window.setTimeout(() => startListeningIfPossible(), 250);
-      }
+      endVoiceModeTurn();
     };
-    utterance.onerror = () => setIsAssistantSpeaking(false);
+    utterance.onerror = () => {
+      setIsAssistantSpeaking(false);
+      endVoiceModeTurn();
+    };
     window.speechSynthesis.speak(utterance);
-  }, [language, resolvePreferredVoice, selectedVoice, speakWithBackendTts, startListeningIfPossible]);
+  }, [endVoiceModeTurn, language, resolvePreferredVoice, selectedVoice, speakWithBackendTts]);
 
-  const voicePreviewText = selectedVoice === BACKEND_ARABIC_VOICE_ID
-    ? 'مرحبا، أنا المدرب الذكي العربي. كيف أقدر أساعدك اليوم؟'
+  const voicePreviewText = selectedVoice === ARABIC_VOICE_AGENT_ID
+    ? 'مرحبا، أنا المساعد الصوتي العربي لفِت كوتش. كيف أقدر أساعدك اليوم؟'
     : (language === 'ar' ? 'مرحبًا، أنا مدربك الشخصي' : 'Hello, I am your personal coach');
 
   const toggleVoiceMode = useCallback(() => {
@@ -1282,6 +1301,10 @@ export function CoachPage() {
   }, [currentMessages]);
 
   useEffect(() => {
+    currentMessagesRef.current = currentMessages;
+  }, [currentMessages]);
+
+  useEffect(() => {
     if (!user) {
       setLoadingConvs(false);
       return;
@@ -1309,9 +1332,12 @@ export function CoachPage() {
   useEffect(() => {
     if (!pendingVoiceResponse || !user) return;
 
+    const responsePayload = pendingVoiceResponse;
+    setPendingVoiceResponse(null);
+
     const applyVoiceResponse = async () => {
-      const transcript = (pendingVoiceResponse.transcript || '').trim();
-      const reply = (pendingVoiceResponse.reply || '').trim();
+      const transcript = (responsePayload.transcript || '').trim();
+      const reply = (responsePayload.reply || '').trim();
       const now = Date.now();
 
       const userMessage: ChatMessage | null = transcript
@@ -1323,11 +1349,10 @@ export function CoachPage() {
 
       const additions = [userMessage, assistantMessage].filter(Boolean) as ChatMessage[];
       if (additions.length === 0) {
-        setPendingVoiceResponse(null);
         return;
       }
 
-      const updatedMessages = [...currentMessages, ...additions];
+      const updatedMessages = [...currentMessagesRef.current, ...additions];
       setCurrentMessages(updatedMessages);
       setConversations(prev =>
         prev.map(c =>
@@ -1370,31 +1395,31 @@ export function CoachPage() {
         }
       }
 
-      const pendingFromApi = extractPendingPlanFromResponse(pendingVoiceResponse);
+      const pendingFromApi = extractPendingPlanFromResponse(responsePayload);
       if (pendingFromApi) {
         setPendingPlanOptions(null);
         setPendingPlan(pendingFromApi);
       }
 
-      const pendingProfileConfirmationFromVoice = extractPendingProfileConfirmation(pendingVoiceResponse);
+      const pendingProfileConfirmationFromVoice = extractPendingProfileConfirmation(responsePayload);
       if (pendingProfileConfirmationFromVoice) {
         setPendingProfileConfirmation(pendingProfileConfirmationFromVoice);
-      } else if (pendingVoiceResponse?.action === 'profile_update_cancelled' || pendingVoiceResponse?.action === 'profile_updated') {
+      } else if (responsePayload?.action === 'profile_update_cancelled' || responsePayload?.action === 'profile_updated') {
         setPendingProfileConfirmation(null);
       }
 
-      await persistProfileUpdate(pendingVoiceResponse);
+      await persistProfileUpdate(responsePayload);
 
-      const planOptionsFromApi = extractPlanOptionsFromResponse(pendingVoiceResponse);
+      const planOptionsFromApi = extractPlanOptionsFromResponse(responsePayload);
       if (planOptionsFromApi) {
         setPendingPlan(null);
         setPendingPlanOptions(planOptionsFromApi);
       }
 
-      const approvedFromApi = extractApprovedPlanFromResponse(pendingVoiceResponse);
+      const approvedFromApi = extractApprovedPlanFromResponse(responsePayload);
       if (approvedFromApi) {
         try {
-          await persistApprovedPlan(pendingVoiceResponse);
+          await persistApprovedPlan(responsePayload);
         } catch (error) {
           console.error('Failed saving approved voice plan to Supabase', error);
         } finally {
@@ -1405,29 +1430,25 @@ export function CoachPage() {
       }
 
       if (reply && (voiceModeRef.current || autoSpeak)) {
-        playBackendAudio(pendingVoiceResponse.audio_path);
+        playBackendAudio(responsePayload.audio_path);
       } else if (voiceModeRef.current) {
-        window.setTimeout(() => startListeningIfPossible(), 250);
+        endVoiceModeTurn();
       } else {
         focusInput();
       }
-
-      setPendingVoiceResponse(null);
     };
 
     applyVoiceResponse().catch((err) => {
       console.error('Failed to apply voice response:', err);
-      setPendingVoiceResponse(null);
     });
   }, [
     autoSpeak,
     currentId,
-    currentMessages,
+    endVoiceModeTurn,
     goToSchedule,
     pendingVoiceResponse,
     playBackendAudio,
     focusInput,
-    startListeningIfPossible,
     user,
   ]);
 
@@ -2789,11 +2810,18 @@ export function CoachPage() {
             {isSupported && (
               <Button
                 variant={voiceMode ? 'default' : 'ghost'}
-                size="icon"
+                size="sm"
+                className="gap-2"
                 onClick={toggleVoiceMode}
-                title={language === 'ar' ? 'وضع محادثة صوتية' : 'Voice Conversation Mode'}
+                title={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
+                aria-label={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
               >
                 {voiceMode ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                <span className="hidden md:inline">
+                  {voiceMode
+                    ? (language === 'ar' ? 'إيقاف التسجيل' : 'Stop voice')
+                    : (language === 'ar' ? 'رسالة صوتية' : 'Voice turn')}
+                </span>
               </Button>
             )}
             <Button
@@ -2820,8 +2848,8 @@ export function CoachPage() {
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
                       <SelectItem value="default">{language === 'ar' ? 'افتراضي' : 'Default'}</SelectItem>
-                      <SelectItem value={BACKEND_ARABIC_VOICE_ID}>
-                        {language === 'ar' ? 'الصوت العربي الذكي' : 'Arabic AI Voice'}
+                      <SelectItem value={ARABIC_VOICE_AGENT_ID}>
+                        {language === 'ar' ? 'المساعد الصوتي العربي' : 'Arabic Voice Agent'}
                       </SelectItem>
                       {filteredVoices.length > 0 && (
                         <>

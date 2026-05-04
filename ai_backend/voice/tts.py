@@ -39,6 +39,12 @@ class LocalTTS:
             return self.piper_model_path_ar
         if lang.startswith("en") and self.piper_model_path_en:
             return self.piper_model_path_en
+        if self.piper_model_path:
+            return self.piper_model_path
+        if self.piper_model_path_ar:
+            return self.piper_model_path_ar
+        if self.piper_model_path_en:
+            return self.piper_model_path_en
         return self.piper_model_path
 
     def synthesize(self, text: str, language: str = "en") -> Path:

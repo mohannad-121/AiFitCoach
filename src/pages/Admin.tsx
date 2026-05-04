@@ -11,10 +11,12 @@ import { encodeAdminNoteTarget, stripAdminNoteTarget } from '@/lib/adminNoteTarg
 const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
 const ADMIN_SESSION_KEY = 'fitcoach_admin_session';
 
+type AdminRole = 'coach' | 'doctor' | 'family';
+
 type AdminSession = {
   password: string;
   actorName: string;
-  role: 'coach' | 'doctor';
+  role: AdminRole;
 };
 
 type AdminUserSummary = {
@@ -77,6 +79,21 @@ type AdminUserDetail = {
   };
   fitbit_status?: {
     connected?: boolean;
+    last_sync_at?: string | null;
+    today_summary?: {
+      steps?: number;
+      distance_km?: number;
+      resting_heart_rate?: number | null;
+    };
+    activity_history?: Array<{
+      date?: string;
+      steps?: number;
+      distance_km?: number;
+    }>;
+    heart_history?: Array<{
+      date?: string;
+      resting_heart_rate?: number | null;
+    }>;
     coach_summary?: {
       latest_resting_heart_rate?: number | null;
       active_minutes_total?: number;
@@ -120,6 +137,17 @@ const compactText = (value: string | undefined, fallback: string) => {
   return clean || fallback;
 };
 
+const formatTimelineLabel = (value: string, language: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 export function AdminPage() {
   const { language } = useLanguage();
   const { toast } = useToast();
@@ -133,7 +161,7 @@ export function AdminPage() {
   const [verifyingAccess, setVerifyingAccess] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [activePanel, setActivePanel] = useState<'overview' | 'notes' | 'report'>('overview');
-  const [loginForm, setLoginForm] = useState({ password: '', actorName: '', role: 'coach' as 'coach' | 'doctor' });
+  const [loginForm, setLoginForm] = useState({ password: '', actorName: '', role: 'coach' as AdminRole });
   const [noteForm, setNoteForm] = useState({ note_text: '', note_category: 'general', related_date: '', target_item: '' });
 
   const adminHeaders = (activeSession: AdminSession) => ({
@@ -327,6 +355,58 @@ export function AdminPage() {
 
   const trackingSummary = detail?.context?.tracking_summary;
   const coachSummary = detail?.fitbit_status?.coach_summary;
+  const isFamilyRole = session?.role === 'family';
+  const activityHistory = Array.isArray(detail?.fitbit_status?.activity_history) ? detail.fitbit_status.activity_history : [];
+  const heartHistory = Array.isArray(detail?.fitbit_status?.heart_history) ? detail.fitbit_status.heart_history : [];
+  const latestActivity = activityHistory[activityHistory.length - 1];
+  const heartRateSeries = useMemo(() => {
+    return heartHistory
+      .map((entry) => ({
+        date: String(entry?.date || ''),
+        value: typeof entry?.resting_heart_rate === 'number' ? entry.resting_heart_rate : Number(entry?.resting_heart_rate),
+      }))
+      .filter((entry) => entry.date && Number.isFinite(entry.value))
+      .slice(-7);
+  }, [heartHistory]);
+  const heartRateChart = useMemo(() => {
+    if (heartRateSeries.length === 0) {
+      return null;
+    }
+
+    const width = 420;
+    const height = 180;
+    const paddingX = 24;
+    const paddingTop = 18;
+    const paddingBottom = 34;
+    const values = heartRateSeries.map((entry) => entry.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const valueRange = Math.max(maxValue - minValue, 6);
+    const innerWidth = width - paddingX * 2;
+    const innerHeight = height - paddingTop - paddingBottom;
+    const stepX = heartRateSeries.length > 1 ? innerWidth / (heartRateSeries.length - 1) : 0;
+
+    const points = heartRateSeries.map((entry, index) => {
+      const x = paddingX + stepX * index;
+      const normalized = (entry.value - minValue) / valueRange;
+      const y = paddingTop + innerHeight - normalized * innerHeight;
+      return {
+        ...entry,
+        x,
+        y,
+        label: formatTimelineLabel(entry.date, language),
+        weekday: new Date(entry.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short' }),
+      };
+    });
+
+    const polyline = points.map((point) => `${point.x},${point.y}`).join(' ');
+    const gridValues = [0, 0.5, 1].map((ratio) => ({
+      y: paddingTop + innerHeight - ratio * innerHeight,
+      value: Math.round(minValue + ratio * valueRange),
+    }));
+
+    return { width, height, points, polyline, gridValues };
+  }, [heartRateSeries, language]);
   const workoutTargetOptions = useMemo(() => {
     const items = new Set<string>();
     (trackingSummary?.active_plan_details || []).forEach((plan) => {
@@ -354,17 +434,22 @@ export function AdminPage() {
       icon: Activity,
       label: language === 'ar' ? 'نظرة عامة' : 'Overview',
     },
-    {
+    ...(!isFamilyRole ? [{
       id: 'notes' as const,
       icon: StickyNote,
       label: language === 'ar' ? 'الملاحظات' : 'Notes',
-    },
-    {
+    }, {
       id: 'report' as const,
       icon: FileHeart,
       label: language === 'ar' ? 'التقرير' : 'Report',
-    },
+    }] : []),
   ];
+
+  useEffect(() => {
+    if (isFamilyRole && activePanel !== 'overview') {
+      setActivePanel('overview');
+    }
+  }, [activePanel, isFamilyRole]);
 
   return (
     <div className="min-h-screen pb-24 md:pb-8">
@@ -374,15 +459,15 @@ export function AdminPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-4 py-2 mb-4">
               <ShieldCheck className="w-4 h-4" />
-              <span>{language === 'ar' ? 'لوحة الإدارة الطبية' : 'Medical Admin Panel'}</span>
+              <span>{language === 'ar' ? 'لوحة المتابعة الطبية والعائلية' : 'Medical and Family Panel'}</span>
             </div>
             <h1 className="font-display text-4xl text-foreground mb-2">
               {language === 'ar' ? 'متابعة المستخدمين وخططهم' : 'Track users, plans, and notes'}
             </h1>
             <p className="text-muted-foreground max-w-3xl">
               {language === 'ar'
-                ? 'هذه اللوحة مخصصة للمدربين والأطباء فقط. يمكنك مراجعة التقدم، التمارين المكتملة، بيانات Fitbit، ثم كتابة ملاحظات على التمرين أو التغذية.'
-                : 'This panel is for coaches and doctors only. Review progress, completed workouts, Fitbit evidence, and leave workout or nutrition notes.'}
+                ? 'هذه اللوحة مخصصة للمدربين والأطباء وأفراد العائلة أو الوالدين. يمكنك مراجعة التقدم، التمارين المكتملة، بيانات Fitbit، وترك ملاحظات على التمرين أو التغذية بحسب الدور.'
+                : 'This panel is for coaches, doctors, and family or parent users. Review progress, completed workouts, Fitbit evidence, and leave workout or nutrition notes based on the selected role.'}
             </p>
           </div>
           {session && (
@@ -406,7 +491,7 @@ export function AdminPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-semibold">{language === 'ar' ? 'كلمة مرور خاصة' : 'Special password required'}</h2>
-                <p className="text-sm text-muted-foreground">{language === 'ar' ? 'أدخل كلمة مرور الإدارة واسم الشخص الذي يكتب الملاحظات.' : 'Enter the admin password and the person leaving notes.'}</p>
+                <p className="text-sm text-muted-foreground">{language === 'ar' ? 'أدخل كلمة مرور الإدارة واسم الشخص الذي سيدخل اللوحة.' : 'Enter the admin password and the person accessing the panel.'}</p>
               </div>
             </div>
             <div className="space-y-4">
@@ -421,24 +506,25 @@ export function AdminPage() {
                 />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground block mb-2">{language === 'ar' ? 'اسم الطبيب أو المدرب' : 'Coach or doctor name'}</label>
+                <label className="text-sm text-muted-foreground block mb-2">{language === 'ar' ? 'اسم الشخص' : 'Person name'}</label>
                 <input
                   type="text"
                   value={loginForm.actorName}
                   onChange={(event) => setLoginForm((current) => ({ ...current, actorName: event.target.value }))}
                   className="w-full rounded-xl border border-border/60 bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40"
-                  placeholder={language === 'ar' ? 'مثال: Dr. Sara' : 'Example: Dr. Sara'}
+                  placeholder={language === 'ar' ? 'مثال: Dr. Sara أو Parent Lina' : 'Example: Dr. Sara or Parent Lina'}
                 />
               </div>
               <div>
                 <label className="text-sm text-muted-foreground block mb-2">{language === 'ar' ? 'الدور' : 'Role'}</label>
                 <select
                   value={loginForm.role}
-                  onChange={(event) => setLoginForm((current) => ({ ...current, role: event.target.value as 'coach' | 'doctor' }))}
+                  onChange={(event) => setLoginForm((current) => ({ ...current, role: event.target.value as AdminRole }))}
                   className="w-full rounded-xl border border-border/60 bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40"
                 >
                   <option value="coach">{language === 'ar' ? 'مدرب' : 'Coach'}</option>
                   <option value="doctor">{language === 'ar' ? 'طبيب' : 'Doctor'}</option>
+                  <option value="family">{language === 'ar' ? 'عائلة / ولي أمر' : 'Family / Parent'}</option>
                 </select>
               </div>
               <Button className="w-full" onClick={verifyAndOpenAdmin} disabled={verifyingAccess || !loginForm.password.trim()}>
@@ -500,7 +586,7 @@ export function AdminPage() {
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground">{language === 'ar' ? 'آخر تحديث' : 'Last update'}: {formatDateTime(user.updated_at, language)}</div>
-                      {user.latest_note?.note_text && (
+                      {!isFamilyRole && user.latest_note?.note_text && (
                         <div className="mt-3 rounded-xl bg-background/60 px-3 py-2 text-xs text-muted-foreground line-clamp-2">
                           {stripAdminNoteTarget(user.latest_note.note_text || '').cleanText}
                         </div>
@@ -534,23 +620,54 @@ export function AdminPage() {
 
               {!loadingDetail && detail && (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="glass-card rounded-2xl p-5">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'الالتزام العام' : 'Overall adherence'}</div>
-                      <div className="text-2xl font-semibold">{formatPercent(trackingSummary?.adherence_score)}</div>
-                    </div>
-                    <div className="glass-card rounded-2xl p-5">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'إكمالات 7 أيام' : '7-day completions'}</div>
-                      <div className="text-2xl font-semibold">{trackingSummary?.completed_last_7_days || 0}</div>
-                    </div>
-                    <div className="glass-card rounded-2xl p-5">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2"><HeartPulse className="w-4 h-4" />{language === 'ar' ? 'نبض القلب' : 'Heart rate'}</div>
-                      <div className="text-2xl font-semibold">{coachSummary?.latest_resting_heart_rate ?? '--'}</div>
-                    </div>
-                    <div className="glass-card rounded-2xl p-5">
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2"><StickyNote className="w-4 h-4" />{language === 'ar' ? 'الملاحظات' : 'Notes'}</div>
-                      <div className="text-2xl font-semibold">{detail.notes?.length || 0}</div>
-                    </div>
+                  <div className={`grid grid-cols-1 gap-4 ${isFamilyRole ? 'md:grid-cols-3 xl:grid-cols-6' : 'md:grid-cols-4'}`}>
+                    {isFamilyRole ? (
+                      <>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><HeartPulse className="w-4 h-4" />{language === 'ar' ? 'نبض القلب/الدقيقة' : 'Heart beats / min'}</div>
+                          <div className="text-2xl font-semibold">{heartRateSeries[heartRateSeries.length - 1]?.value ?? detail.fitbit_status?.today_summary?.resting_heart_rate ?? coachSummary?.latest_resting_heart_rate ?? '--'}</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'الخطوات' : 'Steps'}</div>
+                          <div className="text-2xl font-semibold">{detail.fitbit_status?.today_summary?.steps ?? latestActivity?.steps ?? 0}</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'المسافة' : 'Distance'}</div>
+                          <div className="text-2xl font-semibold">{detail.fitbit_status?.today_summary?.distance_km ?? latestActivity?.distance_km ?? 0} km</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'التزام التمرين' : 'Workout adherence'}</div>
+                          <div className="text-2xl font-semibold">{trackingSummary?.weekly_stats?.workout_adherence_percent || 0}%</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'ثبات التسجيل' : 'Logging consistency'}</div>
+                          <div className="text-2xl font-semibold">{trackingSummary?.weekly_stats?.logging_consistency_percent || 0}%</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'سلسلة التمرين' : 'Workout streak'}</div>
+                          <div className="text-2xl font-semibold">{trackingSummary?.weekly_stats?.current_workout_streak_days || 0}</div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'الالتزام العام' : 'Overall adherence'}</div>
+                          <div className="text-2xl font-semibold">{formatPercent(trackingSummary?.adherence_score)}</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><Activity className="w-4 h-4" />{language === 'ar' ? 'إكمالات 7 أيام' : '7-day completions'}</div>
+                          <div className="text-2xl font-semibold">{trackingSummary?.completed_last_7_days || 0}</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><HeartPulse className="w-4 h-4" />{language === 'ar' ? 'نبض القلب' : 'Heart rate'}</div>
+                          <div className="text-2xl font-semibold">{coachSummary?.latest_resting_heart_rate ?? '--'}</div>
+                        </div>
+                        <div className="glass-card rounded-2xl p-5">
+                          <div className="flex items-center gap-2 text-muted-foreground mb-2"><StickyNote className="w-4 h-4" />{language === 'ar' ? 'الملاحظات' : 'Notes'}</div>
+                          <div className="text-2xl font-semibold">{detail.notes?.length || 0}</div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="glass-card rounded-3xl border border-border/60 p-6">
@@ -559,18 +676,22 @@ export function AdminPage() {
                         <h2 className="mb-1 text-2xl font-semibold">{compactText(String(detail.user?.name || ''), 'Unnamed user')}</h2>
                         <p className="text-sm text-muted-foreground">{language === 'ar' ? 'ملف المستخدم المختار' : 'Selected user profile'}</p>
                       </div>
-                      <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-3 lg:min-w-[520px]">
-                        <div className="rounded-2xl bg-secondary/25 px-4 py-3">
-                          <div>{language === 'ar' ? 'آخر تمرين' : 'Last completion'}</div>
-                          <div className="mt-1 font-medium text-foreground">{formatDateTime(trackingSummary?.last_completed_at, language)}</div>
-                        </div>
-                        <div className="rounded-2xl bg-secondary/25 px-4 py-3">
-                          <div>{language === 'ar' ? 'آخر تسجيل يومي' : 'Last daily log'}</div>
-                          <div className="mt-1 font-medium text-foreground">{formatDateTime(trackingSummary?.last_log_date, language)}</div>
-                        </div>
+                      <div className={`grid gap-2 text-sm text-muted-foreground ${isFamilyRole ? 'md:grid-cols-1 lg:min-w-[220px]' : 'md:grid-cols-3 lg:min-w-[520px]'}`}>
+                        {!isFamilyRole && (
+                          <>
+                            <div className="rounded-2xl bg-secondary/25 px-4 py-3">
+                              <div>{language === 'ar' ? 'آخر تمرين' : 'Last completion'}</div>
+                              <div className="mt-1 font-medium text-foreground">{formatDateTime(trackingSummary?.last_completed_at, language)}</div>
+                            </div>
+                            <div className="rounded-2xl bg-secondary/25 px-4 py-3">
+                              <div>{language === 'ar' ? 'آخر تسجيل يومي' : 'Last daily log'}</div>
+                              <div className="mt-1 font-medium text-foreground">{formatDateTime(trackingSummary?.last_log_date, language)}</div>
+                            </div>
+                          </>
+                        )}
                         <div className="rounded-2xl bg-secondary/25 px-4 py-3">
                           <div>{language === 'ar' ? 'آخر مزامنة Fitbit' : 'Fitbit sync'}</div>
-                          <div className="mt-1 font-medium text-foreground">{formatDateTime(coachSummary?.last_sync_at, language)}</div>
+                          <div className="mt-1 font-medium text-foreground">{formatDateTime(detail.fitbit_status?.last_sync_at, language)}</div>
                         </div>
                       </div>
                     </div>
@@ -593,119 +714,193 @@ export function AdminPage() {
                     </div>
 
                     {activePanel === 'overview' && (
-                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.95fr)]">
+                      <div className={`grid grid-cols-1 gap-6 ${isFamilyRole ? '' : 'lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.95fr)]'}`}>
                         <div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 text-sm">
-                            <div className="rounded-2xl bg-secondary/30 p-4">
-                              <div className="text-muted-foreground mb-1">{language === 'ar' ? 'أيام الالتزام' : 'Workout adherence'}</div>
-                              <div className="text-xl font-semibold">{trackingSummary?.weekly_stats?.workout_adherence_percent || 0}%</div>
-                            </div>
-                            <div className="rounded-2xl bg-secondary/30 p-4">
-                              <div className="text-muted-foreground mb-1">{language === 'ar' ? 'تسجيل يومي' : 'Logging consistency'}</div>
-                              <div className="text-xl font-semibold">{trackingSummary?.weekly_stats?.logging_consistency_percent || 0}%</div>
-                            </div>
-                            <div className="rounded-2xl bg-secondary/30 p-4">
-                              <div className="text-muted-foreground mb-1">{language === 'ar' ? 'سلسلة التمرين' : 'Workout streak'}</div>
-                              <div className="text-xl font-semibold">{trackingSummary?.weekly_stats?.current_workout_streak_days || 0}</div>
-                            </div>
-                          </div>
-
-                          <div className="mb-6">
-                            <h3 className="text-lg font-semibold mb-3">{language === 'ar' ? 'الخطط النشطة' : 'Active plans'}</h3>
-                            <div className="space-y-3">
-                              {(trackingSummary?.active_plan_details || []).map((plan, index) => (
-                                <div key={`${plan.title || 'plan'}-${index}`} className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
-                                  <div className="flex items-center justify-between gap-3 mb-2">
-                                    <div className="font-medium">{compactText(plan.title, language === 'ar' ? 'خطة بدون اسم' : 'Untitled plan')}</div>
-                                    <span className="text-xs rounded-full bg-background px-2 py-1 text-muted-foreground">{plan.type || 'plan'}</span>
+                          {isFamilyRole ? (
+                            <div className="space-y-6">
+                              <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                  <div>
+                                    <h3 className="text-lg font-semibold">{language === 'ar' ? 'نبضات القلب اليومية' : 'Daily heart beats / min'}</h3>
+                                    <p className="text-sm text-muted-foreground">{language === 'ar' ? 'مقياس زمني يومي لآخر 7 أيام.' : 'A daily time scale for the last 7 days.'}</p>
                                   </div>
-                                  <p className="text-sm text-muted-foreground mb-2">{language === 'ar' ? 'أيام أسبوعية بها عناصر' : 'Weekly days with items'}: {plan.weekly_days_with_items || 0}</p>
-                                  {Array.isArray(plan.sample_exercises) && plan.sample_exercises.length > 0 && (
-                                    <p className="text-sm text-muted-foreground">{language === 'ar' ? 'تمارين' : 'Exercises'}: {plan.sample_exercises.join(', ')}</p>
-                                  )}
-                                  {Array.isArray(plan.sample_meals) && plan.sample_meals.length > 0 && (
-                                    <p className="text-sm text-muted-foreground mt-1">{language === 'ar' ? 'وجبات' : 'Meals'}: {plan.sample_meals.join(', ')}</p>
-                                  )}
-                                </div>
-                              ))}
-                              {(trackingSummary?.active_plan_details || []).length === 0 && (
-                                <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-                                  {language === 'ar' ? 'لا توجد خطط نشطة لهذا المستخدم.' : 'No active plans for this user.'}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <h3 className="text-lg font-semibold mb-3">{language === 'ar' ? 'النشاط الحديث' : 'Recent activity'}</h3>
-                            <div className="space-y-3">
-                              {(trackingSummary?.recent_activity || []).map((item, index) => (
-                                <div key={`${item.date || 'activity'}-${index}`} className="rounded-2xl border border-border/60 bg-secondary/20 p-4 text-sm">
-                                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
-                                    <div className="font-medium">{item.date || (language === 'ar' ? 'بدون تاريخ' : 'No date')}</div>
-                                    <div className="text-muted-foreground">{language === 'ar' ? 'التمارين المكتملة' : 'Completed exercises'}: {item.completed_exercises || 0}</div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">{language === 'ar' ? 'آخر قراءة' : 'Latest reading'}</p>
+                                    <p className="text-lg font-semibold text-foreground">{heartRateSeries[heartRateSeries.length - 1]?.value ?? '--'}</p>
                                   </div>
-                                  {item.workout_notes && <p className="text-muted-foreground">{language === 'ar' ? 'ملاحظة التمرين' : 'Workout note'}: {item.workout_notes}</p>}
-                                  {item.nutrition_notes && <p className="text-muted-foreground mt-1">{language === 'ar' ? 'ملاحظة التغذية' : 'Nutrition note'}: {item.nutrition_notes}</p>}
-                                  {item.mood && <p className="text-muted-foreground mt-1">{language === 'ar' ? 'الحالة' : 'Mood'}: {item.mood}</p>}
                                 </div>
-                              ))}
-                              {(trackingSummary?.recent_activity || []).length === 0 && (
-                                <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-                                  {language === 'ar' ? 'لا توجد سجلات حديثة.' : 'No recent log activity.'}
+
+                                {heartRateChart ? (
+                                  <div>
+                                    <svg viewBox={`0 0 ${heartRateChart.width} ${heartRateChart.height}`} className="w-full h-auto overflow-visible" role="img" aria-label={language === 'ar' ? 'رسم نبضات القلب اليومية' : 'Daily heart-rate chart'}>
+                                      {heartRateChart.gridValues.map((row) => (
+                                        <g key={`grid-${row.value}`}>
+                                          <line x1="24" x2={String(heartRateChart.width - 24)} y1={String(row.y)} y2={String(row.y)} stroke="currentColor" strokeOpacity="0.12" />
+                                          <text x="0" y={String(row.y + 4)} fontSize="11" fill="currentColor" opacity="0.55">{row.value}</text>
+                                        </g>
+                                      ))}
+                                      <polyline fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary" points={heartRateChart.polyline} />
+                                      {heartRateChart.points.map((point) => (
+                                        <g key={point.date}>
+                                          <circle cx={String(point.x)} cy={String(point.y)} r="4" className="fill-primary" />
+                                          <text x={String(point.x)} y={String(heartRateChart.height - 10)} textAnchor="middle" fontSize="10" fill="currentColor" opacity="0.6">{point.label}</text>
+                                        </g>
+                                      ))}
+                                    </svg>
+                                    <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
+                                      {heartRateChart.points.map((point) => (
+                                        <div key={point.date} className="rounded-xl bg-background/60 px-3 py-2">
+                                          <div>{point.weekday}</div>
+                                          <div className="font-medium text-foreground mt-1">{point.value} bpm</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                                    {language === 'ar' ? 'لا توجد بيانات كافية لعرض نبضات القلب اليومية بعد.' : 'There is not enough daily heart-rate history yet.'}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
+                                <h3 className="text-lg font-semibold mb-4">{language === 'ar' ? 'دلائل التمرين' : 'Workout evidence'}</h3>
+                                <div className="space-y-3">
+                                  {(detail.evidence || []).slice(0, 6).map((row) => (
+                                    <div key={row.id} className="rounded-2xl border border-border/60 bg-secondary/20 p-4 text-sm">
+                                      <div className="flex items-center justify-between gap-3 mb-2">
+                                        <div className="font-medium">{row.evidence_date || (language === 'ar' ? 'بدون تاريخ' : 'No date')}</div>
+                                        <span className="text-xs rounded-full bg-background px-2 py-1 text-primary">{row.confidence || 'none'}</span>
+                                      </div>
+                                      <p className="text-muted-foreground mb-1">{language === 'ar' ? 'تم اكتشاف تمرين' : 'Workout detected'}: {row.workout_detected_today ? (language === 'ar' ? 'نعم' : 'Yes') : (language === 'ar' ? 'لا' : 'No')}</p>
+                                      <p className="text-muted-foreground">{language === 'ar' ? 'النتيجة' : 'Score'}: {row.evidence_score ?? 0}</p>
+                                    </div>
+                                  ))}
+                                  {(detail.evidence || []).length === 0 && (
+                                    <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                                      {language === 'ar' ? 'لا توجد سجلات دلائل محفوظة حتى الآن.' : 'No workout evidence records are stored yet.'}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 text-sm">
+                                <div className="rounded-2xl bg-secondary/30 p-4">
+                                  <div className="text-muted-foreground mb-1">{language === 'ar' ? 'أيام الالتزام' : 'Workout adherence'}</div>
+                                  <div className="text-xl font-semibold">{trackingSummary?.weekly_stats?.workout_adherence_percent || 0}%</div>
+                                </div>
+                                <div className="rounded-2xl bg-secondary/30 p-4">
+                                  <div className="text-muted-foreground mb-1">{language === 'ar' ? 'تسجيل يومي' : 'Logging consistency'}</div>
+                                  <div className="text-xl font-semibold">{trackingSummary?.weekly_stats?.logging_consistency_percent || 0}%</div>
+                                </div>
+                                <div className="rounded-2xl bg-secondary/30 p-4">
+                                  <div className="text-muted-foreground mb-1">{language === 'ar' ? 'سلسلة التمرين' : 'Workout streak'}</div>
+                                  <div className="text-xl font-semibold">{trackingSummary?.weekly_stats?.current_workout_streak_days || 0}</div>
+                                </div>
+                              </div>
+
+                              <div className="mb-6">
+                                <h3 className="text-lg font-semibold mb-3">{language === 'ar' ? 'الخطط النشطة' : 'Active plans'}</h3>
+                                <div className="space-y-3">
+                                  {(trackingSummary?.active_plan_details || []).map((plan, index) => (
+                                    <div key={`${plan.title || 'plan'}-${index}`} className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
+                                      <div className="flex items-center justify-between gap-3 mb-2">
+                                        <div className="font-medium">{compactText(plan.title, language === 'ar' ? 'خطة بدون اسم' : 'Untitled plan')}</div>
+                                        <span className="text-xs rounded-full bg-background px-2 py-1 text-muted-foreground">{plan.type || 'plan'}</span>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground mb-2">{language === 'ar' ? 'أيام أسبوعية بها عناصر' : 'Weekly days with items'}: {plan.weekly_days_with_items || 0}</p>
+                                      {Array.isArray(plan.sample_exercises) && plan.sample_exercises.length > 0 && (
+                                        <p className="text-sm text-muted-foreground">{language === 'ar' ? 'تمارين' : 'Exercises'}: {plan.sample_exercises.join(', ')}</p>
+                                      )}
+                                      {Array.isArray(plan.sample_meals) && plan.sample_meals.length > 0 && (
+                                        <p className="text-sm text-muted-foreground mt-1">{language === 'ar' ? 'وجبات' : 'Meals'}: {plan.sample_meals.join(', ')}</p>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {(trackingSummary?.active_plan_details || []).length === 0 && (
+                                    <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                                      {language === 'ar' ? 'لا توجد خطط نشطة لهذا المستخدم.' : 'No active plans for this user.'}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div>
+                                <h3 className="text-lg font-semibold mb-3">{language === 'ar' ? 'النشاط الحديث' : 'Recent activity'}</h3>
+                                <div className="space-y-3">
+                                  {(trackingSummary?.recent_activity || []).map((item, index) => (
+                                    <div key={`${item.date || 'activity'}-${index}`} className="rounded-2xl border border-border/60 bg-secondary/20 p-4 text-sm">
+                                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+                                        <div className="font-medium">{item.date || (language === 'ar' ? 'بدون تاريخ' : 'No date')}</div>
+                                        <div className="text-muted-foreground">{language === 'ar' ? 'التمارين المكتملة' : 'Completed exercises'}: {item.completed_exercises || 0}</div>
+                                      </div>
+                                      {item.workout_notes && <p className="text-muted-foreground">{language === 'ar' ? 'ملاحظة التمرين' : 'Workout note'}: {item.workout_notes}</p>}
+                                      {item.nutrition_notes && <p className="text-muted-foreground mt-1">{language === 'ar' ? 'ملاحظة التغذية' : 'Nutrition note'}: {item.nutrition_notes}</p>}
+                                      {item.mood && <p className="text-muted-foreground mt-1">{language === 'ar' ? 'الحالة' : 'Mood'}: {item.mood}</p>}
+                                    </div>
+                                  ))}
+                                  {(trackingSummary?.recent_activity || []).length === 0 && (
+                                    <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                                      {language === 'ar' ? 'لا توجد سجلات حديثة.' : 'No recent log activity.'}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
 
-                        <div className="space-y-6">
-                          <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
-                            <h3 className="text-lg font-semibold mb-4">{language === 'ar' ? 'دلائل التمرين' : 'Workout evidence'}</h3>
-                            <div className="space-y-3">
-                              {(detail.evidence || []).slice(0, 4).map((row) => (
-                                <div key={row.id} className="rounded-2xl border border-border/60 bg-secondary/20 p-4 text-sm">
-                                  <div className="flex items-center justify-between gap-3 mb-2">
-                                    <div className="font-medium">{row.evidence_date || (language === 'ar' ? 'بدون تاريخ' : 'No date')}</div>
-                                    <span className="text-xs rounded-full bg-background px-2 py-1 text-primary">{row.confidence || 'none'}</span>
+                        {!isFamilyRole && (
+                          <div className="space-y-6">
+                            <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
+                              <h3 className="text-lg font-semibold mb-4">{language === 'ar' ? 'دلائل التمرين' : 'Workout evidence'}</h3>
+                              <div className="space-y-3">
+                                {(detail.evidence || []).slice(0, 4).map((row) => (
+                                  <div key={row.id} className="rounded-2xl border border-border/60 bg-secondary/20 p-4 text-sm">
+                                    <div className="flex items-center justify-between gap-3 mb-2">
+                                      <div className="font-medium">{row.evidence_date || (language === 'ar' ? 'بدون تاريخ' : 'No date')}</div>
+                                      <span className="text-xs rounded-full bg-background px-2 py-1 text-primary">{row.confidence || 'none'}</span>
+                                    </div>
+                                    <p className="text-muted-foreground mb-1">{language === 'ar' ? 'تم اكتشاف تمرين' : 'Workout detected'}: {row.workout_detected_today ? (language === 'ar' ? 'نعم' : 'Yes') : (language === 'ar' ? 'لا' : 'No')}</p>
+                                    <p className="text-muted-foreground">{language === 'ar' ? 'النتيجة' : 'Score'}: {row.evidence_score ?? 0}</p>
+                                    {Array.isArray(row.detection_reasons) && row.detection_reasons.length > 0 && (
+                                      <p className="text-muted-foreground mt-2">{row.detection_reasons.join(' • ')}</p>
+                                    )}
                                   </div>
-                                  <p className="text-muted-foreground mb-1">{language === 'ar' ? 'تم اكتشاف تمرين' : 'Workout detected'}: {row.workout_detected_today ? (language === 'ar' ? 'نعم' : 'Yes') : (language === 'ar' ? 'لا' : 'No')}</p>
-                                  <p className="text-muted-foreground">{language === 'ar' ? 'النتيجة' : 'Score'}: {row.evidence_score ?? 0}</p>
-                                  {Array.isArray(row.detection_reasons) && row.detection_reasons.length > 0 && (
-                                    <p className="text-muted-foreground mt-2">{row.detection_reasons.join(' • ')}</p>
-                                  )}
+                                ))}
+                                {(detail.evidence || []).length === 0 && (
+                                  <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                                    {language === 'ar' ? 'لا توجد سجلات دلائل محفوظة حتى الآن.' : 'No workout evidence records are stored yet.'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
+                              <h3 className="text-lg font-semibold mb-4">{language === 'ar' ? 'آخر ملاحظة' : 'Latest note'}</h3>
+                              {detail.notes?.[0] ? (
+                                <div className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
+                                  <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                                    <span>{compactText(detail.notes[0].author_name, session.actorName || 'Coach')} • {detail.notes[0].author_role}</span>
+                                    <span>{formatDateTime(detail.notes[0].created_at, language)}</span>
+                                  </div>
+                                  <div className="mb-2 text-xs text-primary uppercase tracking-wide">{detail.notes[0].note_category || 'general'}{detail.notes[0].related_date ? ` • ${detail.notes[0].related_date}` : ''}</div>
+                                  <p className="text-sm text-foreground whitespace-pre-wrap">{stripAdminNoteTarget(detail.notes[0].note_text || '').cleanText}</p>
                                 </div>
-                              ))}
-                              {(detail.evidence || []).length === 0 && (
+                              ) : (
                                 <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-                                  {language === 'ar' ? 'لا توجد سجلات دلائل محفوظة حتى الآن.' : 'No workout evidence records are stored yet.'}
+                                  {language === 'ar' ? 'لا توجد ملاحظات لهذا المستخدم بعد.' : 'No notes for this user yet.'}
                                 </div>
                               )}
                             </div>
                           </div>
-
-                          <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
-                            <h3 className="text-lg font-semibold mb-4">{language === 'ar' ? 'آخر ملاحظة' : 'Latest note'}</h3>
-                            {detail.notes?.[0] ? (
-                              <div className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
-                                <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                                  <span>{compactText(detail.notes[0].author_name, session.actorName || 'Coach')} • {detail.notes[0].author_role}</span>
-                                  <span>{formatDateTime(detail.notes[0].created_at, language)}</span>
-                                </div>
-                                <div className="mb-2 text-xs text-primary uppercase tracking-wide">{detail.notes[0].note_category || 'general'}{detail.notes[0].related_date ? ` • ${detail.notes[0].related_date}` : ''}</div>
-                                <p className="text-sm text-foreground whitespace-pre-wrap">{stripAdminNoteTarget(detail.notes[0].note_text || '').cleanText}</p>
-                              </div>
-                            ) : (
-                              <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-                                {language === 'ar' ? 'لا توجد ملاحظات لهذا المستخدم بعد.' : 'No notes for this user yet.'}
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
 
-                    {activePanel === 'notes' && (
+                    {!isFamilyRole && activePanel === 'notes' && (
                       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1fr)]">
                         <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
                         <h3 className="text-lg font-semibold mb-4">{language === 'ar' ? 'إضافة ملاحظة' : 'Add coach or doctor note'}</h3>
@@ -777,7 +972,7 @@ export function AdminPage() {
                       </div>
                     )}
 
-                    {activePanel === 'report' && (
+                    {!isFamilyRole && activePanel === 'report' && (
                       <div className="rounded-3xl border border-border/60 bg-secondary/15 p-6">
                         <WorkoutEvidenceReportSection userId={selectedUserId} compact />
                       </div>

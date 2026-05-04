@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Ruler, Weight, Target, MapPin, Edit, LogOut, Calendar } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -47,6 +47,10 @@ type FitbitStatus = {
     fat_g?: number | null;
     food_names?: string[];
   };
+  heart_history?: Array<{
+    date?: string;
+    resting_heart_rate?: number | null;
+  }>;
 };
 
 const EXPIRED_FITBIT_MESSAGE = 'Your Fitbit connection expired. Reconnect Fitbit and try again.';
@@ -89,6 +93,60 @@ export function ProfilePage() {
   const [fitbitStatus, setFitbitStatus] = useState<FitbitStatus | null>(null);
   const [fitbitLoading, setFitbitLoading] = useState(false);
   const [fitbitBusyAction, setFitbitBusyAction] = useState<'connect' | 'sync' | 'disconnect' | null>(null);
+
+  const heartRateSeries = useMemo(() => {
+    const history = Array.isArray(fitbitStatus?.heart_history) ? fitbitStatus.heart_history : [];
+    return history
+      .map((entry) => ({
+        date: String(entry?.date || ''),
+        value: typeof entry?.resting_heart_rate === 'number' ? entry.resting_heart_rate : Number(entry?.resting_heart_rate),
+      }))
+      .filter((entry) => entry.date && Number.isFinite(entry.value))
+      .slice(-7);
+  }, [fitbitStatus?.heart_history]);
+
+  const heartRateChart = useMemo(() => {
+    if (heartRateSeries.length === 0) {
+      return null;
+    }
+
+    const width = 420;
+    const height = 180;
+    const paddingX = 24;
+    const paddingTop = 18;
+    const paddingBottom = 34;
+    const values = heartRateSeries.map((entry) => entry.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const valueRange = Math.max(maxValue - minValue, 6);
+    const innerWidth = width - paddingX * 2;
+    const innerHeight = height - paddingTop - paddingBottom;
+    const stepX = heartRateSeries.length > 1 ? innerWidth / (heartRateSeries.length - 1) : 0;
+
+    const points = heartRateSeries.map((entry, index) => {
+      const x = paddingX + stepX * index;
+      const normalized = (entry.value - minValue) / valueRange;
+      const y = paddingTop + innerHeight - normalized * innerHeight;
+      return {
+        ...entry,
+        x,
+        y,
+        label: new Date(entry.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+          month: 'short',
+          day: 'numeric',
+        }),
+      };
+    });
+
+    const polyline = points.map((point) => `${point.x},${point.y}`).join(' ');
+    const gridValues = [0, 0.5, 1].map((ratio) => {
+      const y = paddingTop + innerHeight - ratio * innerHeight;
+      const value = Math.round(minValue + ratio * valueRange);
+      return { y, value };
+    });
+
+    return { width, height, points, polyline, gridValues };
+  }, [heartRateSeries, language]);
 
   const currentUserId = user?.id || '';
 
@@ -406,7 +464,8 @@ export function ProfilePage() {
                 </div>
                 <div className="bg-secondary/50 rounded-xl p-4">
                   <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'متوسط نبضات 7 أيام' : 'Avg Heart Beats (7d)'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.coach_summary?.avg_resting_heart_rate_7d ?? '--'}</p>
+                  <p className="text-xl font-semibold">{heartRateSeries[heartRateSeries.length - 1]?.value ?? fitbitStatus.coach_summary?.latest_resting_heart_rate ?? '--'}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{language === 'ar' ? 'آخر قيمة يومية من سجل نبضات Fitbit' : 'Latest daily value from Fitbit heart history'}</p>
                 </div>
                 <div className="bg-secondary/50 rounded-xl p-4">
                   <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الوزن المتزامن' : 'Synced weight'}</p>
@@ -446,6 +505,51 @@ export function ProfilePage() {
                   <p>
                     {language === 'ar' ? 'طعام اليوم:' : 'Today\'s foods:'} <span className="text-foreground font-medium">{fitbitStatus.today_summary!.food_names!.join(', ')}</span>
                   </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-border/50 bg-secondary/30 p-4">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground">{language === 'ar' ? 'نبضات القلب اليومية' : 'Daily heart rate'}</h3>
+                    <p className="text-sm text-muted-foreground">{language === 'ar' ? 'مقياس زمني لآخر 7 أيام من نبضات القلب أثناء الراحة.' : 'A time scale for the last 7 days of resting heart rate.'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">{language === 'ar' ? 'آخر قراءة' : 'Latest reading'}</p>
+                    <p className="text-lg font-semibold text-foreground">{heartRateSeries[heartRateSeries.length - 1]?.value ?? '--'}</p>
+                  </div>
+                </div>
+
+                {heartRateChart ? (
+                  <div>
+                    <svg viewBox={`0 0 ${heartRateChart.width} ${heartRateChart.height}`} className="w-full h-auto overflow-visible" role="img" aria-label={language === 'ar' ? 'رسم نبضات القلب اليومية' : 'Daily heart rate chart'}>
+                      {heartRateChart.gridValues.map((row) => (
+                        <g key={`grid-${row.value}`}>
+                          <line x1="24" x2={String(heartRateChart.width - 24)} y1={String(row.y)} y2={String(row.y)} stroke="currentColor" strokeOpacity="0.12" />
+                          <text x="0" y={String(row.y + 4)} fontSize="11" fill="currentColor" opacity="0.55">{row.value}</text>
+                        </g>
+                      ))}
+                      <polyline fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary" points={heartRateChart.polyline} />
+                      {heartRateChart.points.map((point) => (
+                        <g key={point.date}>
+                          <circle cx={String(point.x)} cy={String(point.y)} r="4" className="fill-primary" />
+                          <text x={String(point.x)} y={String(heartRateChart.height - 10)} textAnchor="middle" fontSize="10" fill="currentColor" opacity="0.6">{point.label}</text>
+                        </g>
+                      ))}
+                    </svg>
+                    <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
+                      {heartRateSeries.map((entry) => (
+                        <div key={entry.date} className="rounded-xl bg-background/60 px-3 py-2">
+                          <div>{new Date(entry.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short' })}</div>
+                          <div className="font-medium text-foreground mt-1">{entry.value} bpm</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                    {language === 'ar' ? 'لا توجد بيانات كافية لعرض نبضات القلب اليومية بعد.' : 'There is not enough heart-rate history yet to render a daily chart.'}
+                  </div>
                 )}
               </div>
 

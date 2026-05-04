@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import tempfile
 from pathlib import Path
 from threading import Lock
 from typing import Optional
@@ -36,10 +37,27 @@ class WhisperSTT:
                 "ffmpeg is required for Whisper STT. Install ffmpeg or `imageio-ffmpeg`."
             ) from exc
 
-        ffmpeg_dir = str(Path(ffmpeg_exe).resolve().parent)
+        resolved_exe = Path(ffmpeg_exe).resolve()
+        ffmpeg_dir = str(resolved_exe.parent)
         current_path = os.environ.get("PATH", "")
         if ffmpeg_dir not in current_path:
             os.environ["PATH"] = ffmpeg_dir + os.pathsep + current_path
+
+        if shutil.which("ffmpeg"):
+            return
+
+        # imageio-ffmpeg ships a versioned executable on Windows, so PATH alone
+        # is insufficient for libraries that probe specifically for `ffmpeg`.
+        alias_dir = Path(tempfile.gettempdir()) / "fitcoach_ffmpeg"
+        alias_dir.mkdir(parents=True, exist_ok=True)
+        alias_path = alias_dir / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+        if not alias_path.exists():
+            shutil.copy2(resolved_exe, alias_path)
+
+        alias_dir_str = str(alias_dir)
+        current_path = os.environ.get("PATH", "")
+        if alias_dir_str not in current_path:
+            os.environ["PATH"] = alias_dir_str + os.pathsep + current_path
 
         if not shutil.which("ffmpeg"):
             raise STTError(

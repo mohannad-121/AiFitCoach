@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import base64
 import json
+import os
+import shutil
+import subprocess
+import time
+from threading import Lock
 from typing import Any, Iterator
+from urllib.parse import urlparse
 
 import requests
 try:
@@ -27,6 +33,8 @@ from utils_logger import log_error
 
 class LLMClient:
     """LLM wrapper supporting OpenAI and local Ollama."""
+
+    _ollama_start_lock = Lock()
 
     def __init__(self, model: str = LLM_MODEL, temperature: float = LLM_TEMPERATURE):
         self.model = model
@@ -244,9 +252,9 @@ class LLMClient:
                 if max_tokens is not None:
                     payload["options"]["num_predict"] = max_tokens
 
-                response = requests.post(
-                    f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
-                    json=payload,
+                response = self._post_ollama(
+                    "/api/chat",
+                    payload,
                     timeout=OLLAMA_TIMEOUT_SECONDS,
                 )
                 if response.status_code == 404:
@@ -294,9 +302,9 @@ class LLMClient:
             payload["options"]["num_predict"] = max_tokens
 
         try:
-            with requests.post(
-                f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
-                json=payload,
+            with self._post_ollama(
+                "/api/chat",
+                payload,
                 timeout=OLLAMA_TIMEOUT_SECONDS,
                 stream=True,
             ) as response:
@@ -362,9 +370,9 @@ class LLMClient:
         if max_tokens is not None:
             payload["options"]["num_predict"] = max_tokens
         try:
-            response = requests.post(
-                f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
-                json=payload,
+            response = self._post_ollama(
+                "/api/chat",
+                payload,
                 timeout=OLLAMA_VISION_TIMEOUT_SECONDS,
             )
             if response.status_code >= 400:
@@ -424,9 +432,9 @@ class LLMClient:
             if max_tokens is not None:
                 payload["options"]["num_predict"] = max_tokens
 
-            response = requests.post(
-                f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
-                json=payload,
+            response = self._post_ollama(
+                "/api/generate",
+                payload,
                 timeout=OLLAMA_TIMEOUT_SECONDS,
             )
             if response.status_code >= 400:
@@ -458,9 +466,9 @@ class LLMClient:
         if max_tokens is not None:
             payload["options"]["num_predict"] = max_tokens
 
-        with requests.post(
-            f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
-            json=payload,
+        with self._post_ollama(
+            "/api/generate",
+            payload,
             timeout=OLLAMA_TIMEOUT_SECONDS,
             stream=True,
         ) as response:
@@ -513,6 +521,76 @@ class LLMClient:
         if existing.endswith((" ", "\n")) or new_text.startswith((" ", "\n", ".", ",", ":", ";", "!", "?")):
             return f"{existing}{new_text}".strip()
         return f"{existing} {new_text}".strip()
+
+    def _post_ollama(
+        self,
+        path: str,
+        payload: dict[str, Any],
+        *,
+        timeout: int,
+        stream: bool = False,
+    ) -> requests.Response:
+        url = f"{OLLAMA_BASE_URL.rstrip('/')}{path}"
+        try:
+            return requests.post(url, json=payload, timeout=timeout, stream=stream)
+        except requests.RequestException:
+            if self._maybe_start_ollama_server():
+                return requests.post(url, json=payload, timeout=timeout, stream=stream)
+            raise
+
+    @classmethod
+    def _maybe_start_ollama_server(cls) -> bool:
+        parsed = urlparse(OLLAMA_BASE_URL)
+        if (parsed.hostname or "").lower() not in {"127.0.0.1", "localhost", "0.0.0.0"}:
+            return False
+
+        tags_url = f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags"
+        try:
+            ready = requests.get(tags_url, timeout=2)
+            if ready.ok:
+                return True
+        except requests.RequestException:
+            pass
+
+        ollama_bin = shutil.which("ollama")
+        if not ollama_bin:
+            return False
+
+        with cls._ollama_start_lock:
+            try:
+                ready = requests.get(tags_url, timeout=2)
+                if ready.ok:
+                    return True
+            except requests.RequestException:
+                pass
+
+            popen_kwargs: dict[str, Any] = {
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+            }
+            if os.name == "nt":
+                popen_kwargs["creationflags"] = (
+                    getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                    | getattr(subprocess, "DETACHED_PROCESS", 0)
+                )
+            else:
+                popen_kwargs["start_new_session"] = True
+
+            try:
+                subprocess.Popen([ollama_bin, "serve"], **popen_kwargs)
+            except Exception as exc:
+                log_error("LLM_OLLAMA_AUTOSTART_ERROR", None, exc, {"base_url": OLLAMA_BASE_URL})
+                return False
+
+        for _ in range(20):
+            try:
+                ready = requests.get(tags_url, timeout=2)
+                if ready.ok:
+                    return True
+            except requests.RequestException:
+                time.sleep(0.5)
+
+        return False
 
     @staticmethod
     def _format_ollama_http_error(response: requests.Response) -> str:
