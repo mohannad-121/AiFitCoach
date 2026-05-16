@@ -28,6 +28,7 @@ FITBIT_REVOKE_URL = "https://api.fitbit.com/oauth2/revoke"
 FITBIT_PROFILE_URL = "https://api.fitbit.com/1/user/-/profile.json"
 FITBIT_ACTIVITY_BY_DATE_URL = "https://api.fitbit.com/1/user/-/activities/date/{day}.json"
 FITBIT_HEART_BY_DATE_URL = "https://api.fitbit.com/1/user/-/activities/heart/date/{day}/1d.json"
+FITBIT_HEART_INTRADAY_URL = "https://api.fitbit.com/1/user/-/activities/heart/date/{day}/1d/{detail_level}.json"
 FITBIT_SLEEP_BY_DATE_URL = "https://api.fitbit.com/1.2/user/-/sleep/date/{day}.json"
 FITBIT_WEIGHT_BY_DATE_URL = "https://api.fitbit.com/1/user/-/body/log/weight/date/{day}.json"
 FITBIT_FOODS_BY_DATE_URL = "https://api.fitbit.com/1/user/-/foods/log/date/{day}.json"
@@ -271,6 +272,26 @@ class FitbitIntegration:
             logger.warning("Failed auto-syncing Fitbit coach context", exc_info=True)
 
         return {"fitbit": self._coach_payload(record)}
+
+    def get_heart_intraday(self, user_id: str, day: str = "today", detail_level: str = "1min") -> dict[str, Any]:
+        if not self.configured:
+            return {"configured": False, "connected": False, "points": []}
+
+        record = self.store.get(user_id)
+        if not record:
+            return {"configured": True, "connected": False, "points": []}
+
+        try:
+            refreshed = self._refresh_if_needed(record)
+            normalized_day = self._normalize_intraday_day(day)
+            normalized_detail_level = self._normalize_intraday_detail_level(detail_level)
+            return self._fetch_heart_intraday_payload(
+                refreshed["access_token"],
+                normalized_day,
+                normalized_detail_level,
+            )
+        except ValueError as exc:
+            self._raise_sync_error(user_id, exc)
 
     def sync(self, user_id: str) -> dict[str, Any]:
         if not self.configured:
@@ -547,6 +568,64 @@ class FitbitIntegration:
                 }
             )
         return history
+
+    def _fetch_heart_intraday_payload(self, access_token: str, day: str, detail_level: str) -> dict[str, Any]:
+        response = requests.get(
+            FITBIT_HEART_INTRADAY_URL.format(day=day, detail_level=detail_level),
+            headers=self._bearer_headers(access_token),
+            timeout=20,
+        )
+        payload = self._parse_fitbit_response(response)
+        activities_heart = payload.get("activities-heart") if isinstance(payload.get("activities-heart"), list) else []
+        heart_entry = activities_heart[0] if activities_heart and isinstance(activities_heart[0], dict) else {}
+        heart_value = heart_entry.get("value") if isinstance(heart_entry.get("value"), dict) else {}
+        intraday = payload.get("activities-heart-intraday") if isinstance(payload.get("activities-heart-intraday"), dict) else {}
+        dataset = intraday.get("dataset") if isinstance(intraday.get("dataset"), list) else []
+        resolved_date = str(heart_entry.get("dateTime") or day)
+
+        points: list[dict[str, Any]] = []
+        for item in dataset:
+            if not isinstance(item, dict):
+                continue
+            point_time = str(item.get("time") or "").strip()
+            if not point_time:
+                continue
+            try:
+                bpm = int(item.get("value"))
+            except (TypeError, ValueError):
+                continue
+            points.append(
+                {
+                    "time": point_time,
+                    "bpm": bpm,
+                    "timestamp": f"{resolved_date}T{point_time}",
+                }
+            )
+
+        return {
+            "configured": True,
+            "connected": True,
+            "date": resolved_date,
+            "detail_level": intraday.get("datasetInterval") and intraday.get("datasetType") and f"{intraday.get('datasetInterval')}{intraday.get('datasetType')}" or detail_level,
+            "resting_heart_rate": heart_value.get("restingHeartRate"),
+            "heart_rate_zones": [zone for zone in (heart_value.get("heartRateZones") or []) if isinstance(zone, dict)],
+            "points": points,
+        }
+
+    def _normalize_intraday_day(self, day: str) -> str:
+        normalized = str(day or "today").strip().lower()
+        if normalized == "today":
+            return "today"
+        try:
+            return date.fromisoformat(str(day).strip()).isoformat()
+        except ValueError as exc:
+            raise ValueError("day must be 'today' or an ISO date like 2026-05-06") from exc
+
+    def _normalize_intraday_detail_level(self, detail_level: str) -> str:
+        normalized = str(detail_level or "1min").strip().lower()
+        if normalized not in {"1min", "1sec"}:
+            raise ValueError("detail_level must be '1min' or '1sec'")
+        return normalized
 
     def _fetch_sleep_history(self, access_token: str) -> list[dict[str, Any]]:
         history: list[dict[str, Any]] = []

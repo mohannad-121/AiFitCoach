@@ -222,67 +222,73 @@ export function OnboardingPage() {
                 </>
               )}
               {currentStep === 2 && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-3">
-                      {language === 'ar' ? 'هل تعاني من أمراض مزمنة؟' : 'Do you have any chronic conditions?'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                      {commonConditions.map((condition) => (
-                        <button key={condition} onClick={() => toggleCondition(condition)}
-                          className={`p-3 rounded-xl border-2 text-sm transition-all ${hasCondition(condition) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary hover:border-primary/50'}`}
-                        >
-                          {condition}
-                        </button>
-                      ))}
+                <div className="space-y-8">
+                  <div className="grid gap-8 md:grid-cols-2">
+                    <div className="rounded-xl border border-border bg-background/30 p-5">
+                      <label className="block text-sm font-medium mb-3">
+                        {language === 'ar' ? 'هل تعاني من أمراض مزمنة؟' : 'Do you have any chronic conditions?'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-3 mb-5">
+                        {commonConditions.map((condition) => (
+                          <button
+                            key={condition}
+                            onClick={() => toggleCondition(condition)}
+                            className={`p-3 rounded-xl border-2 text-sm transition-all ${hasCondition(condition) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary hover:border-primary/50'}`}
+                          >
+                            {condition}
+                          </button>
+                        ))}
+                      </div>
+                      <Textarea
+                        value={formData.chronicConditions || ''}
+                        onChange={(e) => updateField('chronicConditions', e.target.value)}
+                        placeholder={language === 'ar' ? 'اكتب أي أمراض أو حالات صحية أخرى...' : 'Type any other conditions...'}
+                        className="bg-secondary border-border"
+                        rows={2}
+                      />
+                      <p className="text-xs text-muted-foreground mt-3">
+                        {language === 'ar' ? 'اتركها فاضية اذا ما عندك أي مشاكل صحية' : 'Leave empty if you have no health issues'}
+                      </p>
                     </div>
-                    <Textarea
-                      value={formData.chronicConditions || ''}
-                      onChange={(e) => updateField('chronicConditions', e.target.value)}
-                      placeholder={language === 'ar' ? 'اكتب أي أمراض أو حالات صحية أخرى...' : 'Type any other conditions...'}
-                      className="bg-secondary border-border"
-                      rows={2}
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {language === 'ar' ? 'اتركها فاضية اذا ما عندك أي مشاكل صحية' : 'Leave empty if you have no health issues'}
-                    </p>
-                  </div>
-                  
-                  <div className="border-t border-border pt-6">
-                    <label className="block text-sm font-medium mb-3">
-                      {language === 'ar' ? 'هل لديك حساسيات؟' : 'Do you have any allergies?'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                      {commonAllergies.map((allergy) => (
-                        <button key={allergy} onClick={() => toggleAllergy(allergy)}
-                          className={`p-3 rounded-xl border-2 text-sm transition-all ${hasAllergy(allergy) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary hover:border-primary/50'}`}
-                        >
-                          {allergy}
-                        </button>
-                      ))}
+
+                    <div className="rounded-xl border border-border bg-background/30 p-5">
+                      <label className="block text-sm font-medium mb-3">
+                        {language === 'ar' ? 'هل لديك حساسيات؟' : 'Do you have any allergies?'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-3 mb-5">
+                        {commonAllergies.map((allergy) => (
+                          <button
+                            key={allergy}
+                            onClick={() => toggleAllergy(allergy)}
+                            className={`p-3 rounded-xl border-2 text-sm transition-all ${hasAllergy(allergy) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary hover:border-primary/50'}`}
+                          >
+                            {allergy}
+                          </button>
+                        ))}
+                      </div>
+                      <Textarea
+                        value={formData.allergies || ''}
+                        onChange={(e) => updateField('allergies', e.target.value)}
+                        placeholder={language === 'ar' ? 'اكتب أي حساسيات أخرى...' : 'Type any other allergies...'}
+                        className="bg-secondary border-border"
+                        rows={2}
+                      />
+                      <p className="text-xs text-muted-foreground mt-3">
+                        {language === 'ar' ? 'اتركها فاضية اذا ما عندك أي حساسيات' : 'Leave empty if you have no allergies'}
+                      </p>
                     </div>
-                    <Textarea
-                      value={formData.allergies || ''}
-                      onChange={(e) => updateField('allergies', e.target.value)}
-                      placeholder={language === 'ar' ? 'اكتب أي حساسيات أخرى...' : 'Type any other allergies...'}
-                      className="bg-secondary border-border"
-                      rows={2}
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {language === 'ar' ? 'اتركها فاضية اذا ما عندك أي حساسيات' : 'Leave empty if you have no allergies'}
-                    </p>
                   </div>
 
-                  <div className="border-t border-border pt-6">
+                  <div className="rounded-xl border border-border bg-background/30 p-5">
                     <label className="block text-sm font-medium mb-3">
                       {language === 'ar' ? 'تفضيلات غذائية' : 'Dietary Preferences'}
                     </label>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="grid grid-cols-2 gap-3 mb-5">
                       {commonDietaryPreferences.map((pref) => (
                         <button
                           key={pref}
                           onClick={() => toggleDietaryPreference(pref)}
-                          className={`p-3 rounded-xl border-2 text-sm transition-all ${
+                          className={`p-3 rounded-xl border-2 text-xs leading-tight transition-all ${
                             hasDietaryPreference(pref)
                               ? 'border-primary bg-primary/10 text-primary'
                               : 'border-border bg-secondary hover:border-primary/50'
@@ -299,7 +305,7 @@ export function OnboardingPage() {
                       className="bg-secondary border-border"
                       rows={2}
                     />
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-muted-foreground mt-3">
                       {language === 'ar' ? 'اتركها فاضية اذا ما عندك تفضيلات غذائية' : 'Leave empty if you have no dietary preferences'}
                     </p>
                   </div>

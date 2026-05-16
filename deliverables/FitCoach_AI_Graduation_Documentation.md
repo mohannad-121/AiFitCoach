@@ -342,7 +342,39 @@ When the LLM was asked questions without grounded context, the answers were not 
 
 ### 11.4 From Single-Answer Planning to Candidate Options and Validation
 
-Another issue we discovered was that a single generated plan was not enough. The user should be able to compare options, and the backend should be able to reject poor or repetitive outputs. This led to candidate generation, ranking, approval flow, and explicit validation logic.
+flowchart LR
+    U[User] --> A[Register / Log In]
+    U --> B[Complete Onboarding]
+    U --> C[Chat with AI Coach]
+    U --> D[Upload Attachments]
+    U --> E[Generate Workout or Nutrition Plan]
+    U --> F[Approve or Reject Plan]
+    U --> G[View Schedule]
+    U --> H[Log Daily Progress]
+    U --> I[Connect Fitbit]
+    U --> J[Read Coach Notifications]
+
+    C --> E
+    E --> F
+    F --> G
+    G --> H
+    I --> H    flowchart LR
+        U[User] --> A[Register / Log In]
+        U --> B[Complete Onboarding]
+        U --> C[Chat with AI Coach]
+        U --> D[Upload Attachments]
+        U --> E[Generate Workout or Nutrition Plan]
+        U --> F[Approve or Reject Plan]
+        U --> G[View Schedule]
+        U --> H[Log Daily Progress]
+        U --> I[Connect Fitbit]
+        U --> J[Read Coach Notifications]
+    
+        C --> E
+        E --> F
+        F --> G
+        G --> H
+        I --> HAnother issue we discovered was that a single generated plan was not enough. The user should be able to compare options, and the backend should be able to reject poor or repetitive outputs. This led to candidate generation, ranking, approval flow, and explicit validation logic.
 
 ### 11.5 From Simple Chat to Full Coaching Platform
 
@@ -365,6 +397,81 @@ The system does not directly send a generated plan into the user schedule. Inste
 The backend first interprets the request and identifies whether it is asking for workout or nutrition guidance. Then it uses the profile, goal-related signals, tracking summary, retrieved context, and planning logic to generate candidate plan options. These options are summarized for the user. The user can request comparison, recommendation, more options, or approval.
 
 This design was important for two reasons. First, it makes the system more transparent. Second, it lets us reduce bad outcomes caused by deterministic repetition or weak first-choice selection.
+
+## CHAPTER 5: IMPLEMENTATION
+
+### 5.1 Tools, Platforms, Frameworks
+
+The project uses a modern, pragmatic full-stack stack chosen for developer productivity, performance, and deployment flexibility:
+
+- **Frontend:** React + TypeScript, built with Vite and Tailwind CSS (see package.json and /src). This stack provides fast development feedback and a responsive UI for chat, schedule, and profile pages.
+- **Backend:** FastAPI served with Uvicorn (`ai_backend/main.py`, `ai_backend/app.py`). FastAPI gives clear route definitions, Pydantic models for validation, and async support for I/O-bound AI operations.
+- **ML & Retrieval:** Scikit-learn for lightweight supervised models (goal, success, intent); SentenceTransformers (`all-MiniLM-L6-v2`, `paraphrase-multilingual-MiniLM-L12-v2`) for embeddings; FAISS for vector indexing via a persistent RAG store.
+- **LLMs:** Provider-agnostic abstraction supporting OpenAI (cloud) and Ollama (local). Vision-capable models are supported when available. See `ai_backend/llm_client.py` for switching and auto-start logic.
+- **Attachments / OCR:** PyMuPDF, pypdf, Pillow, RapidOCR for image/PDF extraction and summarization (`ai_backend/attachment_processing.py`).
+- **Dev / Tooling:** Node tooling (Vite, ESLint, Vitest) for frontend; Python virtualenv/requirements for backend; optional Supabase client for persistence and auth (`@supabase/supabase-js` present in package.json).
+
+These tools were chosen to balance rapid prototyping (OpenAI during development) and production / demo flexibility (Ollama local models, FAISS RAG, and scikit-learn artifacts).
+
+### 5.2 Code Structure
+
+The repository separates concerns clearly between frontend, backend, and dataset/training code:
+
+- `src/` and `index.html` — React app (UI routes: Coach, Schedule, Profile, Onboarding).
+- `ai_backend/` — Backend service and AI orchestration:
+    - `main.py` — API routes, startup tasks, orchestration, request/response models.
+    - `llm_client.py` — LLM provider abstraction (OpenAI <> Ollama), streaming and vision handling.
+    - `recommendation_engine.py` — Plan generation (workout, nutrition, recovery optimizer).
+    - `ai_engine.py` — Exercise retrieval (lexical + optional semantic embeddings).
+    - `predict.py`, training scripts — model loading and inference (goal, intent, success).
+    - `persistent_rag_store.py`, `dataset_*` — dataset normalization and RAG persistence.
+    - `attachment_processing.py` — OCR and file handling.
+- `deliverables/`, `docs/` — documentation and reporting artifacts.
+
+The code is modular and testable: small components expose focused APIs (search, recommend, predict), while `main.py` composes them into request flows.
+
+### 5.3 Key Modules / Components
+
+- `LLMClient` (`ai_backend/llm_client.py`): Encapsulates provider selection, streaming, image analysis, and local Ollama autostarting logic.
+- `RecommendationEngine` (`ai_backend/recommendation_engine.py`): Produces candidate workout and nutrition plans, using catalog search and health-restriction filters.
+- `AIEngine` (`ai_backend/ai_engine.py`): Fast lexical retrieval with optional SentenceTransformer semantic mode for better matching of user intent to exercises.
+- `predict.py` and training scripts: Load scikit-learn artifacts for goal, plan-intent, and conversation-intent classification used in routing and plan personalization.
+- `persistent_rag_store.py` + FAISS: Store multilingual embeddings for retrieval-augmented generation and user-specific context.
+- `attachment_processing.py`: Handles PDF/image ingestion, OCR, and summarizes attachments for RAG context.
+
+Each module is intentionally narrow in responsibility so components can be tested and swapped (e.g., change embedding model or replace the planner).
+
+### 5.4 Screenshots of Working Features
+
+Add labeled screenshots for the following views (placeholders below — capture and insert images):
+
+- Chat / Coach page showing bilingual conversation and plan-generation flow.
+- Plan comparison dialog with multiple candidate options and approval buttons.
+- Schedule page with stored plan and completed workouts logged.
+- Onboarding / Profile page showing collected features used by the models.
+- Attachment upload + OCR result modal demonstrating image/PDF parsing.
+
+For each screenshot include a short caption that explains: where it is in the workflow, which modules handled the action (frontend route, backend endpoint, AI module), and what the expected next user action is.
+
+### 5.5 Integration of AI / Security
+
+- AI Integration: The backend composes components in a controlled pipeline: intent detection -> retrieval (RAG) -> candidate generation -> deterministic validation -> LLM polishing. This reduces hallucination and enforces safety rules.
+- Providers: `LLMClient` supports both cloud (OpenAI) and local (Ollama) providers; provider selection can be automatic or forced via configuration.
+- Data & Privacy: Attachments and user context are processed server-side; you can run the stack with local Ollama to avoid external API calls. Sensitive keys (OPENAI_API_KEY) are read from env and never hard-coded.
+- Safety & Moderation: The `moderation_layer` and `health_rules` modules check generated plans and filter exercises/foods that violate constraints (injury risk, allergies, medical conditions).
+- Operational Safety: Deterministic validators run before any plan is scheduled, and the UI requires explicit user approval before committing plans to the schedule.
+
+### 5.6 Development Challenges
+
+- Multilingual text handling (Arabic + English): solved by combining character-level TF-IDF features, multilingual sentence embeddings, and normalization utilities.
+- Grounding LLM outputs: mitigated via persistent RAG, lexical fallbacks, and a candidate + validation workflow.
+- Model reliability vs dataset size: some signals (e.g., success predictor) had small labeled datasets, so those models are used as supporting signals rather than sole decision-makers.
+- Balancing local vs cloud LLMs: added `LLMClient` abstraction and Ollama autostart logic so the system can run in demo/offline modes.
+- Attachment robustness: implemented multiple parsers (PyMuPDF, pypdf, RapidOCR) and fallback strategies to handle noisy user uploads.
+
+---
+
+*Next steps:* capture the five screenshots listed in 5.4, then I can insert the image files and write precise captions referencing the exact files and routes.
 
 Validation is also central. Fitness advice is not a place where “probably fine” is good enough. We added deterministic logic to evaluate plan structure, completeness, plausibility, and consistency with the user profile. The validation layer complements the LLM rather than competing with it.
 

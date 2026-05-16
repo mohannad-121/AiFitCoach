@@ -18,6 +18,7 @@ export interface UserProfile {
   dietaryPreferences: string;
   chronicConditions: string;
   allergies: string;
+  avatarUrl?: string;
   onboardingCompleted: boolean;
 }
 
@@ -44,6 +45,7 @@ const defaultProfile: UserProfile = {
   dietaryPreferences: '',
   chronicConditions: '',
   allergies: '',
+  avatarUrl: '',
   onboardingCompleted: false,
 };
 
@@ -86,11 +88,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const storageKey = getProfileStorageKey(user.id);
     const saved = localStorage.getItem(storageKey);
+    let savedProfile: UserProfile | null = null;
 
     if (saved) {
       try {
+        savedProfile = JSON.parse(saved) as UserProfile;
         if (isMounted) {
-          setProfileState(JSON.parse(saved) as UserProfile);
+          setProfileState(savedProfile);
         }
       } catch {
         if (isMounted) {
@@ -130,6 +134,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           dietaryPreferences: (data as { dietary_preferences?: string }).dietary_preferences || '',
           chronicConditions: (data as { chronic_conditions?: string }).chronic_conditions || '',
           allergies: (data as { allergies?: string }).allergies || '',
+          avatarUrl: (data as { avatar_url?: string | null }).avatar_url || savedProfile?.avatarUrl || '',
           onboardingCompleted: Boolean(data.onboarding_completed),
         });
       })

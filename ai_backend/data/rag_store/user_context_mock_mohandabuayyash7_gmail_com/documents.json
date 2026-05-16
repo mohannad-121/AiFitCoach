@@ -8,88 +8,387 @@
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_tracking_summary",
-    "text": "Tracking summary: {\"completed_tasks\": 0, \"total_tasks\": 0, \"adherence_score\": 0, \"completed_workout_tasks\": 0, \"total_workout_tasks\": 0, \"total_nutrition_tasks\": 0, \"active_workout_plans\": 0, \"active_nutrition_plans\": 0, \"completed_last_7_days\": 0, \"last_completed_at\": null, \"days_logged_last_7\": 0, \"last_log_date\": null, \"recent_completed_exercises\": [], \"recent_workout_notes\": [], \"recent_nutrition_notes\": [], \"recent_moods\": [], \"recent_activity\": [], \"active_plan_details\": [], \"weekly_stats\": {\"workout_days\": 0, \"planned_days\": 0, \"planned_nutrition_days\": 0, \"workout_log_days\": 0, \"nutrition_log_days\": 0, \"completed_workouts\": 0, \"recent_exercise_names\": []}, \"monthly_stats\": {\"consistency_percent\": 0, \"days_logged\": 0, \"workout_log_days\": 0, \"nutrition_log_days\": 0}, \"goal\": {\"type\": \"bulking\", \"current_weight\": 70}}",
+    "text": "Tracking summary: {\"completed_tasks\": 17, \"total_tasks\": 58, \"adherence_score\": 0.29310344827586204, \"completed_workout_tasks\": 17, \"completed_nutrition_tasks\": 0, \"total_workout_tasks\": 30, \"total_nutrition_tasks\": 28, \"active_workout_plans\": 1, \"active_nutrition_plans\": 1, \"completed_last_7_days\": 0, \"last_completed_at\": \"2026-03-27\", \"days_logged_last_7\": 0, \"last_log_date\": null, \"recent_completed_exercises\": [{\"date\": \"2026-03-27\", \"plan_title\": \"\", \"day\": \"\", \"exercise_name\": \"Exercise completed\"}, {\"date\": \"2026-03-27\", \"plan_title\": \"\", \"day\": \"\", \"exercise_name\": \"Exercise completed\"}, {\"date\": \"2026-03-27\", \"plan_title\": \"\", \"day\": \"\", \"exercise_name\": \"Exercise completed\"}, {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"DB Romanian Deadlift\"}, {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Seated Cable Row\"}, {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Incline DB Press\"}, {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Hip Thrust\"}, {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Light Cardio\"}, {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Leg Press\"}, {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Flat DB Bench Press\"}, {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Neutral Grip Lat Pulldown\"}, {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Seated DB Press\"}], \"recent_workout_notes\": [], \"recent_nutrition_notes\": [], \"recent_moods\": [], \"recent_activity\": [], \"active_plan_details\": [{\"title\": \"Workout Plan - Hypertrophy 1\", \"type\": \"workout\", \"weekly_days_with_items\": 3, \"sample_exercises\": [\"Push-up Variations\", \"Floor DB Bench Press\", \"Floor DB Bench Press\", \"Front Raise\", \"Incline Push-up (Chair)\", \"Chair Triceps Dips\"], \"sample_meals\": []}, {\"title\": \"🍽️ Heavyweight Bulking - Nutrition Plan\", \"type\": \"nutrition\", \"weekly_days_with_items\": 7, \"sample_exercises\": [], \"sample_meals\": [\"Breakfast\", \"Snack\", \"Breakfast\", \"Snack\", \"Breakfast\", \"Snack\"]}], \"progress_metrics\": {\"recent_completed_tasks\": 0, \"prior_completed_tasks\": 0, \"completion_delta\": 0, \"workout_adherence_percent\": 0, \"logging_consistency_percent\": 0, \"current_workout_streak_days\": 0, \"current_logging_streak_days\": 0, \"planned_workout_tasks_last_7_days\": 0, \"trend\": \"flat\"}, \"weekly_stats\": {\"workout_days\": 0, \"planned_days\": 3, \"planned_nutrition_days\": 7, \"workout_log_days\": 0, \"nutrition_log_days\": 0, \"completed_workouts\": 0, \"recent_completed_tasks\": 0, \"previous_completed_tasks\": 0, \"completion_delta\": 0, \"workout_adherence_percent\": 0, \"logging_consistency_percent\": 0, \"current_workout_streak_days\": 0, \"current_logging_streak_days\": 0, \"recent_exercise_names\": [\"Exercise completed\", \"Exercise completed\", \"Exercise completed\", \"DB Romanian Deadlift\", \"Seated Cable Row\", \"Incline DB Press\", \"Hip Thrust\", \"Light Cardio\"]}, \"monthly_stats\": {\"consistency_percent\": 29, \"days_logged\": 0, \"workout_log_days\": 0, \"nutrition_log_days\": 0}, \"goal\": {\"type\": \"bulking\", \"current_weight\": 70}, \"fitbit\": {\"configured\": true, \"connected\": true, \"scope\": [\"profile\", \"activity\", \"nutrition\", \"heartrate\", \"sleep\", \"weight\"], \"last_sync_at\": \"2026-04-12T18:05:55.540235+00:00\", \"profile\": {\"fitbit_user_id\": \"D3RTYH\", \"display_name\": \"mohand a.\", \"avatar_url\": \"https://static0.fitbit.com/images/profile/defaultProfile_150.png\", \"member_since\": \"2026-03-29\", \"age\": 23, \"gender\": \"MALE\", \"height_cm\": 178, \"weight_kg\": 110, \"timezone\": \"Europe/Athens\"}, \"today_summary\": {\"date\": \"2026-04-12\", \"steps\": 1356, \"calories_out\": 1909, \"distance_km\": 1.01, \"fairly_active_minutes\": 0, \"very_active_minutes\": 0, \"lightly_active_minutes\": 10, \"sedentary_minutes\": 1255, \"resting_heart_rate\": null, \"weight_kg\": null, \"latest_weight_kg\": null, \"bmi\": null, \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"food_names\": [], \"water_ml\": 0}, \"activity_history\": [{\"date\": \"2026-04-06\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-07\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-08\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-09\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-10\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-11\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-12\", \"steps\": 1356, \"calories_out\": 1909, \"distance_km\": 1.01, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 10, \"sedentary_minutes\": 1430}], \"heart_history\": [{\"date\": \"2026-04-06\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-07\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-08\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-09\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-10\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-11\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-12\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 1909.124117999977, \"max\": 109, \"min\": 30, \"minutes\": 1439, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}], \"sleep_history\": [{\"date\": \"2026-04-06\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-07\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-08\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-09\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-10\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-11\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-12\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}], \"weight_history\": [{\"date\": \"2026-04-06\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-07\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-08\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-09\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-10\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-11\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-12\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}], \"food_history\": [{\"date\": \"2026-04-06\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-07\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-08\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-09\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-10\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-11\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-12\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}], \"water_history\": [{\"date\": \"2026-04-06\", \"water_ml\": 0}, {\"date\": \"2026-04-07\", \"water_ml\": 0}, {\"date\": \"2026-04-08\", \"water_ml\": 0}, {\"date\": \"2026-04-09\", \"water_ml\": 0}, {\"date\": \"2026-04-10\", \"water_ml\": 0}, {\"date\": \"2026-04-11\", \"water_ml\": 0}, {\"date\": \"2026-04-12\", \"water_ml\": 0}], \"coach_summary\": {\"avg_steps_7d\": 193.71, \"avg_calories_out_7d\": 2075.29, \"avg_calories_in_7d\": 0.0, \"avg_sleep_hours_7d\": 0.0, \"avg_resting_heart_rate_7d\": null, \"avg_weight_7d\": null, \"avg_water_ml_7d\": 0.0, \"latest_weight_kg\": null, \"weight_change_7d\": null, \"foods_logged_7d\": 0, \"total_very_active_minutes_7d\": 0, \"total_fairly_active_minutes_7d\": 0}}}",
     "metadata": {
       "kind": "tracking_summary"
     }
   },
   {
+    "id": "mock_mohandabuayyash7_gmail_com_progress_metrics",
+    "text": "Progress metrics: {\"recent_completed_tasks\": 0, \"prior_completed_tasks\": 0, \"completion_delta\": 0, \"workout_adherence_percent\": 0, \"logging_consistency_percent\": 0, \"current_workout_streak_days\": 0, \"current_logging_streak_days\": 0, \"planned_workout_tasks_last_7_days\": 0, \"trend\": \"flat\"}",
+    "metadata": {
+      "kind": "progress_metrics"
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_active_plan_0",
+    "text": "Active plan detail: {\"title\": \"Workout Plan - Hypertrophy 1\", \"type\": \"workout\", \"weekly_days_with_items\": 3, \"sample_exercises\": [\"Push-up Variations\", \"Floor DB Bench Press\", \"Floor DB Bench Press\", \"Front Raise\", \"Incline Push-up (Chair)\", \"Chair Triceps Dips\"], \"sample_meals\": []}",
+    "metadata": {
+      "kind": "active_plan_detail",
+      "index": 0
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_active_plan_1",
+    "text": "Active plan detail: {\"title\": \"🍽️ Heavyweight Bulking - Nutrition Plan\", \"type\": \"nutrition\", \"weekly_days_with_items\": 7, \"sample_exercises\": [], \"sample_meals\": [\"Breakfast\", \"Snack\", \"Breakfast\", \"Snack\", \"Breakfast\", \"Snack\"]}",
+    "metadata": {
+      "kind": "active_plan_detail",
+      "index": 1
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_0",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-27\", \"plan_title\": \"\", \"day\": \"\", \"exercise_name\": \"Exercise completed\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 0
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_1",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-27\", \"plan_title\": \"\", \"day\": \"\", \"exercise_name\": \"Exercise completed\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 1
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_2",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-27\", \"plan_title\": \"\", \"day\": \"\", \"exercise_name\": \"Exercise completed\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 2
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_3",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"DB Romanian Deadlift\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 3
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_4",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Seated Cable Row\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 4
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_5",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Incline DB Press\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 5
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_6",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Hip Thrust\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 6
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_7",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-26\", \"plan_title\": \"Workout Plan\", \"day\": \"Thursday\", \"exercise_name\": \"Light Cardio\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 7
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_8",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Leg Press\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 8
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_9",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Flat DB Bench Press\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 9
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_10",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Neutral Grip Lat Pulldown\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 10
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_completed_exercise_11",
+    "text": "Recent completed exercise: {\"date\": \"2026-03-23\", \"plan_title\": \"Workout Plan\", \"day\": \"Monday\", \"exercise_name\": \"Seated DB Press\"}",
+    "metadata": {
+      "kind": "recent_completed_exercise",
+      "index": 11
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_summary",
+    "text": "Fitbit summary: {\"configured\": true, \"connected\": true, \"scope\": [\"profile\", \"activity\", \"nutrition\", \"heartrate\", \"sleep\", \"weight\"], \"last_sync_at\": \"2026-04-12T18:05:55.540235+00:00\", \"profile\": {\"fitbit_user_id\": \"D3RTYH\", \"display_name\": \"mohand a.\", \"avatar_url\": \"https://static0.fitbit.com/images/profile/defaultProfile_150.png\", \"member_since\": \"2026-03-29\", \"age\": 23, \"gender\": \"MALE\", \"height_cm\": 178, \"weight_kg\": 110, \"timezone\": \"Europe/Athens\"}, \"today_summary\": {\"date\": \"2026-04-12\", \"steps\": 1356, \"calories_out\": 1909, \"distance_km\": 1.01, \"fairly_active_minutes\": 0, \"very_active_minutes\": 0, \"lightly_active_minutes\": 10, \"sedentary_minutes\": 1255, \"resting_heart_rate\": null, \"weight_kg\": null, \"latest_weight_kg\": null, \"bmi\": null, \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"food_names\": [], \"water_ml\": 0}, \"activity_history\": [{\"date\": \"2026-04-06\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-07\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-08\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-09\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-10\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-11\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}, {\"date\": \"2026-04-12\", \"steps\": 1356, \"calories_out\": 1909, \"distance_km\": 1.01, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 10, \"sedentary_minutes\": 1430}], \"heart_history\": [{\"date\": \"2026-04-06\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-07\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-08\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-09\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-10\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-11\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}, {\"date\": \"2026-04-12\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 1909.124117999977, \"max\": 109, \"min\": 30, \"minutes\": 1439, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}], \"sleep_history\": [{\"date\": \"2026-04-06\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-07\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-08\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-09\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-10\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-11\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}, {\"date\": \"2026-04-12\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}], \"weight_history\": [{\"date\": \"2026-04-06\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-07\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-08\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-09\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-10\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-11\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}, {\"date\": \"2026-04-12\", \"weight_kg\": null, \"bmi\": null, \"source\": \"\", \"log_id\": null}], \"food_history\": [{\"date\": \"2026-04-06\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-07\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-08\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-09\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-10\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-11\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}, {\"date\": \"2026-04-12\", \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"fiber_g\": 0.0, \"sodium_mg\": 0.0, \"food_names\": []}], \"water_history\": [{\"date\": \"2026-04-06\", \"water_ml\": 0}, {\"date\": \"2026-04-07\", \"water_ml\": 0}, {\"date\": \"2026-04-08\", \"water_ml\": 0}, {\"date\": \"2026-04-09\", \"water_ml\": 0}, {\"date\": \"2026-04-10\", \"water_ml\": 0}, {\"date\": \"2026-04-11\", \"water_ml\": 0}, {\"date\": \"2026-04-12\", \"water_ml\": 0}], \"coach_summary\": {\"avg_steps_7d\": 193.71, \"avg_calories_out_7d\": 2075.29, \"avg_calories_in_7d\": 0.0, \"avg_sleep_hours_7d\": 0.0, \"avg_resting_heart_rate_7d\": null, \"avg_weight_7d\": null, \"avg_water_ml_7d\": 0.0, \"latest_weight_kg\": null, \"weight_change_7d\": null, \"foods_logged_7d\": 0, \"total_very_active_minutes_7d\": 0, \"total_fairly_active_minutes_7d\": 0}}",
+    "metadata": {
+      "kind": "fitbit_summary"
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_coach_summary",
+    "text": "Fitbit coach summary: {\"avg_steps_7d\": 193.71, \"avg_calories_out_7d\": 2075.29, \"avg_calories_in_7d\": 0.0, \"avg_sleep_hours_7d\": 0.0, \"avg_resting_heart_rate_7d\": null, \"avg_weight_7d\": null, \"avg_water_ml_7d\": 0.0, \"latest_weight_kg\": null, \"weight_change_7d\": null, \"foods_logged_7d\": 0, \"total_very_active_minutes_7d\": 0, \"total_fairly_active_minutes_7d\": 0}",
+    "metadata": {
+      "kind": "fitbit_coach_summary"
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_today",
+    "text": "Fitbit today summary: {\"date\": \"2026-04-12\", \"steps\": 1356, \"calories_out\": 1909, \"distance_km\": 1.01, \"fairly_active_minutes\": 0, \"very_active_minutes\": 0, \"lightly_active_minutes\": 10, \"sedentary_minutes\": 1255, \"resting_heart_rate\": null, \"weight_kg\": null, \"latest_weight_kg\": null, \"bmi\": null, \"foods_logged\": 0, \"calories_in\": 0, \"protein_g\": 0.0, \"carbs_g\": 0.0, \"fat_g\": 0.0, \"food_names\": [], \"water_ml\": 0}",
+    "metadata": {
+      "kind": "fitbit_today_summary"
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_activity_0",
+    "text": "Fitbit activity history: {\"date\": \"2026-04-06\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}",
+    "metadata": {
+      "kind": "fitbit_activity_history",
+      "index": 0
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_activity_1",
+    "text": "Fitbit activity history: {\"date\": \"2026-04-07\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}",
+    "metadata": {
+      "kind": "fitbit_activity_history",
+      "index": 1
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_activity_2",
+    "text": "Fitbit activity history: {\"date\": \"2026-04-08\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}",
+    "metadata": {
+      "kind": "fitbit_activity_history",
+      "index": 2
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_activity_3",
+    "text": "Fitbit activity history: {\"date\": \"2026-04-09\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}",
+    "metadata": {
+      "kind": "fitbit_activity_history",
+      "index": 3
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_activity_4",
+    "text": "Fitbit activity history: {\"date\": \"2026-04-10\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}",
+    "metadata": {
+      "kind": "fitbit_activity_history",
+      "index": 4
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_activity_5",
+    "text": "Fitbit activity history: {\"date\": \"2026-04-11\", \"steps\": 0, \"calories_out\": 2103, \"distance_km\": 0.0, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 0, \"sedentary_minutes\": 1440}",
+    "metadata": {
+      "kind": "fitbit_activity_history",
+      "index": 5
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_activity_6",
+    "text": "Fitbit activity history: {\"date\": \"2026-04-12\", \"steps\": 1356, \"calories_out\": 1909, \"distance_km\": 1.01, \"very_active_minutes\": 0, \"fairly_active_minutes\": 0, \"lightly_active_minutes\": 10, \"sedentary_minutes\": 1430}",
+    "metadata": {
+      "kind": "fitbit_activity_history",
+      "index": 6
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_sleep_0",
+    "text": "Fitbit sleep history: {\"date\": \"2026-04-06\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}",
+    "metadata": {
+      "kind": "fitbit_sleep_history",
+      "index": 0
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_sleep_1",
+    "text": "Fitbit sleep history: {\"date\": \"2026-04-07\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}",
+    "metadata": {
+      "kind": "fitbit_sleep_history",
+      "index": 1
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_sleep_2",
+    "text": "Fitbit sleep history: {\"date\": \"2026-04-08\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}",
+    "metadata": {
+      "kind": "fitbit_sleep_history",
+      "index": 2
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_sleep_3",
+    "text": "Fitbit sleep history: {\"date\": \"2026-04-09\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}",
+    "metadata": {
+      "kind": "fitbit_sleep_history",
+      "index": 3
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_sleep_4",
+    "text": "Fitbit sleep history: {\"date\": \"2026-04-10\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}",
+    "metadata": {
+      "kind": "fitbit_sleep_history",
+      "index": 4
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_sleep_5",
+    "text": "Fitbit sleep history: {\"date\": \"2026-04-11\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}",
+    "metadata": {
+      "kind": "fitbit_sleep_history",
+      "index": 5
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_sleep_6",
+    "text": "Fitbit sleep history: {\"date\": \"2026-04-12\", \"minutes_asleep\": 0, \"time_in_bed\": 0, \"efficiency\": null, \"start_time\": null, \"end_time\": null, \"minutes_awake\": 0, \"minutes_deep\": 0, \"minutes_light\": 0, \"minutes_rem\": 0}",
+    "metadata": {
+      "kind": "fitbit_sleep_history",
+      "index": 6
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_heart_0",
+    "text": "Fitbit heart history: {\"date\": \"2026-04-06\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}",
+    "metadata": {
+      "kind": "fitbit_heart_history",
+      "index": 0
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_heart_1",
+    "text": "Fitbit heart history: {\"date\": \"2026-04-07\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}",
+    "metadata": {
+      "kind": "fitbit_heart_history",
+      "index": 1
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_heart_2",
+    "text": "Fitbit heart history: {\"date\": \"2026-04-08\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}",
+    "metadata": {
+      "kind": "fitbit_heart_history",
+      "index": 2
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_heart_3",
+    "text": "Fitbit heart history: {\"date\": \"2026-04-09\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}",
+    "metadata": {
+      "kind": "fitbit_heart_history",
+      "index": 3
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_heart_4",
+    "text": "Fitbit heart history: {\"date\": \"2026-04-10\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}",
+    "metadata": {
+      "kind": "fitbit_heart_history",
+      "index": 4
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_heart_5",
+    "text": "Fitbit heart history: {\"date\": \"2026-04-11\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 2103.2351999999687, \"max\": 109, \"min\": 30, \"minutes\": 1440, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}",
+    "metadata": {
+      "kind": "fitbit_heart_history",
+      "index": 5
+    }
+  },
+  {
+    "id": "mock_mohandabuayyash7_gmail_com_fitbit_heart_6",
+    "text": "Fitbit heart history: {\"date\": \"2026-04-12\", \"resting_heart_rate\": null, \"heart_rate_zones\": [{\"caloriesOut\": 1909.124117999977, \"max\": 109, \"min\": 30, \"minutes\": 1439, \"name\": \"Out of Range\"}, {\"caloriesOut\": 0, \"max\": 134, \"min\": 110, \"minutes\": 0, \"name\": \"Fat Burn\"}, {\"caloriesOut\": 0, \"max\": 165, \"min\": 135, \"minutes\": 0, \"name\": \"Cardio\"}, {\"caloriesOut\": 0, \"max\": 220, \"min\": 166, \"minutes\": 0, \"name\": \"Peak\"}]}",
+    "metadata": {
+      "kind": "fitbit_heart_history",
+      "index": 6
+    }
+  },
+  {
     "id": "mock_mohandabuayyash7_gmail_com_plan_snapshot",
-    "text": "Plan snapshot: {\"active_workout_plans\": 0, \"active_nutrition_plans\": 0, \"workout_titles\": [], \"nutrition_titles\": [], \"updated_at\": \"2026-03-27T12:56:33.443Z\"}",
+    "text": "Plan snapshot: {\"active_workout_plans\": 0, \"active_nutrition_plans\": 0, \"workout_titles\": [], \"nutrition_titles\": [], \"updated_at\": \"2026-04-12T18:07:13.078Z\"}",
     "metadata": {
       "kind": "plan_snapshot"
     }
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_recent_message_0",
-    "text": "Recent assistant message: أهلاً وسهلاً يا حج! 👋 كيف أقدر أساعدك اليوم في تمارينك، نظام غذائيك أو أي شيء يخص لياقتك؟",
+    "text": "Recent user message: اسمع",
     "metadata": {
       "kind": "recent_message",
-      "role": "assistant",
+      "role": "user",
       "index": 0
     }
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_recent_message_1",
-    "text": "Recent user message: كيفك",
+    "text": "Recent assistant message: أنا أسمعك، كيف يمكنني مساعدتك اليوم؟\n\n### ما يمكنني فعله الآن\n- الإجابة على أسئلة حول تمارين القوة أو بناء العضلات.\n- تقديم نصائح غذائية تدعم هدفك في زيادة الكتلة.\n- مراجعة سجل التمارين أو التغذية الحالي ومساعدتك على تحسينه.\n\n### الخطوة التالية\nأخبرني ما هو الموضوع الذي تريد مناقشته أو السؤال الذي لديك. 🚀",
     "metadata": {
       "kind": "recent_message",
-      "role": "user",
+      "role": "assistant",
       "index": 1
     }
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_recent_message_2",
-    "text": "Recent assistant message: أنا بخير وجاهز للمساعدة. إذا أردت، أستطيع الآن أن أحسن تمرينك، أو أجيب عن سؤال غذائي، أو أراجع تقدمك.",
+    "text": "Recent user message: هل يمكنك قراءة المعلومات اللي موجودة ب FITBIT",
     "metadata": {
       "kind": "recent_message",
-      "role": "assistant",
+      "role": "user",
       "index": 2
     }
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_recent_message_3",
-    "text": "Recent user message: بدي تعطيني جميع معلوماتي",
+    "text": "Recent assistant message: نعم، أستطيع استعراض البيانات المتوفرة من حساب Fitbit الخاص بك.\n\n### الخلاصة\n- **الحساب متصل** وتم آخر مزامنة في 12 أبريل 2026 الساعة 18:05 بتوقيت UTC.\n- **ملف الشخصي**: عمر 23 سنة، الجنس ذكر، الطول 178 سم، الوزن 110 كغ (مختلف عن الوزن المسجل في التطبيق).\n\n### التفاصيل المتاحة\n- **ملخص اليوم (12 أبريل 2026)**\n - خطوات: **1 356** خطوة.\n - السعرات المستهلكة: **1 909** kcal (خارج النشاط).\n - مسافة: **1.01 كم**.\n - دقائق النشاط: 10 دقيقة نشاط خفيف، باقي الوقت **1 255 دقيقة** جلوس.\n - لا توجد سجلات للوجبات (السعرات الداخلة، البروتين، الكربوهيدرات، الدهون = 0).\n\n- **متوسط أسبوعي** ( - **متوسط أسبوعي** (آخر 7 أيام)\n - متوسط الخطوات اليومية: **≈ 194** خطوة.\n - متوسط السعرات المستهلكة (خارج النشاط): **≈ 2 075 kcal**.\n - متوسط السعرات الداخلة: **0 kcal** (لم تُسجل أي وجبة).\n - متوسط ساعات النوم: **0 ساعة** (لم يتم تسجيل النوم).\n - متوسط استهلاك الماء: **0 مل**.\n\n### ما يلزم تحسينه\n- تسجيل الوجبات يوميًا لتتبع السعرات والبروتينات.\n- زيادة عدد الخطوات والنشاط الخفيف لتقليل الجلوس.\n- إدخال وزنك الفعلي (70 كغ) في Fitbit لتوحيد البيانات.\n\n### الخطوة التالية\nهل ترغب في إضافة ملاحظات غذائية أو تعديل هدف النشاط في Fitbit الآن؟ 📊",
     "metadata": {
       "kind": "recent_message",
-      "role": "user",
+      "role": "assistant",
       "index": 3
     }
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_recent_message_4",
-    "text": "Recent assistant message: بالتأكيد. أخبرني الآن في ماذا تريد المساعدة: التمرين، التغذية، خسارة الدهون، زيادة العضلات، أم تعديل خطتك الحالية.",
+    "text": "Recent user message: CAN YOU READ FITBIT >",
     "metadata": {
       "kind": "recent_message",
-      "role": "assistant",
+      "role": "user",
       "index": 4
     }
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_recent_message_5",
-    "text": "Recent user message: لا بس اعطيني معلوماتسي",
+    "text": "Recent assistant message: نعم، أستطيع قراءة بيانات Fitbit الخاصة بك.\n\n### الخلاصة\n- **الحساب متصل** وآخر مزامنة: 12 أبريل 2026 18:05 UTC.\n- **ملف الشخصي**: عمر 23 سنة، الجنس ذكر، الطول 178 سم، الوزن المسجل في Fitbit 110 كغ (مختلف عن وزنك في التطبيق 70 كغ).\n\n### ما يظهر في اليوم الحالي (12 أبريل 2026)\n- خطوات: **1 356** خطوة.\n- سعرات حرارية مُحترقة: **1 909 kcal**.\n- مسافة: **1.01 كم**.\n- نشاط خفيف: **10 دقيقة**؛ جلوس: **1 255 دقيقة**.\n- لا توجد سجلات طعام (السعرات الداخلة 0 kcal، البروتين 0 غ، الكربوهيدرات 0 غ، الدهون 0 غ).\n\n### متوسط الأسبوع الماضي\n- متوسط الخطوات اليومية: **≈ 194** خطوة.\n- متوسط السعرات المستهلكة: **≈ 2 075 kcal**.\n- لا توجد بيانات للغذاء، النوم، أو الماء.\n\n### ما يمكن تحسينه\n- سجل وجباتك يوميًا لتتبع السعرات والبروتين.\n- زد عدد الخطوات والنشاط الخفيف لتقليل الجلوس.\n- حدث وزنك في Fitbit إلى **70 كغ** لتوحيد البيانات.\n\n### الخطوة التالية\nهل تريد مساعدة في إدخال بيانات الطعام أو تعديل الوزن في حساب Fitbit الآن؟ 📱",
     "metadata": {
       "kind": "recent_message",
-      "role": "user",
+      "role": "assistant",
       "index": 5
     }
   },
   {
     "id": "mock_mohandabuayyash7_gmail_com_recent_message_6",
-    "text": "Recent assistant message: **معلوماتك الشخصية**  \n- الاسم: Mohannad  \n- العمر: 23 سنة  \n- الجنس: ذكر  \n- الطول: 175 سم  \n- الوزن: 70 كغ  \n- الهدف المسجل: زيادة الكتلة (Bulking)  \n- مستوى اللياقة: مبتدئ  \n- أيام التدريب الأسبوعية: 3 أيام  \n- مستوى النشاط اليومي: متوسط  \n- مكان التدريب المفضَّل: المنزل  \n- المعدات المتوفرة: دمبلز (dumbbells)  \n- الإصابة الحالية: خلع في الكتف  \n\n**الحالة الصحية**  \n- أمراض مزمنة: سكري (Diabetes)  \n- حساسية: ليس هناك (لم تُسجَّل)  \n- تفضيلات غذائية: حلال (Halal)  \n\n**ملخص المتابعة** (حتى الآن)  \n- درجة الالتزام: 0 %  \n- تم إكمال تمارين خلال آخر 7 أيام: 0 - **درجة الالتزام**: 0  \n- **عدد التمارين المكتملة خلال آخر 7 أيام**: 0  \n- **عدد الأيام المسجَّلة خلال آخر 7 أيام**: 0  \n- **خطط التمرين النشطة**: 0  \n- **خطط التغذية النشطة**: 0  \n\n**إحصائيات الأسبوعية** (جميعها 0)  \n- أيام التمرين المخططة: 0  \n- أيام التمرين الفعلية: 0  \n- أيام التغذية المخططة: 0  \n- أيام تسجيل التغذية: 0  \n- تم إكمال عدد التمارين: 0  \n- أسماء التمارين الأخيرة: —  \n\n**ملخص الخطة**  \n- عدد خطط التمر - عدد خطط التمرين النشطة: 0  \n- عدد خطط التغذية النشطة: 0  \n\n**ما يمكن فعله الآن**  \n1. **إنشاء خطة تمرين مخصصة** : اطلب من المدرب الذكي (AI Coach) وضع برنامج تمارين منزلية يركز على دمبلز ويأخذ في الاعتبار إصابة الكتف.  \n2. **إنشاء خطة تغذية للزيادة** : حدّد عدد السعرات المطلوبة (≈ 2 500‑2 700 كالوري/يوم) مع توزيع بروتين ≈ 2 غ/كغ وزن (140 غ بروتين).  \n3. **بدء تسجيل النشاط** : سجّل كل تمرين أو وجبة في صفحة “Schedule” لتتبع الالتزام وتحسين التقييم.  \n\n🟢 الخطوة التالية: اكتب “أريد خطة تمارين للمنزل مع دمبلز” أو “أحتاج خطة غذائية للـ bulking”.",
-    "metadata": {
-      "kind": "recent_message",
-      "role": "assistant",
-      "index": 6
-    }
-  },
-  {
-    "id": "mock_mohandabuayyash7_gmail_com_recent_message_7",
-    "text": "Recent user message: احتاج خطة غذائية",
+    "text": "Recent user message: answer in english",
     "metadata": {
       "kind": "recent_message",
       "role": "user",
-      "index": 7
+      "index": 6
     }
   }
 ]

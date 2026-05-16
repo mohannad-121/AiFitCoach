@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AI_BACKEND_URL, isPublicAppOrigin } from '@/lib/backendUrl';
 import { repairMojibake, stabilizeBidiNumbers } from '@/lib/text';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -162,7 +163,6 @@ const renderEmojiAwareChildren = (children: React.ReactNode, keyPrefix: string):
     return child;
   });
 
-const AI_BACKEND_URL = import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002';
 const CHAT_REQUEST_TIMEOUT_MS = 120000;
 const ATTACHMENT_REQUEST_TIMEOUT_MS = 240000;
 const NUTRITION_PREFIX = '\u{1F37D}\uFE0F';
@@ -2334,15 +2334,23 @@ export function CoachPage() {
     });
     let timeoutId: number | null = null;
     try {
+      const useCompactPublicPayload = isPublicAppOrigin();
       const user_profile = await buildCombinedUserProfile();
-      const tracking_summary = await buildTrackingSummary();
-      const plan_snapshot = await buildPlanSnapshot();
-      const recent_messages = newMessages.slice(-12).map((msg) => ({
+      const tracking_summary = useCompactPublicPayload ? null : await buildTrackingSummary();
+      const plan_snapshot = useCompactPublicPayload ? null : await buildPlanSnapshot();
+      const recent_messages = newMessages.slice(useCompactPublicPayload ? -4 : -12).map((msg) => ({
         role: msg.role,
         content: buildOutgoingUserMessage(msg, language),
       }));
 
-      const website_context = await buildWebsiteContext();
+      const website_context = useCompactPublicPayload
+        ? {
+            app_name: 'FitCoach',
+            current_page: 'coach',
+            current_path: location.pathname,
+            current_language: language === 'ar' ? 'ar' : 'en',
+          }
+        : await buildWebsiteContext();
 
       const payload = {
         message: text.trim(),
@@ -2356,10 +2364,28 @@ export function CoachPage() {
         recent_messages,
       };
 
+      const fallbackPayload = {
+        message: text.trim(),
+        user_id: user.id,
+        conversation_id: activeConversationId,
+        language: language === 'ar' ? 'ar' : 'en',
+        user_profile: user_profile
+          ? {
+              goal: user_profile.goal,
+              gender: user_profile.gender,
+              age: user_profile.age,
+              weight: user_profile.weight,
+              height: user_profile.height,
+              fitnessLevel: user_profile.fitnessLevel,
+            }
+          : null,
+        recent_messages: recent_messages.slice(-2),
+      };
+
       const controller = new AbortController();
       const requestTimeoutMs = attachments.length > 0 ? ATTACHMENT_REQUEST_TIMEOUT_MS : CHAT_REQUEST_TIMEOUT_MS;
       timeoutId = window.setTimeout(() => controller.abort(), requestTimeoutMs);
-      const apiResponse = attachments.length > 0
+      let apiResponse = attachments.length > 0
         ? await (async () => {
             const formData = new FormData();
             formData.append('message', text.trim());
@@ -2380,6 +2406,25 @@ export function CoachPage() {
               signal: controller.signal,
             });
           })()
+        : useCompactPublicPayload
+          ? await (async () => {
+              const params = new URLSearchParams({
+                message: fallbackPayload.message,
+                user_id: fallbackPayload.user_id,
+                conversation_id: fallbackPayload.conversation_id,
+                language: fallbackPayload.language,
+              });
+              if (fallbackPayload.user_profile) {
+                params.set('user_profile', JSON.stringify(fallbackPayload.user_profile));
+              }
+              if (fallbackPayload.recent_messages.length > 0) {
+                params.set('recent_messages', JSON.stringify(fallbackPayload.recent_messages));
+              }
+              return fetch(`${AI_BACKEND_URL}/chat-lite?${params.toString()}`, {
+                method: 'GET',
+                signal: controller.signal,
+              });
+            })()
         : await fetch(`${AI_BACKEND_URL}/chat`, {
             method: 'POST',
             headers: {
@@ -2388,6 +2433,17 @@ export function CoachPage() {
             body: JSON.stringify(payload),
             signal: controller.signal,
           });
+
+      if (!attachments.length && apiResponse.status >= 500 && useCompactPublicPayload) {
+        apiResponse = await fetch(`${AI_BACKEND_URL}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: JSON.stringify(fallbackPayload),
+          signal: controller.signal,
+        });
+      }
       if (timeoutId !== null) {
         window.clearTimeout(timeoutId);
         timeoutId = null;

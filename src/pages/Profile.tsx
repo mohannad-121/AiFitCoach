@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Ruler, Weight, Target, MapPin, Edit, LogOut, Calendar } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -8,7 +8,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { HeartRateTimelinePanel } from '@/components/HeartRateTimelinePanel';
 import { supabase } from '@/integrations/supabase/client';
+import { AI_BACKEND_URL } from '@/lib/backendUrl';
 
 type FitbitStatus = {
   configured: boolean;
@@ -22,12 +24,6 @@ type FitbitStatus = {
     avatar_url?: string;
     member_since?: string;
     weight_kg?: number | null;
-  };
-  coach_summary?: {
-    avg_resting_heart_rate_7d?: number | null;
-    latest_resting_heart_rate?: number | null;
-    total_very_active_minutes_7d?: number;
-    total_fairly_active_minutes_7d?: number;
   };
   today_summary?: {
     date?: string;
@@ -47,10 +43,6 @@ type FitbitStatus = {
     fat_g?: number | null;
     food_names?: string[];
   };
-  heart_history?: Array<{
-    date?: string;
-    resting_heart_rate?: number | null;
-  }>;
 };
 
 const EXPIRED_FITBIT_MESSAGE = 'Your Fitbit connection expired. Reconnect Fitbit and try again.';
@@ -64,21 +56,18 @@ function getFitbitErrorMessage(error: unknown, language: string) {
   return error instanceof Error ? error.message : (language === 'ar' ? 'تعذر تحديث Fitbit.' : 'Could not sync Fitbit.');
 }
 
-const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
-
-async function loadLatestProfile(userId: string) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(1);
-
-  if (error) {
-    throw error;
+function getTimeGreeting(language: string) {
+  const hour = new Date().getHours();
+  const isMorning = hour < 12;
+  const isAfternoon = hour >= 12 && hour < 18;
+  if (language === 'ar') {
+    if (isMorning) return 'صباح الخير!';
+    if (isAfternoon) return 'مساء الخير!';
+    return 'مساء الخير!';
   }
-
-  return data?.[0] ?? null;
+  if (isMorning) return 'Good morning!';
+  if (isAfternoon) return 'Good afternoon!';
+  return 'Good evening!';
 }
 
 export function ProfilePage() {
@@ -93,60 +82,10 @@ export function ProfilePage() {
   const [fitbitStatus, setFitbitStatus] = useState<FitbitStatus | null>(null);
   const [fitbitLoading, setFitbitLoading] = useState(false);
   const [fitbitBusyAction, setFitbitBusyAction] = useState<'connect' | 'sync' | 'disconnect' | null>(null);
-
-  const heartRateSeries = useMemo(() => {
-    const history = Array.isArray(fitbitStatus?.heart_history) ? fitbitStatus.heart_history : [];
-    return history
-      .map((entry) => ({
-        date: String(entry?.date || ''),
-        value: typeof entry?.resting_heart_rate === 'number' ? entry.resting_heart_rate : Number(entry?.resting_heart_rate),
-      }))
-      .filter((entry) => entry.date && Number.isFinite(entry.value))
-      .slice(-7);
-  }, [fitbitStatus?.heart_history]);
-
-  const heartRateChart = useMemo(() => {
-    if (heartRateSeries.length === 0) {
-      return null;
-    }
-
-    const width = 420;
-    const height = 180;
-    const paddingX = 24;
-    const paddingTop = 18;
-    const paddingBottom = 34;
-    const values = heartRateSeries.map((entry) => entry.value);
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
-    const valueRange = Math.max(maxValue - minValue, 6);
-    const innerWidth = width - paddingX * 2;
-    const innerHeight = height - paddingTop - paddingBottom;
-    const stepX = heartRateSeries.length > 1 ? innerWidth / (heartRateSeries.length - 1) : 0;
-
-    const points = heartRateSeries.map((entry, index) => {
-      const x = paddingX + stepX * index;
-      const normalized = (entry.value - minValue) / valueRange;
-      const y = paddingTop + innerHeight - normalized * innerHeight;
-      return {
-        ...entry,
-        x,
-        y,
-        label: new Date(entry.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-          month: 'short',
-          day: 'numeric',
-        }),
-      };
-    });
-
-    const polyline = points.map((point) => `${point.x},${point.y}`).join(' ');
-    const gridValues = [0, 0.5, 1].map((ratio) => {
-      const y = paddingTop + innerHeight - ratio * innerHeight;
-      const value = Math.round(minValue + ratio * valueRange);
-      return { y, value };
-    });
-
-    return { width, height, points, polyline, gridValues };
-  }, [heartRateSeries, language]);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(profile?.name || '');
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentUserId = user?.id || '';
 
@@ -174,6 +113,7 @@ export function ProfilePage() {
 
   useEffect(() => {
     setEditData(profile || {});
+    setNameDraft(profile?.name || '');
   }, [profile]);
 
   useEffect(() => {
@@ -211,11 +151,14 @@ export function ProfilePage() {
     navigate('/profile', { replace: true });
   }, [location.search, navigate, toast, language, currentUserId]);
 
-  // Sync profile from DB on mount
   useEffect(() => {
     if (user) {
-      loadLatestProfile(user.id)
-        .then((data) => {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
           if (data && data.onboarding_completed) {
             updateProfile({
               name: data.name,
@@ -233,15 +176,13 @@ export function ProfilePage() {
               dietaryPreferences: (data as any).dietary_preferences || '',
               chronicConditions: (data as any).chronic_conditions || '',
               allergies: (data as any).allergies || '',
+              avatarUrl: (data as any).avatar_url || profile?.avatarUrl || '',
               onboardingCompleted: data.onboarding_completed,
             });
           }
-        })
-        .catch((error) => {
-          console.warn('Failed loading profile from Supabase:', error);
         });
     }
-  }, [user, updateProfile]);
+  }, [user]);
 
   if (!profile || !profile.onboardingCompleted) {
     return (
@@ -268,6 +209,8 @@ export function ProfilePage() {
 
   const bmi = profile.weight / Math.pow(profile.height / 100, 2);
   const bmiCategory = bmi < 18.5 ? (language === 'ar' ? 'نقص وزن' : 'Underweight') : bmi < 25 ? (language === 'ar' ? 'طبيعي' : 'Normal') : bmi < 30 ? (language === 'ar' ? 'زيادة وزن' : 'Overweight') : (language === 'ar' ? 'سمنة' : 'Obese');
+  const hasHealthInfo = Boolean(profile.chronicConditions || profile.allergies || profile.dietaryPreferences);
+  const hasTrainingInfo = Boolean(profile.fitnessLevel || profile.trainingDaysPerWeek || profile.equipment || profile.injuries || profile.activityLevel);
 
   const handleFitbitConnect = () => {
     if (!currentUserId) {
@@ -360,307 +303,423 @@ export function ProfilePage() {
     }
   };
 
+  const handleAvatarClick = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'ملف غير صالح' : 'Invalid file',
+        description: language === 'ar' ? 'الرجاء اختيار صورة فقط.' : 'Please select an image file.',
+      });
+      return;
+    }
+
+    event.target.value = '';
+
+    const applyLocalPreview = (result: string) => {
+      if (result) {
+        updateProfile({ avatarUrl: result });
+      }
+    };
+
+    if (user && supabase?.storage?.from) {
+      try {
+        setAvatarUploading(true);
+        const extension = file.name.split('.').pop() || file.type.split('/')[1] || 'png';
+        const path = `users/${user.id}/avatar.${extension}`;
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+        if (uploadError) {
+          throw uploadError;
+        }
+        const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+        const publicUrl = data?.publicUrl || '';
+        if (publicUrl) {
+          updateProfile({ avatarUrl: publicUrl });
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+            .eq('user_id', user.id);
+          return;
+        }
+      } catch (error) {
+        console.warn('Avatar upload failed, falling back to local preview.', error);
+      } finally {
+        setAvatarUploading(false);
+      }
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      applyLocalPreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveName = async () => {
+    const nextName = nameDraft.trim();
+    if (!nextName) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'الاسم مطلوب' : 'Name required',
+        description: language === 'ar' ? 'اكتب اسمًا صالحًا.' : 'Please enter a valid name.',
+      });
+      return;
+    }
+
+    updateProfile({ name: nextName });
+    setIsEditingName(false);
+
+    if (user && supabase && supabase.from) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ name: nextName, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id);
+      } catch (error) {
+        console.warn('Failed updating name in Supabase:', error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen pb-24 md:pb-8">
       <Navbar />
-      <main className="container mx-auto px-4 pt-24 max-w-2xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-          <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
-            <span className="font-display text-4xl text-primary-foreground">
-              {profile.name?.charAt(0).toUpperCase() || 'U'}
+      <main className="container mx-auto px-4 pt-24 max-w-6xl">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="flex flex-col items-start gap-3">
+            <span className="text-5xl font-normal text-sky-400 font-[Forte]">
+              {getTimeGreeting(language)}
             </span>
-          </div>
-          <h1 className="font-display text-4xl text-foreground mb-1">{profile.name || 'User'}</h1>
-          <p className="text-muted-foreground">
-            {t(`onboarding.${profile.gender}`)} • {t(`onboarding.${profile.goal}`)}
-          </p>
-          {user && <p className="text-xs text-muted-foreground mt-1">{user.email}</p>}
-        </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="glass-card rounded-2xl p-6 mb-6"
-        >
-          <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'مؤشر كتلة الجسم' : 'Body Mass Index'}</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-4xl font-bold gradient-text">{bmi.toFixed(1)}</span>
-              <p className="text-muted-foreground mt-1">{bmiCategory}</p>
-            </div>
-            <div className="w-32 h-3 bg-secondary rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-primary rounded-full transition-all" style={{ width: `${Math.min((bmi / 40) * 100, 100)}%` }} />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="glass-card rounded-2xl p-6 mb-6"
-        >
-          <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'إحصائياتك' : 'Your Stats'}</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {stats.map((stat, index) => (
-              <div key={index} className="bg-secondary/50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <stat.icon className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">{stat.label}</span>
-                </div>
-                <p className="text-lg font-semibold">{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
-          className="glass-card rounded-2xl p-6 mb-6"
-        >
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-lg font-semibold">Fitbit</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {language === 'ar'
-                  ? 'اربط Fitbit لسحب النشاط، الوزن، الطعام، والماء من حسابك.'
-                  : 'Connect Fitbit to pull activity, weight, food, and water data from your account.'}
-              </p>
-            </div>
-            <div className={`text-xs px-3 py-1 rounded-full ${fitbitStatus?.connected ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'}`}>
-              {fitbitStatus?.connected
-                ? (language === 'ar' ? 'متصل' : 'Connected')
-                : (language === 'ar' ? 'غير متصل' : 'Not connected')}
-            </div>
-          </div>
-
-          {fitbitLoading ? (
-            <p className="text-sm text-muted-foreground">
-              {language === 'ar' ? 'جاري تحميل حالة Fitbit...' : 'Loading Fitbit status...'}
-            </p>
-          ) : !fitbitStatus?.configured ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {language === 'ar'
-                  ? 'يجب إعداد متغيرات Fitbit في الخادم أولاً، ثم تغيير Redirect URL في لوحة Fitbit إلى رابط callback الخاص بالباك إند.'
-                  : 'Set the Fitbit environment variables on the backend first, then change the Fitbit app Redirect URL to the backend callback URL.'}
-              </p>
-              <code className="block text-xs rounded-lg bg-secondary/50 px-3 py-2 break-all">
-                {AI_BACKEND_URL}/integrations/fitbit/callback
-              </code>
-            </div>
-          ) : fitbitStatus.connected ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الخطوات اليوم' : 'Steps today'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.steps ?? 0}</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'السعرات المحروقة' : 'Calories out'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_out ?? 0}</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'المسافة' : 'Distance'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.distance_km ?? 0} km</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبضات القلب/الدقيقة' : 'Heart Beats / Min'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? fitbitStatus.coach_summary?.latest_resting_heart_rate ?? '--'}</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'متوسط نبضات 7 أيام' : 'Avg Heart Beats (7d)'}</p>
-                  <p className="text-xl font-semibold">{heartRateSeries[heartRateSeries.length - 1]?.value ?? fitbitStatus.coach_summary?.latest_resting_heart_rate ?? '--'}</p>
-                  <p className="text-xs text-muted-foreground mt-2">{language === 'ar' ? 'آخر قيمة يومية من سجل نبضات Fitbit' : 'Latest daily value from Fitbit heart history'}</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الوزن المتزامن' : 'Synced weight'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg ?? '--'}{(fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg) != null ? ' kg' : ''}</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الماء اليوم' : 'Water today'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.water_ml ?? 0} ml</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'سعرات الطعام' : 'Calories in'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_in ?? 0}</p>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الأطعمة المسجلة' : 'Foods logged'}</p>
-                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.foods_logged ?? 0}</p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="relative inline-flex">
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow overflow-hidden"
+                  aria-label={language === 'ar' ? 'تغيير الصورة الشخصية' : 'Change profile photo'}
+                  title={language === 'ar' ? 'تغيير الصورة الشخصية' : 'Change profile photo'}
+                >
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt={profile.name || 'User avatar'} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="font-display text-4xl text-primary-foreground">
+                      {profile.name?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  )}
+                </button>
+                {avatarUploading && (
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
+                    {language === 'ar' ? 'جاري التحميل...' : 'Uploading...'}
+                  </span>
+                )}
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
               </div>
 
-              <div className="space-y-2 text-sm text-muted-foreground">
-                {fitbitStatus.profile?.display_name && (
-                  <p>
-                    {language === 'ar' ? 'اسم حساب Fitbit:' : 'Fitbit account:'} <span className="text-foreground font-medium">{fitbitStatus.profile.display_name}</span>
-                  </p>
-                )}
-                {fitbitStatus.last_sync_at && (
-                  <p>
-                    {language === 'ar' ? 'آخر مزامنة:' : 'Last synced:'} <span className="text-foreground font-medium">{new Date(fitbitStatus.last_sync_at).toLocaleString()}</span>
-                  </p>
-                )}
-                {fitbitStatus.profile?.member_since && (
-                  <p>
-                    {language === 'ar' ? 'عضو منذ:' : 'Member since:'} <span className="text-foreground font-medium">{fitbitStatus.profile.member_since}</span>
-                  </p>
-                )}
-                {Array.isArray(fitbitStatus.today_summary?.food_names) && fitbitStatus.today_summary!.food_names!.length > 0 && (
-                  <p>
-                    {language === 'ar' ? 'طعام اليوم:' : 'Today\'s foods:'} <span className="text-foreground font-medium">{fitbitStatus.today_summary!.food_names!.join(', ')}</span>
-                  </p>
-                )}
-              </div>
-
-              <div className="rounded-2xl border border-border/50 bg-secondary/30 p-4">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div>
-                    <h3 className="text-base font-semibold text-foreground">{language === 'ar' ? 'نبضات القلب اليومية' : 'Daily heart rate'}</h3>
-                    <p className="text-sm text-muted-foreground">{language === 'ar' ? 'مقياس زمني لآخر 7 أيام من نبضات القلب أثناء الراحة.' : 'A time scale for the last 7 days of resting heart rate.'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{language === 'ar' ? 'آخر قراءة' : 'Latest reading'}</p>
-                    <p className="text-lg font-semibold text-foreground">{heartRateSeries[heartRateSeries.length - 1]?.value ?? '--'}</p>
-                  </div>
-                </div>
-
-                {heartRateChart ? (
-                  <div>
-                    <svg viewBox={`0 0 ${heartRateChart.width} ${heartRateChart.height}`} className="w-full h-auto overflow-visible" role="img" aria-label={language === 'ar' ? 'رسم نبضات القلب اليومية' : 'Daily heart rate chart'}>
-                      {heartRateChart.gridValues.map((row) => (
-                        <g key={`grid-${row.value}`}>
-                          <line x1="24" x2={String(heartRateChart.width - 24)} y1={String(row.y)} y2={String(row.y)} stroke="currentColor" strokeOpacity="0.12" />
-                          <text x="0" y={String(row.y + 4)} fontSize="11" fill="currentColor" opacity="0.55">{row.value}</text>
-                        </g>
-                      ))}
-                      <polyline fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary" points={heartRateChart.polyline} />
-                      {heartRateChart.points.map((point) => (
-                        <g key={point.date}>
-                          <circle cx={String(point.x)} cy={String(point.y)} r="4" className="fill-primary" />
-                          <text x={String(point.x)} y={String(heartRateChart.height - 10)} textAnchor="middle" fontSize="10" fill="currentColor" opacity="0.6">{point.label}</text>
-                        </g>
-                      ))}
-                    </svg>
-                    <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
-                      {heartRateSeries.map((entry) => (
-                        <div key={entry.date} className="rounded-xl bg-background/60 px-3 py-2">
-                          <div>{new Date(entry.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short' })}</div>
-                          <div className="font-medium text-foreground mt-1">{entry.value} bpm</div>
-                        </div>
-                      ))}
-                    </div>
+              <div className="flex flex-col items-start gap-2 text-left">
+                {isEditingName ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={nameDraft}
+                      onChange={(event) => setNameDraft(event.target.value)}
+                      className="min-w-[220px] rounded-xl border border-border/60 bg-background px-4 py-2 text-lg font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                      placeholder={language === 'ar' ? 'اكتب الاسم' : 'Enter name'}
+                    />
+                    <Button variant="hero" size="sm" onClick={handleSaveName}>
+                      {language === 'ar' ? 'حفظ' : 'Save'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingName(false);
+                        setNameDraft(profile.name || '');
+                      }}
+                    >
+                      {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                    </Button>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-                    {language === 'ar' ? 'لا توجد بيانات كافية لعرض نبضات القلب اليومية بعد.' : 'There is not enough heart-rate history yet to render a daily chart.'}
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-4xl font-bold text-foreground font-[Forte]">{profile.name || 'User'}</h1>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingName(true)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
                   </div>
                 )}
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Button variant="hero" onClick={handleFitbitSync} disabled={fitbitBusyAction !== null}>
-                  {fitbitBusyAction === 'sync'
-                    ? (language === 'ar' ? 'جاري التحديث...' : 'Syncing...')
-                    : (language === 'ar' ? 'تحديث البيانات' : 'Sync Data')}
-                </Button>
-                <Button variant="outline" onClick={handleFitbitDisconnect} disabled={fitbitBusyAction !== null}>
-                  {fitbitBusyAction === 'disconnect'
-                    ? (language === 'ar' ? 'جاري الفصل...' : 'Disconnecting...')
-                    : (language === 'ar' ? 'فصل Fitbit' : 'Disconnect Fitbit')}
-                </Button>
+                <p className="text-muted-foreground">
+                  {t(`onboarding.${profile.gender}`)} • {t(`onboarding.${profile.goal}`)}
+                </p>
+                {user && <p className="text-xs text-muted-foreground">{user.email}</p>}
               </div>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {language === 'ar'
-                  ? 'بعد الربط، سيستطيع التطبيق سحب النشاط، الوزن، الطعام، والماء من Fitbit مع كل مزامنة.'
-                  : 'After connecting, the app will be able to pull activity, weight, food, and water data from Fitbit on every sync.'}
-              </p>
-              <Button variant="hero" onClick={handleFitbitConnect} disabled={fitbitBusyAction !== null}>
-                {fitbitBusyAction === 'connect'
-                  ? (language === 'ar' ? 'جاري التحويل...' : 'Redirecting...')
-                  : (language === 'ar' ? 'ربط Fitbit' : 'Connect Fitbit')}
-              </Button>
-            </div>
-          )}
+          </div>
         </motion.div>
 
-        {(profile.chronicConditions || profile.allergies || profile.dietaryPreferences) && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="glass-card rounded-2xl p-6 mb-6"
-          >
-            <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'معلومات صحية' : 'Health Information'}</h2>
-            <div className="space-y-4">
-              {profile.chronicConditions && (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)]">
+          <div className="space-y-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="glass-card rounded-2xl p-6"
+            >
+              <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'مؤشر كتلة الجسم' : 'Body Mass Index'}</h2>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {language === 'ar' ? 'الأمراض المزمنة' : 'Chronic Conditions'}
-                  </p>
-                  <p className="text-base text-foreground">{profile.chronicConditions}</p>
+                  <span className="text-4xl font-bold gradient-text">{bmi.toFixed(1)}</span>
+                  <p className="text-muted-foreground mt-1">{bmiCategory}</p>
                 </div>
-              )}
-              {profile.allergies && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {language === 'ar' ? 'الحساسيات' : 'Allergies'}
-                  </p>
-                  <p className="text-base text-foreground">{profile.allergies}</p>
+                <div className="w-32 h-3 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-primary rounded-full transition-all" style={{ width: `${Math.min((bmi / 40) * 100, 100)}%` }} />
                 </div>
-              )}
-              {profile.dietaryPreferences && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {language === 'ar' ? 'التفضيلات الغذائية' : 'Dietary Preferences'}
-                  </p>
-                  <p className="text-base text-foreground">{profile.dietaryPreferences}</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
+              </div>
+            </motion.div>
 
-        {(profile.fitnessLevel || profile.trainingDaysPerWeek || profile.equipment || profile.injuries || profile.activityLevel) && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
-            className="glass-card rounded-2xl p-6 mb-6"
-          >
-            <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'تفاصيل التدريب' : 'Training Details'}</h2>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  {language === 'ar' ? 'المستوى' : 'Level'}
-                </p>
-                <p className="text-base text-foreground">{t(`onboarding.${profile.fitnessLevel}`)}</p>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="glass-card rounded-2xl p-6"
+            >
+              <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'إحصائياتك' : 'Your Stats'}</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {stats.map((stat, index) => (
+                  <div key={index} className="bg-secondary/50 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <stat.icon className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">{stat.label}</span>
+                    </div>
+                    <p className="text-lg font-semibold">{stat.value}</p>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  {language === 'ar' ? 'أيام التمرين بالأسبوع' : 'Training Days / Week'}
-                </p>
-                <p className="text-base text-foreground">{profile.trainingDaysPerWeek}</p>
+            </motion.div>
+
+            {hasHealthInfo && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                className="glass-card rounded-2xl p-6"
+              >
+                <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'معلومات صحية' : 'Health Information'}</h2>
+                <div className="space-y-4">
+                  {profile.chronicConditions && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {language === 'ar' ? 'الأمراض المزمنة' : 'Chronic Conditions'}
+                      </p>
+                      <p className="text-base text-foreground">{profile.chronicConditions}</p>
+                    </div>
+                  )}
+                  {profile.allergies && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {language === 'ar' ? 'الحساسيات' : 'Allergies'}
+                      </p>
+                      <p className="text-base text-foreground">{profile.allergies}</p>
+                    </div>
+                  )}
+                  {profile.dietaryPreferences && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {language === 'ar' ? 'التفضيلات الغذائية' : 'Dietary Preferences'}
+                      </p>
+                      <p className="text-base text-foreground">{profile.dietaryPreferences}</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {hasTrainingInfo && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+                className="glass-card rounded-2xl p-6"
+              >
+                <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'تفاصيل التدريب' : 'Training Details'}</h2>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {language === 'ar' ? 'المستوى' : 'Level'}
+                    </p>
+                    <p className="text-base text-foreground">{t(`onboarding.${profile.fitnessLevel}`)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {language === 'ar' ? 'أيام التمرين بالأسبوع' : 'Training Days / Week'}
+                    </p>
+                    <p className="text-base text-foreground">{profile.trainingDaysPerWeek}</p>
+                  </div>
+                  {profile.activityLevel && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {language === 'ar' ? 'مستوى النشاط' : 'Activity Level'}
+                      </p>
+                      <p className="text-base text-foreground">{t(`onboarding.activity.${profile.activityLevel}`)}</p>
+                    </div>
+                  )}
+                  {profile.equipment && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {language === 'ar' ? 'المعدات' : 'Equipment'}
+                      </p>
+                      <p className="text-base text-foreground">{profile.equipment}</p>
+                    </div>
+                  )}
+                  {profile.injuries && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {language === 'ar' ? 'إصابات' : 'Injuries'}
+                      </p>
+                      <p className="text-base text-foreground">{profile.injuries}</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+              className="glass-card rounded-2xl p-6"
+            >
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Fitbit</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {language === 'ar'
+                      ? 'اربط Fitbit لسحب النشاط، الوزن، الطعام، والماء من حسابك.'
+                      : 'Connect Fitbit to pull activity, weight, food, and water data from your account.'}
+                  </p>
+                </div>
+                <div className={`text-xs px-3 py-1 rounded-full ${fitbitStatus?.connected ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+                  {fitbitStatus?.connected
+                    ? (language === 'ar' ? 'متصل' : 'Connected')
+                    : (language === 'ar' ? 'غير متصل' : 'Not connected')}
+                </div>
               </div>
-              {profile.activityLevel && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {language === 'ar' ? 'مستوى النشاط' : 'Activity Level'}
+
+              {fitbitLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  {language === 'ar' ? 'جاري تحميل حالة Fitbit...' : 'Loading Fitbit status...'}
+                </p>
+              ) : !fitbitStatus?.configured ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    {language === 'ar'
+                      ? 'يجب إعداد متغيرات Fitbit في الخادم أولاً، ثم تغيير Redirect URL في لوحة Fitbit إلى رابط callback الخاص بالباك إند.'
+                      : 'Set the Fitbit environment variables on the backend first, then change the Fitbit app Redirect URL to the backend callback URL.'}
                   </p>
-                  <p className="text-base text-foreground">{t(`onboarding.activity.${profile.activityLevel}`)}</p>
+                  <code className="block text-xs rounded-lg bg-secondary/50 px-3 py-2 break-all">
+                    {AI_BACKEND_URL}/integrations/fitbit/callback
+                  </code>
+                </div>
+              ) : fitbitStatus.connected ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الخطوات اليوم' : 'Steps today'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.steps ?? 0}</p>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'السعرات المحروقة' : 'Calories out'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_out ?? 0}</p>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'المسافة' : 'Distance'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.distance_km ?? 0} km</p>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبض الراحة' : 'Resting HR'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? '--'}</p>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الوزن المتزامن' : 'Synced weight'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg ?? '--'}{(fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg) != null ? ' kg' : ''}</p>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الماء اليوم' : 'Water today'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.water_ml ?? 0} ml</p>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'سعرات الطعام' : 'Calories in'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_in ?? 0}</p>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الأطعمة المسجلة' : 'Foods logged'}</p>
+                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.foods_logged ?? 0}</p>
+                    </div>
+                  </div>
+
+                  <HeartRateTimelinePanel userId={currentUserId} enabled={fitbitStatus.connected} />
+
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    {fitbitStatus.profile?.display_name && (
+                      <p>
+                        {language === 'ar' ? 'اسم حساب Fitbit:' : 'Fitbit account:'} <span className="text-foreground font-medium">{fitbitStatus.profile.display_name}</span>
+                      </p>
+                    )}
+                    {fitbitStatus.last_sync_at && (
+                      <p>
+                        {language === 'ar' ? 'آخر مزامنة:' : 'Last synced:'} <span className="text-foreground font-medium">{new Date(fitbitStatus.last_sync_at).toLocaleString()}</span>
+                      </p>
+                    )}
+                    {fitbitStatus.profile?.member_since && (
+                      <p>
+                        {language === 'ar' ? 'عضو منذ:' : 'Member since:'} <span className="text-foreground font-medium">{fitbitStatus.profile.member_since}</span>
+                      </p>
+                    )}
+                    {Array.isArray(fitbitStatus.today_summary?.food_names) && fitbitStatus.today_summary!.food_names!.length > 0 && (
+                      <p>
+                        {language === 'ar' ? 'طعام اليوم:' : 'Today\'s foods:'} <span className="text-foreground font-medium">{fitbitStatus.today_summary!.food_names!.join(', ')}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button variant="hero" onClick={handleFitbitSync} disabled={fitbitBusyAction !== null}>
+                      {fitbitBusyAction === 'sync'
+                        ? (language === 'ar' ? 'جاري التحديث...' : 'Syncing...')
+                        : (language === 'ar' ? 'تحديث البيانات' : 'Sync Data')}
+                    </Button>
+                    <Button variant="outline" onClick={handleFitbitDisconnect} disabled={fitbitBusyAction !== null}>
+                      {fitbitBusyAction === 'disconnect'
+                        ? (language === 'ar' ? 'جاري الفصل...' : 'Disconnecting...')
+                        : (language === 'ar' ? 'فصل Fitbit' : 'Disconnect Fitbit')}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    {language === 'ar'
+                      ? 'بعد الربط، سيستطيع التطبيق سحب النشاط، الوزن، الطعام، والماء من Fitbit مع كل مزامنة.'
+                      : 'After connecting, the app will be able to pull activity, weight, food, and water data from Fitbit on every sync.'}
+                  </p>
+                  <Button variant="hero" onClick={handleFitbitConnect} disabled={fitbitBusyAction !== null}>
+                    {fitbitBusyAction === 'connect'
+                      ? (language === 'ar' ? 'جاري التحويل...' : 'Redirecting...')
+                      : (language === 'ar' ? 'ربط Fitbit' : 'Connect Fitbit')}
+                  </Button>
                 </div>
               )}
-              {profile.equipment && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {language === 'ar' ? 'المعدات' : 'Equipment'}
-                  </p>
-                  <p className="text-base text-foreground">{profile.equipment}</p>
-                </div>
-              )}
-              {profile.injuries && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {language === 'ar' ? 'إصابات' : 'Injuries'}
-                  </p>
-                  <p className="text-base text-foreground">{profile.injuries}</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          </div>
+        </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-3">
           <Button variant="outline" className="w-full" onClick={() => setIsEditing(!isEditing)}>

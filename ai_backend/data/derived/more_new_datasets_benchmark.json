@@ -1,0 +1,122 @@
+{
+  "dataset_root": "D:\\AiFitCoach-main\\ai_backend\\datasets",
+  "random_state": 42,
+  "benchmarked_datasets": 3,
+  "results": [
+    {
+      "dataset_name": "minute_calories_wide_band",
+      "filename": "minuteCaloriesWide_merged.csv",
+      "status": "error",
+      "error": "Prepare failed"
+    },
+    {
+      "dataset_name": "minute_steps_wide_band",
+      "filename": "minuteStepsWide_merged.csv",
+      "status": "error",
+      "error": "Prepare failed"
+    },
+    {
+      "dataset_name": "minute_intensities_wide_band",
+      "filename": "minuteIntensitiesWide_merged.csv",
+      "status": "error",
+      "error": "Prepare failed"
+    },
+    {
+      "dataset_name": "hourly_intensities_band",
+      "filename": "hourlyIntensities_merged.csv",
+      "original_rows": 22099,
+      "original_columns": 4,
+      "target": "derived_hourly_intensity_band",
+      "notes": "3-class hourly intensity band.",
+      "rows_used": 5000,
+      "feature_count": 3,
+      "numeric_feature_count": 2,
+      "categorical_feature_count": 1,
+      "class_count": 2,
+      "class_distribution": {
+        "low": 3417,
+        "medium": 1583
+      },
+      "baseline_accuracy": 0.6834,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 1.0,
+        "weighted_f1": 1.0
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "minute_mets_band",
+      "filename": "minuteMETsNarrow_merged.csv",
+      "original_rows": 1325580,
+      "original_columns": 3,
+      "target": "derived_mets_band",
+      "notes": "3-class metabolic rate band.",
+      "status": "error",
+      "error": "Need at least 2 target classes for training."
+    },
+    {
+      "dataset_name": "minute_sleep_band",
+      "filename": "minuteSleep_merged.csv",
+      "original_rows": 188521,
+      "original_columns": 4,
+      "target": "derived_minute_sleep_band",
+      "notes": "3-class minute-level sleep classification.",
+      "status": "error",
+      "error": "Need at least 2 target classes for training."
+    },
+    {
+      "dataset_name": "fitness_workout_level",
+      "filename": "fitness_and_workout_dataset.csv",
+      "original_rows": 2598,
+      "original_columns": 10,
+      "target": "derived_fitness_level_band",
+      "notes": "3-class fitness performance level from program_length.",
+      "rows_used": 2597,
+      "feature_count": 9,
+      "numeric_feature_count": 2,
+      "categorical_feature_count": 7,
+      "class_count": 3,
+      "class_distribution": {
+        "medium": 1436,
+        "low": 907,
+        "high": 254
+      },
+      "baseline_accuracy": 0.5529457065845206,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.7288461538461538,
+        "weighted_f1": 0.7126239617190322
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "gym_members_intensity",
+      "filename": "gym_members_exercise_tracking.csv",
+      "original_rows": 973,
+      "original_columns": 15,
+      "target": "derived_gym_intensity_band",
+      "notes": "3-class gym member exercise intensity from Age.",
+      "rows_used": 973,
+      "feature_count": 14,
+      "numeric_feature_count": 12,
+      "categorical_feature_count": 2,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 340,
+        "medium": 324,
+        "high": 309
+      },
+      "baseline_accuracy": 0.3494347379239466,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.5692307692307692,
+        "weighted_f1": 0.5118153230008582
+      },
+      "status": "ok"
+    }
+  ]
+}

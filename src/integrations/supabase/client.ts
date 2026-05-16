@@ -53,6 +53,12 @@ if (isSupabaseConfigured()) {
       signUp: () => Promise.reject(new Error('Not configured')),
       signOut: () => Promise.resolve({ error: null }),
     },
+    storage: {
+      from: () => ({
+        upload: () => Promise.resolve({ data: null, error: new Error('Not configured') }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+      }),
+    },
     from: () => createMockChain(),
   };
 }

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AiFitCoach — Project Dossier | Orange Social Venture Prize 2026</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange: #f97316;
+    --orange-light: #fed7aa;
+    --dark: #0f172a;
+    --slate: #1e293b;
+    --mid: #475569;
+    --light: #f8fafc;
+    --border: #e2e8f0;
+  }
+
+  body {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background: #fff;
+    color: #1e293b;
+    font-size: 10.5pt;
+    line-height: 1.65;
+  }
+
+  /* ── PAGE WRAPPER ── */
+  .page { max-width: 210mm; margin: 0 auto; padding: 0; }
+
+  /* ── COVER PAGE ── */
+  .cover {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%);
+    color: #fff;
+    padding: 60px 50px 50px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 350px; height: 350px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%);
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -60px;
+    width: 250px; height: 250px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%);
+  }
+
+  .cover-logo {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 80px;
+  }
+  .cover-logo svg { flex-shrink: 0; }
+  .cover-logo-text { display: flex; flex-direction: column; }
+  .cover-logo-name {
+    font-size: 32px; font-weight: 800; letter-spacing: -0.5px;
+    color: #fff; line-height: 1;
+  }
+  .cover-logo-name span { color: var(--orange); font-weight: 300; }
+  .cover-logo-tagline {
+    font-size: 9px; letter-spacing: 3px; color: #64748b;
+    text-transform: uppercase; margin-top: 4px;
+  }
+
+  .cover-main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .cover-badge {
+    display: inline-block;
+    background: rgba(249,115,22,0.15);
+    border: 1px solid rgba(249,115,22,0.4);
+    color: var(--orange);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 2.5px; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 20px;
+    margin-bottom: 24px;
+    width: fit-content;
+  }
+  .cover-title {
+    font-size: 48px; font-weight: 800;
+    line-height: 1.1; letter-spacing: -1.5px;
+    margin-bottom: 10px;
+  }
+  .cover-title span { color: var(--orange); }
+  .cover-subtitle {
+    font-size: 16px; color: #94a3b8; font-weight: 300;
+    margin-bottom: 40px; max-width: 480px;
+  }
+  .cover-divider {
+    width: 60px; height: 3px;
+    background: var(--orange); border-radius: 2px;
+    margin-bottom: 36px;
+  }
+  .cover-stats {
+    display: flex; gap: 40px; flex-wrap: wrap;
+  }
+  .cover-stat { display: flex; flex-direction: column; }
+  .cover-stat-num {
+    font-size: 28px; font-weight: 800; color: #fff; line-height: 1;
+  }
+  .cover-stat-label {
+    font-size: 9px; color: #64748b; letter-spacing: 1.5px;
+    text-transform: uppercase; margin-top: 4px;
+  }
+
+  .cover-footer {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 20px; margin-top: 40px;
+  }
+  .cover-footer-left { font-size: 9px; color: #475569; }
+  .cover-footer-right {
+    font-size: 10px; color: var(--orange); font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  /* ── CONTENT PAGES ── */
+  .content { padding: 50px 50px; }
+
+  /* ── SECTION ── */
+  .section { margin-bottom: 44px; page-break-inside: avoid; }
+  .section-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-number {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--orange); color: #fff;
+    font-size: 13px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700; color: var(--dark);
+    letter-spacing: -0.3px;
+  }
+  .section-subtitle {
+    font-size: 9px; color: #94a3b8; letter-spacing: 2px;
+    text-transform: uppercase; display: block; margin-top: 1px;
+  }
+
+  p { margin-bottom: 10px; color: var(--mid); }
+  strong { color: var(--dark); }
+
+  /* ── TABLES ── */
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 9.5pt; margin: 14px 0;
+  }
+  thead th {
+    background: var(--dark); color: #fff;
+    padding: 9px 12px; text-align: left;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody td { padding: 9px 12px; color: var(--mid); vertical-align: top; }
+  tbody td:first-child { color: var(--dark); font-weight: 600; }
+
+  /* ── SWOT ── */
+  .swot {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin: 14px 0;
+  }
+  .swot-box { border-radius: 8px; padding: 14px 16px; }
+  .swot-box.s { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .swot-box.w { background: #fefce8; border: 1px solid #fef08a; }
+  .swot-box.o { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .swot-box.t { background: #fff1f2; border: 1px solid #fecdd3; }
+  .swot-title {
+    font-size: 9px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .swot-box.s .swot-title { color: #16a34a; }
+  .swot-box.w .swot-title { color: #ca8a04; }
+  .swot-box.o .swot-title { color: #2563eb; }
+  .swot-box.t .swot-title { color: #dc2626; }
+  .swot-box ul { list-style: none; padding: 0; }
+  .swot-box ul li {
+    font-size: 9pt; color: var(--mid); padding: 2px 0;
+    padding-left: 12px; position: relative;
+  }
+  .swot-box ul li::before {
+    content: '•'; position: absolute; left: 0;
+    font-weight: 700;
+  }
+  .swot-box.s ul li::before { color: #16a34a; }
+  .swot-box.w ul li::before { color: #ca8a04; }
+  .swot-box.o ul li::before { color: #2563eb; }
+  .swot-box.t ul li::before { color: #dc2626; }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight {
+    background: linear-gradient(135deg, #fff7ed, #ffedd5);
+    border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px; margin: 14px 0;
+  }
+  .highlight p { color: var(--dark); margin: 0; font-size: 10pt; }
+
+  /* ── FEATURE GRID ── */
+  .feature-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin: 14px 0;
+  }
+  .feature-card {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .feature-card-title {
+    font-size: 9.5pt; font-weight: 700; color: var(--dark);
+    margin-bottom: 4px;
+  }
+  .feature-card p {
+    font-size: 9pt; color: var(--mid); margin: 0;
+  }
+
+  /* ── IMPACT METRICS ── */
+  .metrics {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin: 16px 0;
+  }
+  .metric-card {
+    background: var(--dark); border-radius: 10px;
+    padding: 16px; text-align: center;
+  }
+  .metric-num {
+    font-size: 22px; font-weight: 800; color: var(--orange);
+    line-height: 1; margin-bottom: 4px;
+  }
+  .metric-label {
+    font-size: 8.5pt; color: #94a3b8; line-height: 1.3;
+  }
+
+  /* ── TEAM CARD ── */
+  .team-card {
+    display: flex; align-items: flex-start; gap: 16px;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px; margin: 10px 0;
+  }
+  .team-avatar {
+    width: 50px; height: 50px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--orange), #ea580c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: #fff;
+    flex-shrink: 0;
+  }
+  .team-name { font-size: 13pt; font-weight: 700; color: var(--dark); }
+  .team-role { font-size: 9pt; color: var(--orange); font-weight: 600; margin-bottom: 6px; }
+  .team-skills { font-size: 9pt; color: var(--mid); }
+
+  /* ── FINANCIAL TABLE ── */
+  .financial-highlight {
+    background: var(--dark); color: #fff;
+    border-radius: 10px; padding: 20px 24px; margin: 14px 0;
+  }
+  .financial-highlight h4 {
+    font-size: 11pt; color: var(--orange); margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+  .fin-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .fin-year { text-align: center; }
+  .fin-year-label {
+    font-size: 8px; color: #64748b; text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 6px;
+  }
+  .fin-year-rev {
+    font-size: 20px; font-weight: 800; color: var(--orange); line-height: 1;
+  }
+  .fin-year-users {
+    font-size: 9pt; color: #94a3b8; margin-top: 4px;
+  }
+
+  /* ── FUND ALLOCATION ── */
+  .fund-bars { margin: 14px 0; }
+  .fund-bar-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+  }
+  .fund-bar-label {
+    width: 180px; font-size: 9pt; color: var(--dark); font-weight: 500;
+    flex-shrink: 0;
+  }
+  .fund-bar-track {
+    flex: 1; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden;
+  }
+  .fund-bar-fill {
+    height: 100%; border-radius: 5px;
+    background: linear-gradient(90deg, var(--orange), #ea580c);
+  }
+  .fund-bar-pct {
+    width: 35px; text-align: right; font-size: 9pt;
+    font-weight: 700; color: var(--orange);
+  }
+
+  /* ── FOOTER ── */
+  .doc-footer {
+    margin-top: 50px; padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .doc-footer-left { font-size: 8.5pt; color: #94a3b8; }
+  .doc-footer-right {
+    font-size: 8.5pt; color: var(--orange); font-weight: 600;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    body { font-size: 10pt; }
+    .cover { min-height: 100vh; page-break-after: always; }
+    .section { page-break-inside: avoid; }
+    .feature-grid, .swot, .metrics, .fin-grid { page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm 18mm;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ════════════════════════════════════════ COVER PAGE -->
+  <div class="cover">
+    <div class="cover-logo">
+      <!-- Inline SVG logo -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 92 92" width="72" height="72">
+        <rect width="92" height="92" rx="20" fill="#1e293b"/>
+        <rect x="1" y="1" width="90" height="90" rx="19" fill="none" stroke="#f97316" stroke-width="1.5" stroke-opacity="0.3"/>
+        <rect x="27" y="44" width="38" height="10" rx="5" fill="#f97316"/>
+        <rect x="19" y="36" width="10" height="20" rx="4" fill="#f97316"/>
+        <rect x="13" y="40" width="7" height="12" rx="3" fill="#f97316" opacity="0.6"/>
+        <rect x="63" y="36" width="10" height="20" rx="4" fill="#f97316"/>
+        <rect x="72" y="40" width="7" height="12" rx="3" fill="#f97316" opacity="0.6"/>
+        <polyline points="22,32 30,32 36,20 42,42 48,28 54,36 60,32 70,32"
+          fill="none" stroke="#f97316" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="36" cy="20" r="3.5" fill="#f97316"/>
+        <circle cx="48" cy="28" r="3" fill="#fb923c"/>
+        <circle cx="54" cy="36" r="2.5" fill="#fdba74"/>
+      </svg>
+      <div class="cover-logo-text">
+        <div class="cover-logo-name">AiFit<span>Coach</span></div>
+        <div class="cover-logo-tagline">AI-Powered Fitness Coaching</div>
+      </div>
+    </div>
+
+    <div class="cover-main">
+      <div class="cover-badge">Orange Social Venture Prize 2026</div>
+      <div class="cover-title">Project<br/><span>Presentation</span><br/>Dossier</div>
+      <div class="cover-subtitle">Democratizing professional fitness and nutrition coaching through artificial intelligence — accessible, affordable, and Arabic-first.</div>
+      <div class="cover-divider"></div>
+      <div class="cover-stats">
+        <div class="cover-stat">
+          <div class="cover-stat-num">450M+</div>
+          <div class="cover-stat-label">Target Market</div>
+        </div>
+        <div class="cover-stat">
+          <div class="cover-stat-num">$50B</div>
+          <div class="cover-stat-label">Global Market</div>
+        </div>
+        <div class="cover-stat">
+          <div class="cover-stat-num">100%</div>
+          <div class="cover-stat-label">Built &amp; Live</div>
+        </div>
+        <div class="cover-stat">
+          <div class="cover-stat-num">2</div>
+          <div class="cover-stat-label">Languages (AR/EN)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cover-footer">
+      <div class="cover-footer-left">
+        Submitted by: Abu Ayyash &nbsp;|&nbsp; Jordan &nbsp;|&nbsp; May 2026<br/>
+        Sector: Healthcare &nbsp;|&nbsp; aifitcoach.ai
+      </div>
+      <div class="cover-footer-right">CONFIDENTIAL</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════ CONTENT -->
+  <div class="content">
+
+    <!-- ── SECTION 1 ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <div>
+          <div class="section-title">Project Summary</div>
+          <span class="section-subtitle">1,000–2,000 characters · Social &amp; Environmental Context</span>
+        </div>
+      </div>
+
+      <div class="highlight">
+        <p><strong>The Problem:</strong> In Jordan and across the Arab world, chronic lifestyle diseases — obesity, type 2 diabetes, hypertension — are rising sharply. Professional personal coaching costs $30–$80 per session; most families cannot sustain this. The result: millions of people receive no structured health guidance whatsoever.</p>
+      </div>
+
+      <p>AiFitCoach is an AI-powered fitness and nutrition coaching platform built to change this. It delivers fully personalized, evidence-based coaching through an intelligent conversational AI — available 24 hours a day, 7 days a week, on any device, in both <strong>Arabic and English</strong>, at a fraction of the cost of a human coach.</p>
+
+      <p>This is not a simple chatbot. AiFitCoach is a <strong>multi-agent AI system</strong> that learns each user's profile, builds adaptive workout and nutrition plans, tracks progress over time, and processes uploaded photos, meal images, and PDF health reports to incorporate real user data into its coaching. A built-in memory system ensures every interaction improves on the last.</p>
+
+      <p>The platform is already <strong>fully built and production-ready</strong> — deployed on cloud infrastructure, accessible from any browser, with no installation required. It combines a modern React web application with a sophisticated Python AI backend, RAG (Retrieval-Augmented Generation) over real fitness datasets, and a safety moderation layer.</p>
+
+      <p>By removing the financial and language barriers to quality health coaching, AiFitCoach directly addresses the lifestyle disease epidemic — one of the most urgent public health challenges in Jordan and the broader MENA region.</p>
+    </div>
+
+    <!-- ── SECTION 2 ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <div>
+          <div class="section-title">Market Analysis</div>
+          <span class="section-subtitle">Segmentation · SWOT · Competition · Partners</span>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Segment</th><th>Profile</th><th>Size Estimate</th></tr></thead>
+        <tbody>
+          <tr><td>Primary</td><td>Adults 18–45 in Jordan &amp; MENA seeking affordable fitness/nutrition guidance</td><td>~80M people</td></tr>
+          <tr><td>Secondary</td><td>Women needing private, Arabic-language coaching with cultural sensitivity</td><td>~40M women</td></tr>
+          <tr><td>Tertiary</td><td>Corporate wellness programs &amp; health insurance providers</td><td>High value / B2B</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Market Size:</strong> The global digital fitness market exceeded $50 billion in 2025, growing at 26% CAGR. The Arab world — 450 million people — is vastly underserved by Arabic-language health technology. Less than 5% of the MENA population currently uses any digital fitness coaching.</p>
+
+      <div class="swot">
+        <div class="swot-box s">
+          <div class="swot-title">Strengths</div>
+          <ul>
+            <li>Production-ready, fully built product</li>
+            <li>Full Arabic + English bilingual support</li>
+            <li>Multi-agent AI with memory, RAG, vision</li>
+            <li>Very low operational cost per user</li>
+          </ul>
+        </div>
+        <div class="swot-box w">
+          <div class="swot-title">Weaknesses</div>
+          <ul>
+            <li>Early-stage brand recognition</li>
+            <li>LLM API costs scale with users</li>
+            <li>No native mobile app yet (web only)</li>
+          </ul>
+        </div>
+        <div class="swot-box o">
+          <div class="swot-title">Opportunities</div>
+          <ul>
+            <li>Massive underserved Arabic-speaking market</li>
+            <li>Growing government health initiatives in Jordan</li>
+            <li>Corporate wellness demand post-COVID</li>
+            <li>First-mover advantage in Arabic AI coaching</li>
+          </ul>
+        </div>
+        <div class="swot-box t">
+          <div class="swot-title">Threats</div>
+          <ul>
+            <li>Global competitors (MyFitnessPal, Noom)</li>
+            <li>User trust in AI health advice</li>
+            <li>Data privacy regulation changes</li>
+          </ul>
+        </div>
+      </div>
+
+      <p><strong>Competitive Landscape:</strong> Existing players (MyFitnessPal, Noom, Freeletics) are English-first, offer no deep Arabic support, and lack genuine AI personalization. AiFitCoach's multi-agent architecture and Arabic-first design is a clear and defensible differentiator in this region.</p>
+
+      <table>
+        <thead><tr><th>Partner Type</th><th>Partner</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>Cloud Infrastructure</td><td>Render / Railway</td><td>Backend and frontend deployment</td></tr>
+          <tr><td>AI Engine</td><td>OpenAI / Groq / Ollama</td><td>LLM inference (flexible stack)</td></tr>
+          <tr><td>Database &amp; Auth</td><td>Supabase</td><td>User data, authentication, storage</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── SECTION 3 ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <div>
+          <div class="section-title">Market Opportunity</div>
+          <span class="section-subtitle">Relevance · Real Need · Timing</span>
+        </div>
+      </div>
+
+      <p>Lifestyle-related chronic diseases cost Jordan's healthcare system hundreds of millions of dollars annually. The WHO reports that physical inactivity is one of the top 10 leading risk factors for global mortality. Yet behavior change through coaching has proven highly effective — structured coaching reduces obesity rates by <strong>30–50% over 12 months</strong>.</p>
+
+      <div class="highlight">
+        <p><strong>The gap is clear:</strong> there is no affordable, intelligent, Arabic-speaking fitness coach on the market. Every existing solution is either too expensive (human coaches), too generic (basic apps), or inaccessible to Arabic speakers. AiFitCoach fills this gap precisely.</p>
+      </div>
+
+      <p><strong>Why now?</strong> Smartphone penetration in Jordan exceeds 90%. Internet access is widespread and affordable. AI adoption is accelerating globally. The regulatory environment for digital health services is open. A first-mover advantage in Arabic AI health coaching in Jordan and MENA is achievable today.</p>
+
+      <p>AiFitCoach is uniquely positioned to capture this opportunity by combining technical depth (multi-agent AI, RAG, vision) with cultural relevance (Arabic language, halal nutrition, Ramadan-aware plans) and radical affordability (target: under $5/month).</p>
+    </div>
+
+    <!-- ── SECTION 4 ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <div>
+          <div class="section-title">Product &amp; Service Presentation</div>
+          <span class="section-subtitle">Features · Technology · Innovation · Value</span>
+        </div>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-card-title">AI Chat Coach</div>
+          <p>Conversational coaching via GPT-4-class LLMs with domain routing and content moderation.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-title">Workout Planner Agent</div>
+          <p>Generates adaptive multi-week workout programs tailored to user level, goals, and equipment.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-title">Nutrition Planner Agent</div>
+          <p>Creates personalized meal plans with calorie/macro targets; culturally aware of halal and MENA diets.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-title">Progress Analyzer</div>
+          <p>Tracks user metrics over time, detects plateaus, and automatically adjusts recommendations.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-title">Attachment Intelligence</div>
+          <p>Users upload meal photos, PDF lab reports, or body scans — AI reads, interprets, and coaches from them using OCR and computer vision.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-title">Memory System</div>
+          <p>Short-term (conversation) and long-term (user profile, goals, history) memory for truly personalized coaching that improves over time.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-title">Multilingual (AR/EN)</div>
+          <p>Full Arabic and English support with auto-detection. Culturally sensitive responses for MENA users.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-title">RAG Evidence Engine</div>
+          <p>Retrieval-Augmented Generation over real fitness/nutrition datasets ensures evidence-based, accurate answers — not hallucinations.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+        <tbody>
+          <tr><td>Frontend</td><td>React 18 + Vite + TailwindCSS</td></tr>
+          <tr><td>Backend</td><td>Python FastAPI</td></tr>
+          <tr><td>AI / Agents</td><td>Multi-agent LLM system (OpenAI / Groq / Ollama)</td></tr>
+          <tr><td>Database</td><td>Supabase (PostgreSQL + Authentication)</td></tr>
+          <tr><td>Deployment</td><td>Docker, Render, Railway (cloud-ready)</td></tr>
+          <tr><td>Vision / OCR</td><td>PIL, RapidOCR, LLM vision analysis</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Innovation:</strong> The combination of multi-agent AI, persistent user memory, document vision/OCR, and Arabic-language support in a single coherent coaching platform has no direct equivalent in the MENA market. AiFitCoach brings enterprise-grade AI architecture to a consumer health application.</p>
+
+      <p><strong>Value for users:</strong> Save $200–$500/month vs. a human personal trainer. Access coaching at 2 AM, during Ramadan, while traveling. Receive advice grounded in actual uploaded health data — not generic templates.</p>
+    </div>
+
+    <!-- ── SECTION 5 ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">5</div>
+        <div>
+          <div class="section-title">Management Team</div>
+          <span class="section-subtitle">Key Members · Skills · Roles</span>
+        </div>
+      </div>
+
+      <div class="team-card">
+        <div class="team-avatar">A</div>
+        <div>
+          <div class="team-name">Abu Ayyash</div>
+          <div class="team-role">Founder &amp; Lead Developer</div>
+          <div class="team-skills">
+            Full-stack development (React, Python, FastAPI) · AI/ML system integration · Multi-agent architecture design · RAG pipeline engineering · Cloud deployment (Docker, Render, Railway) · Database design (Supabase/PostgreSQL) · Product strategy &amp; vision
+          </div>
+        </div>
+      </div>
+
+      <p>The founder designed and built the entire AiFitCoach platform end-to-end: frontend UI, AI backend, multi-agent system, RAG pipeline, database schema, cloud deployment infrastructure, and all seven AI agents. This demonstrates full technical ownership and entrepreneurial execution capability.</p>
+
+      <div class="highlight">
+        <p>The team is actively seeking co-founders with expertise in business development, marketing, and health sciences to scale the venture following the competition.</p>
+      </div>
+    </div>
+
+    <!-- ── SECTION 6 ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">6</div>
+        <div>
+          <div class="section-title">3-Year Financial Forecast</div>
+          <span class="section-subtitle">Business Plan · Revenue · Costs · Use of Funds</span>
+        </div>
+      </div>
+
+      <p><strong>Revenue Model:</strong> Freemium SaaS subscription.</p>
+
+      <table>
+        <thead><tr><th>Tier</th><th>Price</th><th>Includes</th></tr></thead>
+        <tbody>
+          <tr><td>Free</td><td>$0/month</td><td>20 AI messages/day, basic workout and nutrition plans</td></tr>
+          <tr><td>Pro</td><td>$4.99/month</td><td>Unlimited coaching, full memory, file uploads, progress tracking</td></tr>
+          <tr><td>Corporate/Team</td><td>$99/month</td><td>Up to 25 employees, admin dashboard, usage reporting</td></tr>
+        </tbody>
+      </table>
+
+      <div class="financial-highlight">
+        <h4>3-Year Revenue Projections</h4>
+        <div class="fin-grid">
+          <div class="fin-year">
+            <div class="fin-year-label">Year 1</div>
+            <div class="fin-year-rev">$12,000</div>
+            <div class="fin-year-users">~200 Pro users</div>
+            <div class="fin-year-users" style="color:#64748b;font-size:8pt;margin-top:4px;">Launch Jordan · Validate product-market fit</div>
+          </div>
+          <div class="fin-year">
+            <div class="fin-year-label">Year 2</div>
+            <div class="fin-year-rev">$120,000</div>
+            <div class="fin-year-users">~2,000 Pro users</div>
+            <div class="fin-year-users" style="color:#64748b;font-size:8pt;margin-top:4px;">Expand to KSA, Egypt · Mobile app launch</div>
+          </div>
+          <div class="fin-year">
+            <div class="fin-year-label">Year 3</div>
+            <div class="fin-year-rev">$600,000</div>
+            <div class="fin-year-users">~10,000 Pro users</div>
+            <div class="fin-year-users" style="color:#64748b;font-size:8pt;margin-top:4px;">Regional SaaS · Corporate contracts · Series A ready</div>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Monthly Cost Item</th><th>Est. Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Cloud hosting (Render/Railway)</td><td>$25</td></tr>
+          <tr><td>LLM API (OpenAI/Groq — scales with users)</td><td>$50–$150</td></tr>
+          <tr><td>Supabase database</td><td>$25</td></tr>
+          <tr><td>Domain &amp; miscellaneous</td><td>$10</td></tr>
+          <tr><td><strong>Total baseline (launch)</strong></td><td><strong>~$110/month</strong></td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Use of Prize Funds:</strong></p>
+      <div class="fund-bars">
+        <div class="fund-bar-row">
+          <div class="fund-bar-label">Marketing &amp; User Acquisition</div>
+          <div class="fund-bar-track"><div class="fund-bar-fill" style="width:40%"></div></div>
+          <div class="fund-bar-pct">40%</div>
+        </div>
+        <div class="fund-bar-row">
+          <div class="fund-bar-label">Mobile App (iOS + Android)</div>
+          <div class="fund-bar-track"><div class="fund-bar-fill" style="width:30%"></div></div>
+          <div class="fund-bar-pct">30%</div>
+        </div>
+        <div class="fund-bar-row">
+          <div class="fund-bar-label">Arabic Dataset Fine-tuning</div>
+          <div class="fund-bar-track"><div class="fund-bar-fill" style="width:20%"></div></div>
+          <div class="fund-bar-pct">20%</div>
+        </div>
+        <div class="fund-bar-row">
+          <div class="fund-bar-label">Legal, IP &amp; Business Registration</div>
+          <div class="fund-bar-track"><div class="fund-bar-fill" style="width:10%"></div></div>
+          <div class="fund-bar-pct">10%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 7 ── -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">7</div>
+        <div>
+          <div class="section-title">Societal Impact Assessment</div>
+          <span class="section-subtitle">Public Health · Inclusion · Measurable Outcomes</span>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-num">1,000+</div>
+          <div class="metric-label">Active users coached daily (Year 1 target)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-num">500+</div>
+          <div class="metric-label">Personalized workout plans/month</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-num">70%</div>
+          <div class="metric-label">Users reporting positive lifestyle change at 3 months</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-num">$0</div>
+          <div class="metric-label">Cost for free-tier users to access basic coaching</div>
+        </div>
+      </div>
+
+      <p><strong>Public Health Impact:</strong> AiFitCoach directly addresses the epidemic of lifestyle-related chronic disease in Jordan and the Arab world. By making evidence-based fitness and nutrition coaching affordable and accessible, the platform can measurably reduce rates of obesity, type 2 diabetes, and cardiovascular disease in its user base.</p>
+
+      <p><strong>Women's Empowerment:</strong> In many MENA communities, women face cultural and practical barriers to accessing fitness facilities or hiring male coaches. AiFitCoach provides a private, safe, Arabic-language coaching environment — enabling thousands of women to improve their health independently. This directly aligns with the Orange SVP's gender equity objectives.</p>
+
+      <p><strong>Financial Inclusion:</strong> At $4.99/month versus $200+/month for human coaching, AiFitCoach makes professional-level health guidance accessible to middle and lower-income households for the first time. A free tier ensures even financially constrained users receive basic guidance — health as a right, not a luxury.</p>
+
+      <p><strong>Digital Inclusion:</strong> The platform operates in a browser on any device, including low-end smartphones, with no app installation required. Arabic-first design ensures accessibility for users with limited English literacy.</p>
+
+      <p><strong>Environmental Footprint:</strong> As a fully digital service with no physical infrastructure, AiFitCoach has a minimal carbon footprint. Cloud hosting on energy-efficient modern data centers further reduces environmental impact compared to traditional gym or clinic operations.</p>
+
+      <div class="highlight">
+        <p><strong>Mission in one sentence:</strong> AiFitCoach exists to make expert, personalized health coaching accessible to every person — regardless of income, language, location, or gender.</p>
+      </div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <div class="doc-footer">
+      <div class="doc-footer-left">
+        AiFitCoach &nbsp;·&nbsp; Orange Social Venture Prize 2026 &nbsp;·&nbsp; Jordan &nbsp;·&nbsp; Confidential
+      </div>
+      <div class="doc-footer-right">aifitcoach.ai</div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /page -->
+</body>
+</html>

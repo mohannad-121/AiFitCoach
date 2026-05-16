@@ -1,0 +1,51 @@
+{
+  "00000000-0000-0000-0000-000000000001:apple_health": {
+    "user_id": "00000000-0000-0000-0000-000000000001",
+    "provider": "apple_health",
+    "external_user_id": "",
+    "access_token": "",
+    "refresh_token": "",
+    "token_type": "Ingest",
+    "scope": "healthkit:read",
+    "expires_at": null,
+    "profile_data": {
+      "display_name": "Bridge User",
+      "timezone": "UTC"
+    },
+    "last_sync_data": {
+      "today_summary": {
+        "steps": 3210,
+        "resting_heart_rate": 58,
+        "distance_km": 2.7,
+        "heart_zone_active_minutes": 18
+      },
+      "heart_history": [
+        {
+          "date": "2026-05-05",
+          "resting_heart_rate": 60
+        },
+        {
+          "date": "2026-05-06",
+          "resting_heart_rate": 58
+        }
+      ],
+      "activity_history": [],
+      "sleep_history": [],
+      "weight_history": [],
+      "food_history": [],
+      "water_history": [],
+      "coach_summary": {
+        "avg_resting_heart_rate_7d": 59.0,
+        "latest_resting_heart_rate": 58.0,
+        "active_minutes_total": 0,
+        "heart_zone_active_minutes": 18,
+        "last_sync_at": "2026-05-06T19:51:06.668728+00:00"
+      },
+      "metadata": {},
+      "last_sync_at": "2026-05-06T19:51:06.668728+00:00"
+    },
+    "last_sync_at": "2026-05-06T19:51:06.668728+00:00",
+    "created_at": "2026-05-06T19:51:06.668728+00:00",
+    "updated_at": "2026-05-06T19:51:06.668728+00:00"
+  }
+}

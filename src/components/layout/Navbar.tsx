@@ -1,14 +1,16 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Home, Dumbbell, MessageCircle, User, Globe, Calendar, LogOut, LogIn, Shield, BellRing } from 'lucide-react';
+import { Home, Dumbbell, MessageCircle, User, Globe, Calendar, LogOut, LogIn, Shield, BellRing, Moon, Sun } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/contexts/ThemeContext';
 import { buttonVariants, Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const { t, language, setLanguage } = useLanguage();
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
   const navItems = [
@@ -60,6 +62,16 @@ export function Navbar() {
 
           {/* Right section */}
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTheme}
+              className="border-border/50 text-muted-foreground hover:text-foreground"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+
             <Button
               variant="outline"
               size="sm"

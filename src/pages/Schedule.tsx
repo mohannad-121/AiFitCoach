@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { AI_BACKEND_URL } from '@/lib/backendUrl';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -102,8 +103,6 @@ interface WorkoutAdherenceStatus {
     persistence_error: string | null;
   };
 }
-
-const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
 
 const getLocalPlansStorageKey = (userId: string) => `fitcoach_schedule_plans_${userId}`;
 const getLocalCompletionsStorageKey = (userId: string) => `fitcoach_schedule_completions_${userId}`;
@@ -301,6 +300,7 @@ export function SchedulePage() {
   const [workoutAdherence, setWorkoutAdherence] = useState<WorkoutAdherenceStatus | null>(null);
   const [adherenceLoading, setAdherenceLoading] = useState(false);
   const [highlightItemName, setHighlightItemName] = useState('');
+  const [coachPinToast, setCoachPinToast] = useState<{ exerciseName: string; authorName: string } | null>(null);
   const targetItemRef = useRef<HTMLDivElement | null>(null);
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
@@ -377,6 +377,11 @@ export function SchedulePage() {
 
   useEffect(() => {
     if (!user || loading) return;
+    fetchCoachPins(user.id);
+  }, [user?.id, loading]);
+
+  useEffect(() => {
+    if (!user || loading) return;
     void fetchWorkoutAdherence();
   }, [user?.id, loading, completions.length, dailyLogs.length, plans.length]);
 
@@ -443,6 +448,34 @@ export function SchedulePage() {
       setCompletions(localCompletions);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCoachPins = async (userId: string) => {
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/coach/pins/${encodeURIComponent(userId)}`);
+      if (!response.ok) return;
+      const payload = await response.json().catch(() => null);
+      const pins: Array<{ note_id: string; pinned_exercise: { name: string; nameAr?: string }; note_text: string; author_name: string; created_at: string }> = Array.isArray(payload?.pins) ? payload.pins : [];
+      if (pins.length === 0) return;
+
+      // Always highlight the most recent pinned exercise
+      const latestPin = pins[0];
+      setHighlightItemName(latestPin.pinned_exercise.name);
+
+      // Toast only once per note_id
+      const NOTIFIED_KEY = `fitcoach_coach_pins_notified_${userId}`;
+      const notifiedIds: string[] = JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]');
+      if (!notifiedIds.includes(latestPin.note_id)) {
+        const exerciseName = language === 'ar'
+          ? latestPin.pinned_exercise.nameAr || latestPin.pinned_exercise.name
+          : latestPin.pinned_exercise.name;
+        setCoachPinToast({ exerciseName, authorName: latestPin.author_name || 'Coach' });
+        const updated = [...notifiedIds, latestPin.note_id];
+        localStorage.setItem(NOTIFIED_KEY, JSON.stringify(updated));
+      }
+    } catch {
+      // fail silently
     }
   };
 
@@ -646,6 +679,16 @@ export function SchedulePage() {
       targetItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [highlightItemName, selectedDateIdx, weekOffset, viewTab, matchingDay?.index]);
+
+  useEffect(() => {
+    if (!coachPinToast) return;
+    toast({
+      title: language === 'ar' ? '📌 ملاحظة من المدرب' : '📌 Note from your coach',
+      description: language === 'ar'
+        ? `${coachPinToast.authorName} يريدك أن تؤدي: ${coachPinToast.exerciseName} — تم تمييزه أدناه بـ "مطلوب الآن"`
+        : `${coachPinToast.authorName} wants you to do: ${coachPinToast.exerciseName} — highlighted below as "Needed Now"`,
+    });
+  }, [coachPinToast]);
 
   const overallMissingPlanItems = useMemo(() => {
     if (!currentPlan) return [] as string[];
@@ -1264,7 +1307,10 @@ export function SchedulePage() {
                       {matchingDay.day.exercises?.map((ex, exIdx) => {
                         const done = isCompleted(matchingDay.index, exIdx, currentPlan.id);
                         const exerciseLabel = language === 'ar' ? ex.nameAr || ex.name : ex.name;
-                        const isHighlighted = Boolean(highlightItemName) && normalizeItemLabel(exerciseLabel) === normalizeItemLabel(highlightItemName);
+                        const isHighlighted = Boolean(highlightItemName) && (
+                          normalizeItemLabel(ex.name) === normalizeItemLabel(highlightItemName) ||
+                          normalizeItemLabel(ex.nameAr || '') === normalizeItemLabel(highlightItemName)
+                        );
                         return (
                           <div
                             key={`ex-${exIdx}`}
@@ -1280,7 +1326,7 @@ export function SchedulePage() {
                             }}
                             className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-start ${
                               isHighlighted
-                                ? 'border-accent bg-accent/10 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]'
+                                ? 'border-primary bg-primary/10 shadow-[0_0_0_2px_hsl(var(--primary)/0.4)]'
                                 : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
                             }`}
                           >
@@ -1297,7 +1343,7 @@ export function SchedulePage() {
                                 <p className={`font-medium ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                                   {exerciseLabel}
                                 </p>
-                                {isHighlighted && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">{language === 'ar' ? 'مطلوب الآن' : 'Needed now'}</span>}
+                                {isHighlighted && <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground animate-pulse">{language === 'ar' ? 'مطلوب الآن' : 'Needed Now'}</span>}
                               </div>
                               {ex.sets && <p className="text-xs text-muted-foreground mt-0.5">{ex.sets} × {ex.reps}</p>}
                             </div>
@@ -1326,7 +1372,7 @@ export function SchedulePage() {
                             }}
                             className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-start ${
                               isHighlighted
-                                ? 'border-accent bg-accent/10 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]'
+                                ? 'border-primary bg-primary/10 shadow-[0_0_0_2px_hsl(var(--primary)/0.4)]'
                                 : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
                             }`}
                           >
@@ -1343,7 +1389,7 @@ export function SchedulePage() {
                                 <p className={`font-medium ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                                   {mealLabel}
                                 </p>
-                                {isHighlighted && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">{language === 'ar' ? 'مطلوب الآن' : 'Needed now'}</span>}
+                                {isHighlighted && <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground animate-pulse">{language === 'ar' ? 'مطلوب الآن' : 'Needed Now'}</span>}
                                 {meal.calories && <span className="text-xs text-muted-foreground">({meal.calories} cal)</span>}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">

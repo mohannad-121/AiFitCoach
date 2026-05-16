@@ -1,0 +1,135 @@
+{
+  "dataset_root": "D:\\AiFitCoach-main\\ai_backend\\datasets",
+  "random_state": 42,
+  "benchmarked_datasets": 5,
+  "results": [
+    {
+      "dataset_name": "daily_calories_band",
+      "filename": "dailyCalories_merged.csv",
+      "original_rows": 940,
+      "original_columns": 3,
+      "target": "derived_daily_calorie_band",
+      "notes": "3-class daily calorie band from activity metrics.",
+      "rows_used": 940,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 314,
+        "medium": 313,
+        "high": 313
+      },
+      "baseline_accuracy": 0.33404255319148934,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.5372340425531915,
+        "weighted_f1": 0.5316277399356168
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "daily_steps_band",
+      "filename": "dailySteps_merged.csv",
+      "original_rows": 940,
+      "original_columns": 3,
+      "target": "derived_daily_steps_band",
+      "notes": "3-class daily steps band.",
+      "rows_used": 940,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 314,
+        "medium": 313,
+        "high": 313
+      },
+      "baseline_accuracy": 0.33404255319148934,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.3882978723404255,
+        "weighted_f1": 0.38578791215225355
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "daily_intensities_band",
+      "filename": "dailyIntensities_merged.csv",
+      "original_rows": 940,
+      "original_columns": 10,
+      "target": "derived_intensity_band",
+      "notes": "3-class intensity band from active minutes.",
+      "rows_used": 940,
+      "feature_count": 9,
+      "numeric_feature_count": 8,
+      "categorical_feature_count": 1,
+      "class_count": 2,
+      "class_distribution": {
+        "low": 631,
+        "medium": 309
+      },
+      "baseline_accuracy": 0.6712765957446809,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.9627659574468085,
+        "weighted_f1": 0.9629814281417847
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "hourly_steps_band",
+      "filename": "hourlySteps_merged.csv",
+      "original_rows": 22099,
+      "original_columns": 3,
+      "target": "derived_hourly_steps_band",
+      "notes": "3-class hourly steps band.",
+      "rows_used": 5000,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 2,
+      "class_distribution": {
+        "low": 3333,
+        "medium": 1667
+      },
+      "baseline_accuracy": 0.6666,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.677,
+        "weighted_f1": 0.6857734204519409
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "heart_rate_band",
+      "filename": "heartrate_seconds_merged.csv",
+      "original_rows": 2483658,
+      "original_columns": 3,
+      "target": "derived_heart_rate_band",
+      "notes": "3-class heart rate zone classification.",
+      "rows_used": 5000,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "medium": 1693,
+        "low": 1681,
+        "high": 1626
+      },
+      "baseline_accuracy": 0.3386,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.416,
+        "weighted_f1": 0.38444895053926076
+      },
+      "status": "ok"
+    }
+  ]
+}

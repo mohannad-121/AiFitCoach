@@ -1,6 +1,10 @@
+import { AI_BACKEND_URL } from '@/lib/backendUrl';
 import { ScheduleNoteTarget, stripAdminNoteTarget } from '@/lib/adminNoteTargets';
 
-export const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
+export type PinnedExercise = {
+  name: string;
+  nameAr?: string | null;
+};
 
 export type CoachNotification = {
   id: string;
@@ -9,6 +13,7 @@ export type CoachNotification = {
   author_role: 'coach' | 'doctor';
   note_category: 'general' | 'workout' | 'nutrition';
   note_text: string;
+  pinned_exercise?: PinnedExercise | null;
   related_date?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -71,10 +76,19 @@ export async function fetchCoachNotifications(userId: string, limit = 50): Promi
 
 export function parseCoachNotification(notification: CoachNotification): ParsedCoachNotification {
   const { cleanText, target } = stripAdminNoteTarget(notification.note_text);
+  // If no text-based schedule target, synthesize one from pinned_exercise
+  const resolvedTarget: ScheduleNoteTarget | null = target
+    ?? (notification.pinned_exercise?.name
+      ? {
+          view: 'workout' as const,
+          date: notification.related_date || null,
+          itemName: notification.pinned_exercise.name,
+        }
+      : null);
   return {
     ...notification,
     clean_text: cleanText,
-    schedule_target: target,
+    schedule_target: resolvedTarget,
   };
 }
 

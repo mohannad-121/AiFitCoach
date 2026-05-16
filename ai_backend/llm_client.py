@@ -99,6 +99,21 @@ class LLMClient:
             return self._analyze_image_openai(image_bytes, mime_type, prompt, max_tokens)
         return self._analyze_image_ollama(image_bytes, prompt, max_tokens)
 
+    def vision_support_status(self) -> tuple[bool, str]:
+        provider = self.active_provider
+        if provider == "openai":
+            if self.has_openai_key and self._openai_client is not None:
+                return True, ""
+            return False, "OpenAI vision is disabled because OPENAI_API_KEY is not configured."
+
+        vision_model = str(OLLAMA_VISION_MODEL or "").strip() or OLLAMA_MODEL
+        if not self._ollama_model_supports_vision(vision_model):
+            return (
+                False,
+                "Vision analysis is disabled for Ollama. Set OLLAMA_VISION_MODEL to a vision-capable model (for example: llava:7b or qwen2.5vl).",
+            )
+        return True, ""
+
     def _chat_openai(
         self,
         messages: list[dict[str, Any]],
@@ -505,7 +520,20 @@ class LLMClient:
     @staticmethod
     def _ollama_model_supports_vision(model_name: str) -> bool:
         normalized = str(model_name or "").strip().lower()
-        return any(tag in normalized for tag in ("llava", "vision", "gemma3", "minicpm-v", "qwen2.5vl", "qwen2-vl", "bakllava"))
+        return any(
+            tag in normalized
+            for tag in (
+                "llava",
+                "vision",
+                "gemma3",
+                "minicpm-v",
+                "qwen2.5vl",
+                "qwen2-vl",
+                "qwen3-vl",
+                "qwen3vl",
+                "bakllava",
+            )
+        )
 
     @staticmethod
     def _openai_needs_continuation(choice: Any) -> bool:

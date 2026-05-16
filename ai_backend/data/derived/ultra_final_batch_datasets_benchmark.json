@@ -1,0 +1,157 @@
+{
+  "dataset_root": "D:\\AiFitCoach-main\\ai_backend\\datasets",
+  "random_state": 42,
+  "benchmarked_datasets": 5,
+  "results": [
+    {
+      "dataset_name": "foundation_food_quality",
+      "filename": "foundation_food.csv",
+      "original_rows": 365,
+      "original_columns": 3,
+      "target": "derived_foundation_food_quality",
+      "notes": "3-class food quality from fdc_id.",
+      "rows_used": 365,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 122,
+        "high": 122,
+        "medium": 121
+      },
+      "baseline_accuracy": 0.33424657534246577,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.9178082191780822,
+        "weighted_f1": 0.9174824695252629
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "sample_food_profile",
+      "filename": "sample_food.csv",
+      "original_rows": 3890,
+      "original_columns": 1,
+      "target": "derived_sample_food_profile",
+      "notes": "3-class food profile from fdc_id.",
+      "status": "error",
+      "error": "No usable rows after filtering target."
+    },
+    {
+      "dataset_name": "food_nutrient_density",
+      "filename": "food_nutrient.csv",
+      "original_rows": 159285,
+      "original_columns": 11,
+      "target": "derived_food_nutrient_density",
+      "notes": "3-class nutrient density from id.",
+      "status": "error",
+      "error": "Found array with 0 feature(s) (shape=(4000, 0)) while a minimum of 1 is required."
+    },
+    {
+      "dataset_name": "acquisition_samples_profile",
+      "filename": "acquisition_samples.csv",
+      "original_rows": 8172,
+      "original_columns": 2,
+      "target": "derived_acquisition_samples_profile",
+      "notes": "3-class acquisition profile from fdc_id_of_sample_food.",
+      "rows_used": 5000,
+      "feature_count": 1,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 0,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 1668,
+        "high": 1667,
+        "medium": 1665
+      },
+      "baseline_accuracy": 0.3336,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 1.0,
+        "weighted_f1": 1.0
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "agricultural_samples_profile",
+      "filename": "agricultural_samples.csv",
+      "original_rows": 810,
+      "original_columns": 5,
+      "target": "derived_agricultural_samples_profile",
+      "notes": "3-class agricultural profile from fdc_id.",
+      "rows_used": 810,
+      "feature_count": 4,
+      "numeric_feature_count": 0,
+      "categorical_feature_count": 4,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 270,
+        "medium": 270,
+        "high": 270
+      },
+      "baseline_accuracy": 0.3333333333333333,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.9753086419753086,
+        "weighted_f1": 0.9752971098412819
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "food_portion_estimation",
+      "filename": "food_portion.csv",
+      "original_rows": 10951,
+      "original_columns": 11,
+      "target": "derived_food_portion_estimation",
+      "notes": "3-class portion estimation from min_year_acquired.",
+      "rows_used": 90,
+      "feature_count": 10,
+      "numeric_feature_count": 8,
+      "categorical_feature_count": 2,
+      "class_count": 3,
+      "class_distribution": {
+        "medium": 37,
+        "low": 31,
+        "high": 22
+      },
+      "baseline_accuracy": 0.4111111111111111,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.8333333333333334,
+        "weighted_f1": 0.8363636363636364
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "nutrient_values_classification",
+      "filename": "nutrient.csv",
+      "original_rows": 477,
+      "original_columns": 5,
+      "target": "derived_nutrient_values_classification",
+      "notes": "3-class nutrient value from nutrient_nbr.",
+      "rows_used": 465,
+      "feature_count": 4,
+      "numeric_feature_count": 2,
+      "categorical_feature_count": 2,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 155,
+        "medium": 155,
+        "high": 155
+      },
+      "baseline_accuracy": 0.3333333333333333,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.946236559139785,
+        "weighted_f1": 0.9465501792114696
+      },
+      "status": "ok"
+    }
+  ]
+}

@@ -8,15 +8,14 @@ import uuid
 import shutil
 import asyncio
 import math
-import hmac
 from functools import lru_cache
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from dotenv import dotenv_values, load_dotenv
-from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -63,9 +62,9 @@ app.add_middleware(
 )
 
 logger = logging.getLogger(__name__)
+ADMIN_PANEL_ROLES = {"coach", "doctor", "family"}
 
 BACKEND_DIR = Path(__file__).resolve().parent
-ADMIN_NOTES_TABLE = "admin_user_notes"
 load_dotenv(BACKEND_DIR.parent / ".env", override=True)
 load_dotenv(BACKEND_DIR / ".env", override=True)
 load_dotenv(override=True)
@@ -155,208 +154,6 @@ class ChatRequest(BaseModel):
     plan_snapshot: Optional[Dict[str, Any]] = None
     website_context: Optional[Dict[str, Any]] = None
     attachment_context: Optional[Dict[str, Any]] = None
-
-
-class AdminNoteCreateRequest(BaseModel):
-    note_text: str
-    note_category: str = "general"
-    author_name: Optional[str] = None
-    author_role: Optional[str] = "coach"
-    related_date: Optional[str] = None
-
-    @field_validator("note_text")
-    @classmethod
-    def validate_note_text(cls, value: str) -> str:
-        clean = str(value or "").strip()
-        if len(clean) < 3:
-            raise ValueError("note_text must be at least 3 characters long")
-        return clean
-
-    @field_validator("note_category")
-    @classmethod
-    def validate_note_category(cls, value: str) -> str:
-        clean = str(value or "general").strip().lower()
-        if clean not in {"general", "workout", "nutrition"}:
-            raise ValueError("note_category must be one of: general, workout, nutrition")
-        return clean
-
-    @field_validator("author_role")
-    @classmethod
-    def validate_author_role(cls, value: Optional[str]) -> str:
-        clean = str(value or "coach").strip().lower()
-        if clean not in {"coach", "doctor"}:
-            raise ValueError("author_role must be either coach or doctor")
-        return clean
-
-    @field_validator("related_date")
-    @classmethod
-    def validate_related_date(cls, value: Optional[str]) -> Optional[str]:
-        clean = str(value or "").strip()
-        if not clean:
-            return None
-        try:
-            return datetime.fromisoformat(clean).date().isoformat()
-        except ValueError:
-            try:
-                return datetime.strptime(clean, "%Y-%m-%d").date().isoformat()
-            except ValueError as exc:
-                raise ValueError("related_date must use YYYY-MM-DD format") from exc
-
-
-def _admin_panel_password() -> str:
-    configured = str(os.getenv("ADMIN_PANEL_PASSWORD") or "").strip()
-    if configured:
-        return configured
-
-    for env_path in (BACKEND_DIR / ".env", BACKEND_DIR.parent / ".env"):
-        try:
-            values = dotenv_values(env_path)
-        except Exception:
-            continue
-        candidate = str((values or {}).get("ADMIN_PANEL_PASSWORD") or "").strip()
-        if candidate:
-            return candidate
-
-    return ""
-
-
-def _require_admin_password(admin_password: Optional[str]) -> None:
-    expected = _admin_panel_password()
-    if not expected:
-        raise HTTPException(status_code=503, detail="ADMIN_PANEL_PASSWORD is not configured on the backend.")
-
-    supplied = str(admin_password or "").strip()
-    if not supplied or not hmac.compare_digest(supplied, expected):
-        raise HTTPException(status_code=403, detail="Invalid admin panel password.")
-
-
-def _require_supabase_admin_client() -> Any:
-    client = getattr(SUPABASE_CONTEXT, "client", None)
-    if client is None:
-        raise HTTPException(status_code=503, detail="Supabase service-role access is not configured on the backend.")
-    return client
-
-
-def _serialize_admin_note(note: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "id": str(note.get("id") or ""),
-        "user_id": str(note.get("user_id") or ""),
-        "author_name": str(note.get("author_name") or "").strip(),
-        "author_role": str(note.get("author_role") or "coach").strip().lower(),
-        "note_category": str(note.get("note_category") or "general").strip().lower(),
-        "note_text": str(note.get("note_text") or "").strip(),
-        "related_date": note.get("related_date"),
-        "created_at": note.get("created_at"),
-        "updated_at": note.get("updated_at"),
-    }
-
-
-def _load_admin_notes(user_id: str, limit: int = 20) -> list[dict[str, Any]]:
-    if not user_id or not SUPABASE_CONTEXT.table_ready(ADMIN_NOTES_TABLE):
-        return []
-
-    client = _require_supabase_admin_client()
-    try:
-        response = (
-            client.table(ADMIN_NOTES_TABLE)
-            .select("id,user_id,author_name,author_role,note_category,note_text,related_date,created_at,updated_at")
-            .eq("user_id", user_id)
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
-    except Exception as exc:
-        logger.warning("Failed loading admin notes for %s: %s", user_id, exc)
-        return []
-
-    rows = getattr(response, "data", None)
-    if not isinstance(rows, list):
-        return []
-    return [_serialize_admin_note(row) for row in rows if isinstance(row, dict)]
-
-
-def _load_admin_profiles(limit: int = 100) -> list[dict[str, Any]]:
-    client = _require_supabase_admin_client()
-    response = (
-        client.table("profiles")
-        .select("user_id,name,age,height,weight,goal,location,created_at,updated_at")
-        .order("updated_at", desc=True)
-        .limit(limit)
-        .execute()
-    )
-    rows = getattr(response, "data", None)
-    if not isinstance(rows, list):
-        return []
-
-    deduped: list[dict[str, Any]] = []
-    seen_user_ids: set[str] = set()
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        user_id = str(row.get("user_id") or "").strip()
-        if not user_id or user_id in seen_user_ids:
-            continue
-        seen_user_ids.add(user_id)
-        deduped.append(row)
-    return deduped
-
-
-def _build_admin_user_summary(profile: dict[str, Any]) -> dict[str, Any]:
-    user_id = _normalize_user_id(profile.get("user_id"))
-    context = SUPABASE_CONTEXT.load_user_context(user_id)
-    tracking_summary = context.get("tracking_summary") if isinstance(context, dict) else {}
-    weekly_stats = tracking_summary.get("weekly_stats") if isinstance(tracking_summary, dict) else {}
-    latest_evidence = None
-    if SUPABASE_CONTEXT.table_ready("workout_evidence"):
-        evidence_rows = SUPABASE_CONTEXT.list_workout_evidence(user_id, limit=1)
-        latest_evidence = evidence_rows[0] if evidence_rows else None
-    latest_note = _load_admin_notes(user_id, limit=1)
-
-    return {
-        "user_id": user_id,
-        "name": str(profile.get("name") or "").strip() or "Unnamed user",
-        "goal": str(profile.get("goal") or "").strip(),
-        "fitness_level": str(profile.get("fitness_level") or "").strip(),
-        "location": str(profile.get("location") or "").strip(),
-        "updated_at": profile.get("updated_at") or profile.get("created_at"),
-        "tracking_summary": {
-            "adherence_score": tracking_summary.get("adherence_score", 0),
-            "completed_last_7_days": tracking_summary.get("completed_last_7_days", 0),
-            "last_completed_at": tracking_summary.get("last_completed_at"),
-            "last_log_date": tracking_summary.get("last_log_date"),
-            "weekly_stats": {
-                "workout_adherence_percent": weekly_stats.get("workout_adherence_percent", 0),
-                "logging_consistency_percent": weekly_stats.get("logging_consistency_percent", 0),
-                "current_workout_streak_days": weekly_stats.get("current_workout_streak_days", 0),
-            },
-        },
-        "latest_evidence": latest_evidence,
-        "latest_note": latest_note[0] if latest_note else None,
-        "counts": context.get("counts") if isinstance(context, dict) else {},
-    }
-
-
-def _load_admin_user_detail(user_id: str, evidence_limit: int = 14, notes_limit: int = 20) -> dict[str, Any]:
-    normalized_user_id = _normalize_user_id(user_id)
-    context = SUPABASE_CONTEXT.load_user_context(normalized_user_id)
-    if not context.get("enabled"):
-        raise HTTPException(status_code=404, detail="User tracking context was not found.")
-
-    fitbit_status = FITBIT.get_status(normalized_user_id)
-    return {
-        "user_id": normalized_user_id,
-        "user": context.get("profile") or {"user_id": normalized_user_id},
-        "context": context,
-        "fitbit_status": fitbit_status,
-        "storage": {
-            "workout_evidence_ready": SUPABASE_CONTEXT.table_ready("workout_evidence"),
-            "admin_notes_ready": SUPABASE_CONTEXT.table_ready(ADMIN_NOTES_TABLE),
-        },
-        "evidence": SUPABASE_CONTEXT.list_workout_evidence(normalized_user_id, limit=evidence_limit)
-        if SUPABASE_CONTEXT.table_ready("workout_evidence")
-        else [],
-        "notes": _load_admin_notes(normalized_user_id, limit=notes_limit),
-    }
 
 
 def _repair_mojibake(text: str) -> str:
@@ -585,6 +382,23 @@ class WorkoutAdherenceRequest(BaseModel):
         if value < 0 or value > 23:
             raise ValueError("cutoff_hour_local must be between 0 and 23")
         return value
+
+
+class AdminNoteRequest(BaseModel):
+    note_text: str
+    note_category: str = "general"
+    related_date: Optional[str] = None
+    author_name: Optional[str] = None
+    author_role: Optional[str] = None
+    pinned_exercise: Optional[dict[str, str]] = None
+
+    @field_validator("note_text")
+    @classmethod
+    def _validate_note_text(cls, value: str) -> str:
+        cleaned = str(value or "").strip()
+        if not cleaned:
+            raise ValueError("note_text is required")
+        return cleaned
 
 
 class GoalPredictionRequest(BaseModel):
@@ -1402,8 +1216,6 @@ TRAINING_DAYS_UPDATE_KEYWORDS = {
     "عدد أيام التدريب",
 }
 GOAL_UPDATE_KEYWORDS = {"my goal", "goal", "هدفي", "الهدف", "هدفي الحالي"}
-NAME_UPDATE_KEYWORDS = {"my name", "name", "display name", "الاسم", "اسمي", "اسم المستخدم"}
-GENDER_UPDATE_KEYWORDS = {"gender", "sex", "الجنس", "نوعي", "نوع الجنس"}
 FITNESS_LEVEL_UPDATE_KEYWORDS = {
     "fitness level",
     "level",
@@ -1422,49 +1234,9 @@ ACTIVITY_LEVEL_UPDATE_KEYWORDS = {
     "النشاط",
 }
 LOCATION_UPDATE_KEYWORDS = {"location", "workout location", "place", "المكان", "الموقع", "مكان التمرين", "اللوكيشن"}
-EQUIPMENT_UPDATE_KEYWORDS = {"equipment", "gear", "available equipment", "tools", "المعدات", "الأدوات", "ادواتي", "معداتي"}
-INJURIES_UPDATE_KEYWORDS = {"injury", "injuries", "pain", "medical issue", "الإصابات", "اصاباتي", "الإصابة", "أصابتي", "الالم", "الألم"}
-DIETARY_PREFERENCES_UPDATE_KEYWORDS = {
-    "dietary preferences",
-    "diet preference",
-    "food preference",
-    "diet",
-    "preferences",
-    "التفضيلات الغذائية",
-    "تفضيلاتي الغذائية",
-    "نظامي الغذائي",
-}
-CHRONIC_CONDITIONS_UPDATE_KEYWORDS = {
-    "chronic conditions",
-    "chronic diseases",
-    "medical conditions",
-    "health conditions",
-    "الامراض المزمنة",
-    "الأمراض المزمنة",
-    "الحالات المزمنة",
-    "مشاكلي الصحية",
-}
-ALLERGIES_UPDATE_KEYWORDS = {"allergies", "allergy", "food allergies", "الحساسية", "الحساسيات", "حساسية الطعام", "حساسيتي"}
 PROFILE_CONFIRM_YES_KEYWORDS = {"yes", "y", "confirm", "confirmed", "ok", "okay", "done", "approve", "وافق", "موافق", "أكيد", "تمام", "نعم", "اوكي"}
 PROFILE_CONFIRM_NO_KEYWORDS = {"no", "n", "cancel", "stop", "reject", "لا", "إلغاء", "الغاء", "وقف", "ارفض", "مش الآن", "لا تؤكد"}
-PROFILE_UPDATE_CORRECTION_CUES = {"not my", "i want my", "want my", "instead", "بدي", "بدي", "اريد", "أريد", "مش", "مو"}
-SENSITIVE_PROFILE_UPDATE_FIELDS = {
-    "name",
-    "gender",
-    "weight",
-    "height",
-    "age",
-    "goal",
-    "training_days_per_week",
-    "fitness_level",
-    "activity_level",
-    "location",
-    "equipment",
-    "injuries",
-    "dietary_preferences",
-    "chronic_diseases",
-    "allergies",
-}
+SENSITIVE_PROFILE_UPDATE_FIELDS = {"weight", "height", "age", "goal", "training_days_per_week", "fitness_level", "activity_level", "location"}
 
 PROGRESS_CONCERN_KEYWORDS = {
     "no progress",
@@ -1743,6 +1515,139 @@ def _normalize_user_id(user_id: Optional[str]) -> str:
     return (user_id or "anonymous").strip() or "anonymous"
 
 
+def _table_ready(table: str) -> bool:
+    client = SUPABASE_CONTEXT.client
+    if client is None:
+        return False
+    try:
+        client.table(table).select("id").limit(1).execute()
+        return True
+    except Exception:
+        return False
+
+
+def _require_admin_session(
+    admin_password: Optional[str] = Header(default=None, alias="X-Admin-Password"),
+    admin_actor: Optional[str] = Header(default=None, alias="X-Admin-Actor"),
+    admin_role: Optional[str] = Header(default=None, alias="X-Admin-Role"),
+) -> dict[str, str]:
+    expected_password = str(os.getenv("ADMIN_PANEL_PASSWORD", "coach0000")).strip()
+    provided_password = str(admin_password or "").strip()
+    if not expected_password or provided_password != expected_password:
+        raise HTTPException(status_code=403, detail="Invalid admin credentials")
+
+    actor_name = str(admin_actor or "").strip() or "Coach"
+    role = normalize_text(admin_role or "coach").lower() or "coach"
+    if role not in ADMIN_PANEL_ROLES:
+        raise HTTPException(status_code=400, detail="Invalid admin role")
+
+    return {"actor_name": actor_name, "role": role}
+
+
+def _list_profiles(limit: int) -> list[dict[str, Any]]:
+    client = SUPABASE_CONTEXT.client
+    if client is None:
+        return []
+    try:
+        response = (
+            client.table("profiles")
+            .select("user_id,name,goal,fitness_level,location,updated_at")
+            .order("updated_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = getattr(response, "data", None) or []
+        return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+    except Exception as exc:
+        logger.warning("Failed loading admin profiles: %s", exc)
+        return []
+
+
+def _parse_note_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Parse JSON-encoded note_text to extract text and pinned_exercise fields."""
+    raw = row.get("note_text", "")
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict) and "text" in parsed:
+            row["note_text"] = parsed["text"]
+            row["pinned_exercise"] = parsed.get("pinned_exercise") or None
+    except (json.JSONDecodeError, ValueError):
+        row.setdefault("pinned_exercise", None)
+    return row
+
+
+def _list_admin_notes(user_id: str, limit: int) -> list[dict[str, Any]]:
+    client = SUPABASE_CONTEXT.client
+    if client is None:
+        return []
+    try:
+        response = (
+            client.table("admin_user_notes")
+            .select("id,note_text,note_category,author_name,author_role,related_date,created_at,updated_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = getattr(response, "data", None) or []
+        return [_parse_note_row(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+    except Exception as exc:
+        logger.warning("Failed loading admin notes for %s: %s", user_id, exc)
+        return []
+
+
+def _save_admin_note(user_id: str, request: AdminNoteRequest, admin: dict[str, str]) -> dict[str, Any]:
+    client = SUPABASE_CONTEXT.client
+    if client is None:
+        raise HTTPException(status_code=503, detail="Supabase is not configured")
+    # Encode pinned_exercise inside note_text as a JSON envelope so we don't need a schema change
+    if request.pinned_exercise and isinstance(request.pinned_exercise, dict):
+        note_text_stored = json.dumps({
+            "text": request.note_text,
+            "pinned_exercise": request.pinned_exercise,
+        }, ensure_ascii=False)
+    else:
+        note_text_stored = request.note_text
+    payload = {
+        "user_id": user_id,
+        "note_text": note_text_stored,
+        "note_category": request.note_category,
+        "related_date": request.related_date,
+        "author_name": request.author_name or admin["actor_name"],
+        "author_role": request.author_role or admin["role"],
+    }
+    try:
+        response = client.table("admin_user_notes").insert(payload).execute()
+        data = getattr(response, "data", None)
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            return data[0]
+        if isinstance(data, dict):
+            return data
+        return payload
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed saving note: {exc}") from exc
+
+
+def _list_workout_evidence(user_id: str, limit: int) -> list[dict[str, Any]]:
+    client = SUPABASE_CONTEXT.client
+    if client is None:
+        return []
+    try:
+        response = (
+            client.table("workout_evidence")
+            .select("id,report_type,evidence_date,workout_detected_today,confidence,evidence_score,evidence_threshold,detection_reasons,schedule_summary,detection_summary,reminder_summary,fitbit_summary,synced_at,created_at,updated_at")
+            .eq("user_id", user_id)
+            .order("evidence_date", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = getattr(response, "data", None) or []
+        return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+    except Exception as exc:
+        logger.warning("Failed loading workout evidence for %s: %s", user_id, exc)
+        return []
+
+
 def _normalize_conversation_id(conversation_id: Optional[str], user_id: str) -> str:
     return (conversation_id or f"conv_{user_id}").strip() or f"conv_{user_id}"
 
@@ -1812,48 +1717,7 @@ def _looks_like_attachment_followup(message: str) -> bool:
         "الpdf",
         "pdf",
     }
-    referential_cues = {
-        "this",
-        "that",
-        "it",
-        "those",
-        "these",
-        "what you see",
-        "based on what you see",
-        "based on the variables",
-        "the variables you see",
-        "from the image",
-        "from the screenshot",
-        "from the attachment",
-        "same image",
-        "same screenshot",
-        "الصورة نفسها",
-        "نفس الصورة",
-        "اللي بالصورة",
-        "بناء على الصورة",
-        "من الصورة",
-    }
-    reasoning_cues = {
-        "answer",
-        "solve",
-        "explain",
-        "read",
-        "what is",
-        "which",
-        "output",
-        "variable",
-        "variables",
-        "answer it",
-        "جاوب",
-        "حل",
-        "اشرح",
-        "اقرأ",
-        "المتغير",
-        "المتغيرات",
-    }
-    if any(keyword in normalized for keyword in keywords):
-        return True
-    return any(cue in normalized for cue in referential_cues) and any(cue in normalized for cue in reasoning_cues)
+    return any(keyword in normalized for keyword in keywords)
 
 
 def _contains_any(text: str, keywords: set[str]) -> bool:
@@ -4287,59 +4151,8 @@ def _extract_location_value(text: str) -> Optional[str]:
     return None
 
 
-def _extract_gender_value(text: str) -> Optional[str]:
-    normalized = normalize_text(_repair_mojibake(text or ""))
-    if not normalized:
-        return None
-    if _contains_phrase(normalized, {"female", "woman", "أنثى", "انثى", "بنت", "سيدة"}):
-        return "female"
-    if _contains_phrase(normalized, {"male", "man", "ذكر", "رجل", "شاب"}):
-        return "male"
-    return None
-
-
-def _extract_free_text_profile_value(text: str, field_keywords: set[str]) -> Optional[str]:
-    raw_text = _repair_mojibake(text or "").strip()
-    if not raw_text:
-        return None
-
-    lowered = raw_text.lower()
-    for keyword in sorted(field_keywords, key=len, reverse=True):
-        keyword_lower = keyword.lower()
-        if keyword_lower in lowered:
-            start = lowered.find(keyword_lower)
-            raw_text = (raw_text[:start] + raw_text[start + len(keyword):]).strip()
-            lowered = raw_text.lower()
-            break
-
-    raw_text = re.sub(
-        r"^(?:please\s+)?(?:change|update|set|edit|modify|adjust|replace|make|غير|غيّر|عدل|عدّل|حدث|حدّث|خل|خلي|خلّي|خليه|خلّيه|اجعل|ثبت|ثبّت)\s+",
-        "",
-        raw_text,
-        flags=re.IGNORECASE,
-    )
-    raw_text = re.sub(r"^(?:my|the|a|an)\s+", "", raw_text, flags=re.IGNORECASE)
-    raw_text = re.sub(r"^(?:to|as|is|are|=|:|be|become)\s+", "", raw_text, flags=re.IGNORECASE)
-    raw_text = re.sub(r"^(?:my|the|a|an)\s+", "", raw_text, flags=re.IGNORECASE)
-    raw_text = re.sub(r"^(?:to|as|is|are|=|:|be|become)\s+", "", raw_text, flags=re.IGNORECASE)
-    raw_text = re.sub(r"^(?:الى|إلى|هو|هي|يكون|تصير|يصير|=|:)\s+", "", raw_text, flags=re.IGNORECASE)
-    raw_text = raw_text.strip(" .,:;!?-\"'`()[]{}")
-
-    normalized = normalize_text(raw_text)
-    if not normalized:
-        return None
-    return raw_text.strip()
-
-
 def _extract_profile_update_value(field_name: str, user_input: str) -> Any:
     raw_text = _repair_mojibake(user_input or "")
-
-    if field_name == "name":
-        value = _extract_free_text_profile_value(raw_text, NAME_UPDATE_KEYWORDS)
-        return value[:80] if value else None
-
-    if field_name == "gender":
-        return _extract_gender_value(raw_text)
 
     if field_name == "weight":
         value = _extract_first_float(raw_text)
@@ -4377,49 +4190,11 @@ def _extract_profile_update_value(field_name: str, user_input: str) -> Any:
     if field_name == "location":
         return _extract_location_value(raw_text)
 
-    if field_name == "equipment":
-        value = _extract_free_text_profile_value(raw_text, EQUIPMENT_UPDATE_KEYWORDS)
-        if value is None:
-            return None
-        return "" if normalize_text(value) in {"none", "no equipment", "لا يوجد", "ما في", "بدون"} else value[:250]
-
-    if field_name == "injuries":
-        value = _extract_free_text_profile_value(raw_text, INJURIES_UPDATE_KEYWORDS)
-        if value is None:
-            return None
-        return "" if normalize_text(value) in {"none", "no injuries", "لا يوجد", "ما في", "بدون"} else value[:250]
-
-    if field_name == "dietary_preferences":
-        value = _extract_free_text_profile_value(raw_text, DIETARY_PREFERENCES_UPDATE_KEYWORDS)
-        if value is None:
-            return None
-        if normalize_text(value) in {"none", "no preferences", "لا يوجد", "ما في", "بدون"}:
-            return []
-        return _parse_list_field(value)
-
-    if field_name == "chronic_diseases":
-        value = _extract_free_text_profile_value(raw_text, CHRONIC_CONDITIONS_UPDATE_KEYWORDS)
-        if value is None:
-            return None
-        if normalize_text(value) in {"none", "no conditions", "no chronic conditions", "لا يوجد", "ما في", "بدون"}:
-            return []
-        return _parse_list_field(value)
-
-    if field_name == "allergies":
-        value = _extract_free_text_profile_value(raw_text, ALLERGIES_UPDATE_KEYWORDS)
-        if value is None:
-            return None
-        if normalize_text(value) in {"none", "no allergies", "لا يوجد", "ما في", "بدون"}:
-            return []
-        return _parse_list_field(value)
-
     return None
 
 
 def _profile_field_label(field_name: str, language: str) -> str:
     labels = {
-        "name": _lang_reply(language, "name", "اسمك", "اسمك"),
-        "gender": _lang_reply(language, "gender", "جنسك", "جنسك"),
         "weight": _lang_reply(language, "weight", "وزنك", "وزنك"),
         "height": _lang_reply(language, "height", "طولك", "طولك"),
         "age": _lang_reply(language, "age", "عمرك", "عمرك"),
@@ -4428,11 +4203,6 @@ def _profile_field_label(field_name: str, language: str) -> str:
         "fitness_level": _lang_reply(language, "fitness level", "مستوى لياقتك", "مستوى لياقتك"),
         "activity_level": _lang_reply(language, "activity level", "مستوى نشاطك", "مستوى نشاطك"),
         "location": _lang_reply(language, "training location", "مكان التمرين", "مكان التمرين"),
-        "equipment": _lang_reply(language, "equipment", "المعدات", "المعدات"),
-        "injuries": _lang_reply(language, "injuries", "الإصابات", "الإصابات"),
-        "dietary_preferences": _lang_reply(language, "dietary preferences", "التفضيلات الغذائية", "التفضيلات الغذائية"),
-        "chronic_diseases": _lang_reply(language, "chronic conditions", "الأمراض المزمنة", "الأمراض المزمنة"),
-        "allergies": _lang_reply(language, "allergies", "الحساسيات", "الحساسيات"),
     }
     return labels.get(field_name, _lang_reply(language, "profile field", "حقل الملف الشخصي", "حقل البروفايل"))
 
@@ -4446,14 +4216,6 @@ def _frontend_goal_value(goal_value: str) -> str:
 
 
 def _profile_update_display_value(field_name: str, value: Any, language: str) -> str:
-    if field_name == "name":
-        return str(value or "").strip()
-    if field_name == "gender":
-        gender = str(value or "").strip().lower()
-        if gender == "male":
-            return _lang_reply(language, "male", "ذكر", "ذكر")
-        if gender == "female":
-            return _lang_reply(language, "female", "أنثى", "أنثى")
     if field_name == "weight":
         return f"{value} kg" if language == "en" else f"{value} كغ"
     if field_name == "height":
@@ -4485,11 +4247,6 @@ def _profile_update_display_value(field_name: str, value: Any, language: str) ->
             return _lang_reply(language, "gym", "النادي", "الجيم")
         if str(value or "").strip().lower() == "home":
             return _lang_reply(language, "home", "المنزل", "البيت")
-    if field_name in {"dietary_preferences", "chronic_diseases", "allergies"}:
-        items = value if isinstance(value, list) else _parse_list_field(value)
-        if not items:
-            return _lang_reply(language, "none", "لا يوجد", "ما في")
-        return ", ".join(str(item).strip() for item in items if str(item).strip())
     return str(value or "").strip()
 
 
@@ -4541,18 +4298,6 @@ def _is_profile_update_confirmation_no(user_input: str) -> bool:
 
 def _profile_update_value_prompt(field_name: str, language: str) -> str:
     prompts = {
-        "name": _lang_reply(
-            language,
-            "What name should I save in your profile?",
-            "ما الاسم الذي تريد أن أحفظه في ملفك؟",
-            "شو الاسم اللي بدك أحفظه بالبروفايل؟",
-        ),
-        "gender": _lang_reply(
-            language,
-            "What gender should I save: male or female?",
-            "ما الجنس الذي تريد حفظه: ذكر أم أنثى؟",
-            "شو الجنس اللي بدك أحفظه: ذكر ولا أنثى؟",
-        ),
         "weight": _lang_reply(
             language,
             "What should I set your weight to in kg?",
@@ -4601,36 +4346,6 @@ def _profile_update_value_prompt(field_name: str, language: str) -> str:
             "ما مكان التمرين الذي تريد حفظه: المنزل أم النادي؟",
             "شو مكان التمرين اللي بدك أحفظه: البيت ولا الجيم؟",
         ),
-        "equipment": _lang_reply(
-            language,
-            "What equipment should I save in your profile?",
-            "ما المعدات التي تريد أن أحفظها في ملفك؟",
-            "شو المعدات اللي بدك أحفظها بالبروفايل؟",
-        ),
-        "injuries": _lang_reply(
-            language,
-            "What injuries or pain notes should I save? If none, say none.",
-            "ما الإصابات أو ملاحظات الألم التي تريد أن أحفظها؟ إذا لا يوجد فقل: لا يوجد.",
-            "شو الإصابات أو ملاحظات الألم اللي بدك أحفظها؟ إذا ما في احكي: ما في.",
-        ),
-        "dietary_preferences": _lang_reply(
-            language,
-            "What dietary preferences should I save? If none, say none.",
-            "ما التفضيلات الغذائية التي تريد حفظها؟ إذا لا يوجد فقل: لا يوجد.",
-            "شو التفضيلات الغذائية اللي بدك أحفظها؟ إذا ما في احكي: ما في.",
-        ),
-        "chronic_diseases": _lang_reply(
-            language,
-            "What chronic conditions should I save? If none, say none.",
-            "ما الأمراض المزمنة التي تريد حفظها؟ إذا لا يوجد فقل: لا يوجد.",
-            "شو الأمراض المزمنة اللي بدك أحفظها؟ إذا ما في احكي: ما في.",
-        ),
-        "allergies": _lang_reply(
-            language,
-            "What allergies should I save? If none, say none.",
-            "ما الحساسية التي تريد حفظها؟ إذا لا يوجد فقل: لا يوجد.",
-            "شو الحساسية اللي بدك أحفظها؟ إذا ما في احكي: ما في.",
-        ),
     }
     return prompts.get(field_name, _lang_reply(language, "What value should I save?", "ما القيمة التي تريد حفظها؟", "شو القيمة اللي بدك أحفظها؟"))
 
@@ -4650,13 +4365,7 @@ def _profile_update_payload(field_name: str, value: Any, language: str) -> dict[
     profile_updates: dict[str, Any] = {}
     supabase_updates: dict[str, Any] = {"updated_at": datetime.utcnow().isoformat()}
 
-    if field_name == "name":
-        profile_updates["name"] = value
-        supabase_updates["name"] = value
-    elif field_name == "gender":
-        profile_updates["gender"] = value
-        supabase_updates["gender"] = value
-    elif field_name == "weight":
+    if field_name == "weight":
         profile_updates["weight"] = value
         supabase_updates["weight"] = value
     elif field_name == "height":
@@ -4681,24 +4390,6 @@ def _profile_update_payload(field_name: str, value: Any, language: str) -> dict[
     elif field_name == "location":
         profile_updates["location"] = value
         supabase_updates["location"] = value
-    elif field_name == "equipment":
-        profile_updates["equipment"] = value
-        supabase_updates["equipment"] = value
-    elif field_name == "injuries":
-        profile_updates["injuries"] = value
-        supabase_updates["injuries"] = value
-    elif field_name == "dietary_preferences":
-        frontend_value = ", ".join(value) if isinstance(value, list) else str(value or "")
-        profile_updates["dietaryPreferences"] = frontend_value
-        supabase_updates["dietary_preferences"] = frontend_value
-    elif field_name == "chronic_diseases":
-        frontend_value = ", ".join(value) if isinstance(value, list) else str(value or "")
-        profile_updates["chronicConditions"] = frontend_value
-        supabase_updates["chronic_conditions"] = frontend_value
-    elif field_name == "allergies":
-        frontend_value = ", ".join(value) if isinstance(value, list) else str(value or "")
-        profile_updates["allergies"] = frontend_value
-        supabase_updates["allergies"] = frontend_value
 
     return {
         "field": field_name,
@@ -4718,13 +4409,10 @@ def _extract_profile_update_command(user_input: str) -> Optional[dict[str, Any]]
         return None
 
     has_update_verb = _contains_any(normalized, PROFILE_UPDATE_VERBS)
-    has_correction_cue = _contains_phrase(normalized, PROFILE_UPDATE_CORRECTION_CUES)
-    if (not has_update_verb) and (not has_correction_cue) and _contains_phrase(normalized, ASK_MY_WEIGHT_KEYWORDS | ASK_MY_HEIGHT_KEYWORDS | ASK_MY_AGE_KEYWORDS):
+    if (not has_update_verb) and _contains_phrase(normalized, ASK_MY_WEIGHT_KEYWORDS | ASK_MY_HEIGHT_KEYWORDS | ASK_MY_AGE_KEYWORDS):
         return None
 
     field_configs = [
-        ("name", NAME_UPDATE_KEYWORDS),
-        ("gender", GENDER_UPDATE_KEYWORDS),
         ("weight", WEIGHT_UPDATE_KEYWORDS),
         ("height", HEIGHT_UPDATE_KEYWORDS),
         ("age", AGE_UPDATE_KEYWORDS),
@@ -4733,30 +4421,10 @@ def _extract_profile_update_command(user_input: str) -> Optional[dict[str, Any]]
         ("fitness_level", FITNESS_LEVEL_UPDATE_KEYWORDS),
         ("activity_level", ACTIVITY_LEVEL_UPDATE_KEYWORDS),
         ("location", LOCATION_UPDATE_KEYWORDS),
-        ("equipment", EQUIPMENT_UPDATE_KEYWORDS),
-        ("injuries", INJURIES_UPDATE_KEYWORDS),
-        ("dietary_preferences", DIETARY_PREFERENCES_UPDATE_KEYWORDS),
-        ("chronic_diseases", CHRONIC_CONDITIONS_UPDATE_KEYWORDS),
-        ("allergies", ALLERGIES_UPDATE_KEYWORDS),
     ]
 
-    matched_field_name: Optional[str] = None
     for field_name, field_keywords in field_configs:
-        if _contains_phrase(normalized, field_keywords):
-            matched_field_name = field_name
-            break
-
-    if matched_field_name is None:
-        for field_name, field_keywords in field_configs:
-            if _contains_any(normalized, field_keywords):
-                matched_field_name = field_name
-                break
-
-    if matched_field_name is None:
-        return None
-
-    for field_name, field_keywords in field_configs:
-        if field_name != matched_field_name:
+        if not _contains_any(normalized, field_keywords):
             continue
 
         explicit_statement = False
@@ -4768,13 +4436,8 @@ def _extract_profile_update_command(user_input: str) -> Optional[dict[str, Any]]
             explicit_statement = bool(re.search(r"(?:عمري|age)\s*(?:هو|is|صار|=|:)?\s*([+-]?\d+(?:\.\d+)?)", raw_text, flags=re.IGNORECASE))
         elif field_name == "training_days_per_week":
             explicit_statement = bool(re.search(r"([1-7])\s*(?:days?|ايام|أيام).*(?:week|اسبوع|أسبوع)", raw_text, flags=re.IGNORECASE))
-        elif field_name in {"name", "gender", "goal", "fitness_level", "activity_level", "location", "equipment", "injuries", "dietary_preferences", "chronic_diseases", "allergies"}:
-            explicit_statement = True
 
-        if has_correction_cue and field_name in {"weight", "height", "age", "training_days_per_week"}:
-            explicit_statement = True
-
-        if not has_update_verb and not has_correction_cue and not explicit_statement:
+        if not has_update_verb and not explicit_statement:
             continue
 
         value = _extract_profile_update_value(field_name, raw_text)
@@ -8492,95 +8155,6 @@ def _is_performance_analysis_request(
     return False
 
 
-def _is_attachment_reasoning_request(message: str, attachment_context: Optional[dict[str, Any]]) -> bool:
-    attachments = attachment_context.get("attachments") if isinstance(attachment_context, dict) else None
-    if not isinstance(attachments, list) or not attachments:
-        return False
-
-    normalized = normalize_text(message or "")
-    if not normalized:
-        return False
-
-    reasoning_keywords = {
-        "solve this",
-        "solve this question",
-        "solve the question",
-        "can you solve",
-        "answer this",
-        "answer this question",
-        "what is the answer",
-        "which answer",
-        "correct answer",
-        "help me solve",
-        "explain this question",
-        "answer based on what you see",
-        "answer based on the variables",
-        "based on the variables you see",
-        "based on what you see",
-        "the variables you see",
-        "what do you see",
-        "what is the output",
-        "what's the output",
-        "what is the value",
-        "حل هذا",
-        "حل السؤال",
-        "جاوب هذا",
-        "اجب عن هذا",
-        "أجب عن هذا",
-        "ما الجواب",
-        "اشرح السؤال",
-        "اعتمد على المتغيرات",
-        "بناء على المتغيرات",
-        "بناء على ما ترى",
-        "من اللي بالصورة",
-    }
-    return any(keyword in normalized for keyword in reasoning_keywords)
-
-
-def _attachment_reasoning_reply(attachment_context: dict[str, Any], message: str, language: str) -> str:
-    summary = str(attachment_context.get("summary") or "").strip()
-    documents = attachment_context.get("documents") if isinstance(attachment_context.get("documents"), list) else []
-    evidence_blocks: list[str] = []
-    if summary:
-        evidence_blocks.append(summary)
-    for item in documents[:4]:
-        if not isinstance(item, dict):
-            continue
-        text = str(item.get("text") or "").strip()
-        if text:
-            evidence_blocks.append(text)
-
-    evidence = "\n\n".join(evidence_blocks).strip()
-    if not evidence:
-        return _attachment_direct_reply(attachment_context, language)
-
-    system_prompt = (
-        "You answer questions about uploaded attachments using only the extracted attachment evidence. "
-        "If the evidence contains a screenshot question, solve it directly and briefly explain why. "
-        "If it is multiple choice, state the correct option and answer. "
-        "If the evidence is insufficient, say exactly what is missing. "
-        + ("Respond in Arabic." if language.startswith("ar") else "Respond in English.")
-    )
-    user_prompt = f"User request: {message.strip()}\n\nAttachment evidence:\n{evidence[:8000]}"
-    try:
-        reply = str(
-            LLM.chat_completion(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_tokens=320,
-            )
-            or ""
-        ).strip()
-    except Exception:
-        reply = ""
-
-    if not reply or reply.startswith("Ollama error:") or reply.startswith("Ollama is not reachable"):
-        return _attachment_direct_reply(attachment_context, language)
-    return reply
-
-
 def _format_number(value: Optional[float], digits: int = 2) -> str:
     if value is None:
         return "N/A"
@@ -9147,55 +8721,56 @@ def _activity_progress_analysis_reply(language: str, tracking_summary: dict[str,
         elif completion_delta <= 0:
             recommendations_ar.append("الأداء ثابت مقارنة بالأسبوع السابق. استمر على الخطة لكن نظّم الأيام السبعة القادمة بشكل أوضح.")
         else:
-            recommendations_ar.append("اتجاه النشاط جيد. حافظ على نفس الإيقاع ولا ترفع الحمل إلا إذا كان التعافي جيدًا.")
+            recommendations_ar.append("أداؤك في تحسن. حافظ على نفس الهيكلة ولا ترفع الحمل إلا إذا كان التعافي جيدًا.")
         if logging_consistency_percent < 50:
-            recommendations_ar.append("سجّل 4 أيام على الأقل هذا الأسبوع حتى يبقى تحليل التقدم دقيقًا.")
+            recommendations_ar.append("سجّل على الأقل 4 أيام هذا الأسبوع حتى يظل تحليل التقدم موثوقًا.")
         if latest_nutrition_note:
-            recommendations_ar.append(f"إشارة التغذية الأخيرة: {latest_nutrition_note}")
+            recommendations_ar.append(f"إشارة التغذية: {latest_nutrition_note}")
         elif latest_workout_note:
-            recommendations_ar.append(f"إشارة التمرين الأخيرة: {latest_workout_note}")
+            recommendations_ar.append(f"إشارة التمرين: {latest_workout_note}")
         parts_ar = [
             f"مراجعة التقدم: {trend_label_ar}.",
-            f"آخر 7 أيام: {recent_completed} مهام مكتملة مقابل {prior_completed} في السبعة السابقة ({completion_delta:+d}).",
+            f"آخر 7 أيام: أنجزت {recent_completed} مهام مقابل {prior_completed} في الأيام السبعة السابقة ({completion_delta:+d}).",
             f"التزام التمرين: {workout_adherence_percent}%.",
             f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
-            f"سلسلة التمرين: {workout_streak} أيام. سلسلة التسجيل: {logging_streak} أيام.",
+            f"استمرارية التمرين: {workout_streak} أيام. واستمرارية التسجيل: {logging_streak} أيام.",
         ]
         if latest_workout_note:
             parts_ar.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
         if latest_mood:
-            parts_ar.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
+            parts_ar.append(f"آخر ملاحظة طاقة/مزاج: {latest_mood}")
         parts_ar.append("التوصيات:")
         parts_ar.extend(f"{index}. {text}" for index, text in enumerate(recommendations_ar[:3], start=1))
         return "\n".join(parts_ar)
 
-    recommendations_jo = []
-    if workout_adherence_percent < 60:
-        recommendations_jo.append("المشكلة الأساسية هسا بالالتزام. ثبّت يومين تمرين ثابتين أول إشي قبل ما تزود الحجم.")
-    elif completion_delta <= 0:
-        recommendations_jo.append("أداؤك ثابت عن الأسبوع اللي قبله. كمّل على الخطة بس رتّب الأسبوع الجاي بشكل أوضح.")
-    else:
-        recommendations_jo.append("اتجاهك منيح. خليك على نفس النسق وزيد الحمل فقط إذا التعافي تمام.")
-    if logging_consistency_percent < 50:
-        recommendations_jo.append("سجل على الأقل 4 أيام هالأسبوع عشان يضل التحليل دقيق.")
-    if latest_nutrition_note:
-        recommendations_jo.append(f"آخر إشارة تغذية: {latest_nutrition_note}")
-    elif latest_workout_note:
-        recommendations_jo.append(f"آخر إشارة تمرين: {latest_workout_note}")
-    parts_jo = [
-        f"مراجعة التقدم: {trend_label_ar}.",
-        f"آخر 7 أيام: خلصت {recent_completed} مهام مقابل {prior_completed} بالأسبوع اللي قبله ({completion_delta:+d}).",
-        f"التزام التمرين: {workout_adherence_percent}%.",
-        f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
-        f"ستريك التمرين: {workout_streak} أيام. ستريك التسجيل: {logging_streak} أيام.",
-    ]
-    if latest_workout_note:
-        parts_jo.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
-    if latest_mood:
-        parts_jo.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
-    parts_jo.append("التوصيات:")
-    parts_jo.extend(f"{index}. {text}" for index, text in enumerate(recommendations_jo[:3], start=1))
-    return "\n".join(parts_jo)
+    if language == "ar_jo":
+        recommendations_jo = []
+        if workout_adherence_percent < 60:
+            recommendations_jo.append("العائق الرئيسي هسه هو الالتزام. ثبّت يومين تدريب واضحين قبل ما تزود الحجم التدريبي.")
+        elif completion_delta <= 0:
+            recommendations_jo.append("أداءك ثابت مقارنة بالأسبوع اللي فات. كمل على الخطة لكن رتّب الأيام السبعة الجايين بشكل أوضح.")
+        else:
+            recommendations_jo.append("اتجاهك إيجابي. حافظ على نفس الهيكلة وما تزود الحمل إلا إذا كان التعافي ممتاز.")
+        if logging_consistency_percent < 50:
+            recommendations_jo.append("سجّل على الأقل 4 أيام هالأسبوع عشان يضل التحليل دقيق.")
+        if latest_nutrition_note:
+            recommendations_jo.append(f"آخر إشارة تغذية: {latest_nutrition_note}")
+        elif latest_workout_note:
+            recommendations_jo.append(f"آخر إشارة تمرين: {latest_workout_note}")
+        parts_jo = [
+            f"مراجعة التقدم: {trend_label_ar}.",
+            f"آخر 7 أيام: أنجزت {recent_completed} مهام مقابل {prior_completed} بالأسبوع اللي قبله ({completion_delta:+d}).",
+            f"التزام التمرين: {workout_adherence_percent}%.",
+            f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
+            f"استمرارية التمرين: {workout_streak} أيام. واستمرارية التسجيل: {logging_streak} أيام.",
+        ]
+        if latest_workout_note:
+            parts_jo.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
+        if latest_mood:
+            parts_jo.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
+        parts_jo.append("التوصيات:")
+        parts_jo.extend(f"{index}. {text}" for index, text in enumerate(recommendations_jo[:3], start=1))
+        return "\n".join(parts_jo)
 
 
 def _performance_analysis_reply(
@@ -10119,13 +9694,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     profile_update_command = _extract_profile_update_command(user_input)
 
     if pending_profile_update_confirmation:
-        replacement_profile_update = profile_update_command
-        pending_confirmation_field = str(pending_profile_update_confirmation.get("field") or "")
-        replacement_confirmation_field = str(replacement_profile_update.get("field") or "") if replacement_profile_update else ""
-        if replacement_confirmation_field and replacement_confirmation_field != pending_confirmation_field:
-            state["pending_profile_update_confirmation"] = None
-            state["pending_profile_update_confirmation_conversation_id"] = None
-        elif _is_profile_update_confirmation_yes(user_input):
+        if _is_profile_update_confirmation_yes(user_input):
             field_name = str(pending_profile_update_confirmation.get("field") or "")
             value = pending_profile_update_confirmation.get("value")
             state_value = pending_profile_update_confirmation.get("state_value", value)
@@ -10144,7 +9713,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 data=payload,
             )
 
-        elif _is_profile_update_confirmation_no(user_input):
+        if _is_profile_update_confirmation_no(user_input):
             state["pending_profile_update_confirmation"] = None
             state["pending_profile_update_confirmation_conversation_id"] = None
             reply = _profile_update_cancel_reply(language)
@@ -10157,7 +9726,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 data={"cancelled": True},
             )
 
-        elif not profile_update_command:
+        if not profile_update_command:
             reply = _profile_update_needs_confirmation_reply(language)
             memory.add_assistant_message(reply)
             return ChatResponse(
@@ -10168,53 +9737,11 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 data=repair_mojibake_deep(dict(pending_profile_update_confirmation)),
             )
 
-        else:
-            state["pending_profile_update_confirmation"] = None
-            state["pending_profile_update_confirmation_conversation_id"] = None
+        state["pending_profile_update_confirmation"] = None
+        state["pending_profile_update_confirmation_conversation_id"] = None
 
     if pending_profile_update:
         field_name = str(pending_profile_update)
-        replacement_profile_update = profile_update_command
-        if replacement_profile_update:
-            replacement_field_name = str(replacement_profile_update.get("field") or "")
-            if replacement_field_name and replacement_field_name != field_name:
-                state["pending_profile_update"] = None
-                state["pending_profile_update_conversation_id"] = None
-                field_name = replacement_field_name
-                value = replacement_profile_update.get("value")
-                if value is None:
-                    state["pending_profile_update"] = field_name
-                    state["pending_profile_update_conversation_id"] = conversation_id
-                    reply = _profile_update_value_prompt(field_name, language)
-                    memory.add_assistant_message(reply)
-                    return ChatResponse(
-                        reply=reply,
-                        conversation_id=conversation_id,
-                        language=language,
-                        action="ask_profile_update",
-                        data={"field": field_name},
-                    )
-
-                profile_payload = _profile_update_payload(field_name, value, language)
-                confirmation_payload = {
-                    "field": field_name,
-                    "value": value,
-                    "state_value": value,
-                    "payload": profile_payload,
-                    **profile_payload,
-                }
-                state["pending_profile_update_confirmation"] = confirmation_payload
-                state["pending_profile_update_confirmation_conversation_id"] = conversation_id
-                reply = _profile_update_confirmation_reply(field_name, value, language)
-                memory.add_assistant_message(reply)
-                return ChatResponse(
-                    reply=reply,
-                    conversation_id=conversation_id,
-                    language=language,
-                    action="confirm_profile_update",
-                    data=confirmation_payload,
-                )
-
         if _is_profile_update_confirmation_no(user_input):
             state["pending_profile_update"] = None
             state["pending_profile_update_conversation_id"] = None
@@ -10550,12 +10077,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
         return ChatResponse(reply=performance_reply, conversation_id=conversation_id, language=language)
 
     if CHAT_RESPONSE_MODE != "dataset_only":
-        if has_active_attachments and _is_attachment_reasoning_request(user_input, active_attachment_context):
-            attachment_reply = _attachment_reasoning_reply(active_attachment_context, user_input, language)
-            filtered_reply, _ = MODERATION.filter_content(attachment_reply, language=language)
-            memory.add_assistant_message(filtered_reply)
-            return ChatResponse(reply=filtered_reply, conversation_id=conversation_id, language=language)
-
         contextual_followup_reply = _contextual_followup_reply(user_input, language, recent_messages, memory)
         if contextual_followup_reply:
             memory.add_assistant_message(contextual_followup_reply)
@@ -11037,27 +10558,6 @@ def _is_direct_attachment_request(message: str, attachment_context: Optional[dic
     if not normalized:
         return True
 
-    actionable_keywords = {
-        "solve this",
-        "solve this question",
-        "solve the question",
-        "can you solve",
-        "answer this",
-        "answer this question",
-        "what is the answer",
-        "which answer",
-        "correct answer",
-        "help me solve",
-        "حل هذا",
-        "حل السؤال",
-        "جاوب هذا",
-        "اجب عن هذا",
-        "أجب عن هذا",
-        "ما الجواب",
-    }
-    if any(keyword in normalized for keyword in actionable_keywords):
-        return False
-
     direct_keywords = {
         "what is in this image",
         "what is in the image",
@@ -11082,7 +10582,7 @@ def _is_direct_attachment_request(message: str, attachment_context: Optional[dic
         "ماذا ترى",
         "ماذا مكتوب",
     }
-    return any(keyword in normalized for keyword in direct_keywords)
+    return any(keyword in normalized for keyword in direct_keywords) or len(normalized.split()) <= 6
 
 
 def _attachment_direct_reply(attachment_context: dict[str, Any], language: str) -> str:
@@ -11415,6 +10915,20 @@ def fitbit_status(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
     return FITBIT.get_status(_normalize_user_id(user_id))
 
 
+@app.get("/integrations/fitbit/heart-intraday")
+def fitbit_heart_intraday(
+    user_id: str = Query(..., min_length=1),
+    day: str = Query(default="today"),
+    detail_level: str = Query(default="1min"),
+) -> dict[str, Any]:
+    try:
+        return FITBIT.get_heart_intraday(_normalize_user_id(user_id), day=day, detail_level=detail_level)
+    except FitbitReconnectRequiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/adherence/workout")
 def workout_adherence(request: WorkoutAdherenceRequest) -> dict[str, Any]:
     user_id = _normalize_user_id(request.user_id)
@@ -11424,127 +10938,7 @@ def workout_adherence(request: WorkoutAdherenceRequest) -> dict[str, Any]:
         fitbit_summary=fitbit_summary,
         issue_reminder=request.issue_reminder,
         cutoff_hour_local=request.cutoff_hour_local,
-        persist_result=True,
     )
-
-
-@app.get("/reports/workout-evidence")
-def workout_evidence_report(
-    user_id: str = Query(..., min_length=1),
-    limit: int = Query(14, ge=1, le=90),
-) -> dict[str, Any]:
-    normalized_user_id = _normalize_user_id(user_id)
-    fitbit_summary = FITBIT.get_coach_tracking_summary(normalized_user_id)
-    latest_status = SUPABASE_CONTEXT.evaluate_workout_adherence(
-        normalized_user_id,
-        fitbit_summary=fitbit_summary,
-        issue_reminder=False,
-        persist_result=True,
-    )
-    return {
-        "user_id": normalized_user_id,
-        "generated_at": datetime.utcnow().isoformat(),
-        "storage_ready": SUPABASE_CONTEXT.table_ready("workout_evidence"),
-        "latest_status": latest_status,
-        "records": SUPABASE_CONTEXT.list_workout_evidence(normalized_user_id, limit=limit),
-    }
-
-
-@app.get("/coach-notifications")
-def coach_notifications(
-    user_id: str = Query(..., min_length=1),
-    limit: int = Query(50, ge=1, le=100),
-) -> dict[str, Any]:
-    normalized_user_id = _normalize_user_id(user_id)
-    notifications = _load_admin_notes(normalized_user_id, limit=limit)
-    return {
-        "user_id": normalized_user_id,
-        "storage_ready": SUPABASE_CONTEXT.table_ready(ADMIN_NOTES_TABLE),
-        "count": len(notifications),
-        "notifications": notifications,
-    }
-
-
-@app.get("/admin/status")
-def admin_status(admin_password: Optional[str] = Header(default=None, alias="X-Admin-Password")) -> dict[str, Any]:
-    _require_admin_password(admin_password)
-    return {
-        "ok": True,
-        "configured": True,
-        "notes_table_ready": SUPABASE_CONTEXT.table_ready(ADMIN_NOTES_TABLE),
-        "workout_evidence_ready": SUPABASE_CONTEXT.table_ready("workout_evidence"),
-    }
-
-
-@app.get("/admin/users")
-def admin_users(
-    limit: int = Query(25, ge=1, le=100),
-    admin_password: Optional[str] = Header(default=None, alias="X-Admin-Password"),
-) -> dict[str, Any]:
-    _require_admin_password(admin_password)
-    profiles = _load_admin_profiles(limit=limit * 2)
-    summaries: list[dict[str, Any]] = []
-    for profile in profiles:
-        try:
-            summaries.append(_build_admin_user_summary(profile))
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning("Skipping admin summary for %s: %s", profile.get("user_id"), exc)
-    return {
-        "count": min(len(summaries), limit),
-        "users": summaries[:limit],
-    }
-
-
-@app.get("/admin/users/{user_id}")
-def admin_user_detail(
-    user_id: str,
-    evidence_limit: int = Query(14, ge=1, le=90),
-    notes_limit: int = Query(20, ge=1, le=100),
-    admin_password: Optional[str] = Header(default=None, alias="X-Admin-Password"),
-) -> dict[str, Any]:
-    _require_admin_password(admin_password)
-    return _load_admin_user_detail(user_id, evidence_limit=evidence_limit, notes_limit=notes_limit)
-
-
-@app.post("/admin/users/{user_id}/notes")
-def create_admin_user_note(
-    user_id: str,
-    request: AdminNoteCreateRequest,
-    admin_password: Optional[str] = Header(default=None, alias="X-Admin-Password"),
-    admin_actor: Optional[str] = Header(default=None, alias="X-Admin-Actor"),
-    admin_role: Optional[str] = Header(default=None, alias="X-Admin-Role"),
-) -> dict[str, Any]:
-    _require_admin_password(admin_password)
-    normalized_user_id = _normalize_user_id(user_id)
-    if not SUPABASE_CONTEXT.table_ready(ADMIN_NOTES_TABLE):
-        raise HTTPException(status_code=503, detail="Admin notes table is not ready. Run the Supabase migration first.")
-
-    client = _require_supabase_admin_client()
-    author_name = str(request.author_name or admin_actor or "Coach").strip() or "Coach"
-    author_role = str(request.author_role or admin_role or "coach").strip().lower() or "coach"
-    if author_role not in {"coach", "doctor"}:
-        raise HTTPException(status_code=400, detail="author_role must be either coach or doctor.")
-
-    payload = {
-        "user_id": normalized_user_id,
-        "author_name": author_name,
-        "author_role": author_role,
-        "note_category": request.note_category,
-        "note_text": request.note_text,
-        "related_date": request.related_date,
-    }
-    try:
-        response = client.table(ADMIN_NOTES_TABLE).insert(payload).execute()
-    except Exception as exc:
-        logger.warning("Failed creating admin note for %s: %s", normalized_user_id, exc)
-        raise HTTPException(status_code=500, detail="Failed saving admin note.") from exc
-
-    rows = getattr(response, "data", None)
-    if isinstance(rows, list) and rows:
-        return {"note": _serialize_admin_note(rows[0])}
-    return {"note": _serialize_admin_note(payload)}
 
 
 @app.post("/integrations/fitbit/sync")
@@ -11561,3 +10955,205 @@ def sync_fitbit(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
 def disconnect_fitbit(user_id: str = Query(..., min_length=1)) -> dict[str, Any]:
     FITBIT.disconnect(_normalize_user_id(user_id))
     return {"configured": FITBIT.configured, "connected": False}
+
+
+@app.get("/reports/workout-evidence")
+def workout_evidence_report(
+    user_id: str = Query(..., min_length=1),
+    limit: int = Query(default=14, ge=1, le=90),
+) -> dict[str, Any]:
+    uid = _normalize_user_id(user_id)
+    fitbit_summary = FITBIT.get_coach_tracking_summary(uid)
+    latest_status = SUPABASE_CONTEXT.evaluate_workout_adherence(
+        uid,
+        fitbit_summary=fitbit_summary,
+        issue_reminder=False,
+        cutoff_hour_local=18,
+    )
+    return {
+        "user_id": uid,
+        "generated_at": datetime.utcnow().isoformat(),
+        "storage_ready": _table_ready("workout_evidence"),
+        "latest_status": latest_status,
+        "records": _list_workout_evidence(uid, limit),
+    }
+
+
+@app.get("/admin/status")
+def admin_status(admin: dict[str, str] = Depends(_require_admin_session)) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "actor_name": admin["actor_name"],
+        "role": admin["role"],
+        "supabase_enabled": SUPABASE_CONTEXT.enabled,
+        "storage": {
+            "admin_user_notes": _table_ready("admin_user_notes"),
+            "workout_evidence": _table_ready("workout_evidence"),
+        },
+    }
+
+
+@app.get("/admin/users")
+def admin_users(
+    limit: int = Query(default=30, ge=1, le=100),
+    admin: dict[str, str] = Depends(_require_admin_session),
+) -> dict[str, Any]:
+    del admin
+    profiles = _list_profiles(limit)
+    notes_ready = _table_ready("admin_user_notes")
+    users: list[dict[str, Any]] = []
+    for profile_row in profiles:
+        uid = _normalize_user_id(profile_row.get("user_id"))
+        if not uid or uid == "anonymous":
+            continue
+        latest_note_rows = _list_admin_notes(uid, 1) if notes_ready else []
+        latest_note = latest_note_rows[0] if latest_note_rows else None
+        users.append(
+            {
+                "user_id": uid,
+                "name": profile_row.get("name") or uid,
+                "goal": profile_row.get("goal") or None,
+                "fitness_level": profile_row.get("fitness_level") or None,
+                "location": profile_row.get("location") or None,
+                "updated_at": profile_row.get("updated_at"),
+                "tracking_summary": {
+                    "adherence_score": 0,
+                    "completed_last_7_days": 0,
+                    "weekly_stats": {
+                        "workout_adherence_percent": 0,
+                        "logging_consistency_percent": 0,
+                        "current_workout_streak_days": 0,
+                    },
+                },
+                "latest_note": (
+                    {
+                        "note_text": latest_note.get("note_text"),
+                        "author_name": latest_note.get("author_name"),
+                        "created_at": latest_note.get("created_at"),
+                    }
+                    if isinstance(latest_note, dict)
+                    else None
+                ),
+            }
+        )
+    return {"count": len(users), "storage_ready": notes_ready, "users": users}
+
+
+@app.get("/admin/users/{user_id}")
+def admin_user_detail(
+    user_id: str,
+    evidence_limit: int = Query(default=14, ge=1, le=90),
+    notes_limit: int = Query(default=20, ge=1, le=100),
+    admin: dict[str, str] = Depends(_require_admin_session),
+) -> dict[str, Any]:
+    uid = _normalize_user_id(user_id)
+    context = SUPABASE_CONTEXT.load_user_context(uid)
+    notes_ready = _table_ready("admin_user_notes")
+    notes = _list_admin_notes(uid, notes_limit) if notes_ready and admin["role"] != "family" else []
+    return {
+        "user_id": uid,
+        "user": context.get("profile") if isinstance(context.get("profile"), dict) else {"user_id": uid},
+        "context": {
+            "tracking_summary": context.get("tracking_summary") if isinstance(context.get("tracking_summary"), dict) else {},
+        },
+        "fitbit_status": FITBIT.get_coach_tracking_summary(uid),
+        "evidence": _list_workout_evidence(uid, evidence_limit),
+        "notes": notes,
+        "storage_ready": {
+            "admin_user_notes": notes_ready,
+            "workout_evidence": _table_ready("workout_evidence"),
+        },
+    }
+
+
+@app.post("/admin/users/{user_id}/notes")
+def admin_user_add_note(
+    user_id: str,
+    request: AdminNoteRequest,
+    admin: dict[str, str] = Depends(_require_admin_session),
+) -> dict[str, Any]:
+    if not _table_ready("admin_user_notes"):
+        raise HTTPException(status_code=503, detail="admin_user_notes table is not ready")
+    saved = _save_admin_note(_normalize_user_id(user_id), request, admin)
+    return {"ok": True, "note": _parse_note_row(saved)}
+
+
+@app.get("/admin/users/{user_id}/plans")
+def admin_get_user_plans(
+    user_id: str,
+    admin: dict[str, str] = Depends(_require_admin_session),
+) -> dict[str, Any]:
+    """Return the user's active workout plans with full exercise data for the exercise picker."""
+    client = SUPABASE_CONTEXT.client
+    if client is None:
+        raise HTTPException(status_code=503, detail="Supabase is not configured")
+    uid = _normalize_user_id(user_id)
+    try:
+        response = (
+            client.table("workout_plans")
+            .select("id,title,title_ar,plan_data,is_active,created_at")
+            .eq("user_id", uid)
+            .order("created_at", desc=True)
+            .limit(10)
+            .execute()
+        )
+        rows = getattr(response, "data", None) or []
+        plans = [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+        return {"plans": plans}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed loading user plans: {exc}") from exc
+
+
+@app.get("/coach/pins/{user_id}")
+def get_coach_pins(user_id: str) -> dict[str, Any]:
+    """Return recent coach-pinned exercises for a user (no admin auth needed — user-facing endpoint)."""
+    uid = _normalize_user_id(user_id)
+    notes = _list_admin_notes(uid, 30)
+    pins: list[dict[str, Any]] = []
+    for note in notes:
+        pe = note.get("pinned_exercise")
+        if pe and isinstance(pe, dict):
+            pins.append({
+                "note_id": note.get("id"),
+                "pinned_exercise": pe,
+                "note_text": note.get("note_text", ""),
+                "author_name": note.get("author_name", ""),
+                "author_role": note.get("author_role", ""),
+                "created_at": note.get("created_at"),
+            })
+    return {"pins": pins}
+
+
+@app.get("/coach-notifications")
+def get_coach_notifications(
+    user_id: str,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """User-facing endpoint: return all admin notes for a user as coach notifications."""
+    uid = _normalize_user_id(user_id)
+    if not uid:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    storage_ready = _table_ready("admin_user_notes")
+    notes = _list_admin_notes(uid, max(1, min(limit, 200)))
+    notifications = [
+        {
+            "id": note.get("id", ""),
+            "user_id": uid,
+            "author_name": note.get("author_name", ""),
+            "author_role": note.get("author_role", "coach"),
+            "note_category": note.get("note_category", "general"),
+            "note_text": note.get("note_text", ""),
+            "pinned_exercise": note.get("pinned_exercise"),
+            "related_date": note.get("related_date"),
+            "created_at": note.get("created_at"),
+            "updated_at": note.get("updated_at"),
+        }
+        for note in notes
+        if isinstance(note, dict)
+    ]
+    return {
+        "user_id": uid,
+        "storage_ready": storage_ready,
+        "count": len(notifications),
+        "notifications": notifications,
+    }

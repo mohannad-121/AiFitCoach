@@ -8,10 +8,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { isPublicAppOrigin } from '@/lib/backendUrl';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const isSupabaseReady = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+const getSignupRedirectUrl = () => {
+  if (typeof window === 'undefined' || !window.location?.origin) {
+    return undefined;
+  }
+
+  const baseUrl = window.location.origin.replace(/\/$/, '');
+  return isPublicAppOrigin() ? `${baseUrl}/auth?force=1` : `${baseUrl}/auth`;
+};
 
 export function AuthPage() {
   const { t, language } = useLanguage();
@@ -177,6 +187,7 @@ export function AuthPage() {
           email: email.trim().toLowerCase(),
           password,
           options: {
+            emailRedirectTo: getSignupRedirectUrl(),
             data: {
               name,
             },

@@ -44,6 +44,17 @@ vi.mock('@/components/workout/ExerciseCard', () => ({
 }));
 
 describe('WorkoutsPage', () => {
+  it('hides workout results until a muscle is selected', () => {
+    render(
+      <MemoryRouter>
+        <WorkoutsPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Select a muscle to view exercise videos/i)).toBeInTheDocument();
+    expect(screen.queryByText('Lateral Raises')).not.toBeInTheDocument();
+  });
+
   it('maps side delts selection to shoulder exercises including lateral raises', () => {
     render(
       <MemoryRouter>

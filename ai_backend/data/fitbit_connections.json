@@ -604,5 +604,2431 @@
     "last_sync_at": "2026-04-10T14:40:12.935341+00:00",
     "created_at": "2026-04-07T19:53:41.589984+00:00",
     "updated_at": "2026-04-10T14:40:12.935341+00:00"
+  },
+  "mock_mohandabuayyash7_gmail_com": {
+    "user_id": "mock_mohandabuayyash7_gmail_com",
+    "provider": "fitbit",
+    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyM1Y1UFkiLCJzdWIiOiJEM1JUWUgiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyYWN0IHJ3ZWkgcmhyIHJwcm8gcm51dCByc2xlIiwiZXhwIjoxNzc2MDQzODg2LCJpYXQiOjE3NzYwMTUwODZ9.7o1pmkwOp7UByxPbSNWKIT1niJo1NqBmYm4n81TVfdU",
+    "refresh_token": "552b0b8dd6166a2a4ba32565050bdc6ff33c17343a5222eca4e9826bd486d263",
+    "token_type": "Bearer",
+    "scope": "profile activity nutrition heartrate sleep weight",
+    "expires_at": "2026-04-13T01:31:56.823952+00:00",
+    "fitbit_user_id": "D3RTYH",
+    "profile_data": {
+      "fitbit_user_id": "D3RTYH",
+      "display_name": "mohand a.",
+      "avatar_url": "https://static0.fitbit.com/images/profile/defaultProfile_150.png",
+      "member_since": "2026-03-29",
+      "age": 23,
+      "gender": "MALE",
+      "height_cm": 178,
+      "weight_kg": 110,
+      "timezone": "Europe/Athens"
+    },
+    "last_sync_data": {
+      "synced_at": "2026-04-12T18:05:55.540235+00:00",
+      "today_summary": {
+        "date": "2026-04-12",
+        "steps": 1356,
+        "calories_out": 1909,
+        "distance_km": 1.01,
+        "fairly_active_minutes": 0,
+        "very_active_minutes": 0,
+        "lightly_active_minutes": 10,
+        "sedentary_minutes": 1255,
+        "resting_heart_rate": null,
+        "weight_kg": null,
+        "latest_weight_kg": null,
+        "bmi": null,
+        "foods_logged": 0,
+        "calories_in": 0,
+        "protein_g": 0.0,
+        "carbs_g": 0.0,
+        "fat_g": 0.0,
+        "food_names": [],
+        "water_ml": 0
+      },
+      "activity_history": [
+        {
+          "date": "2026-04-06",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-07",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-08",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-09",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-10",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-11",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-12",
+          "steps": 1356,
+          "calories_out": 1909,
+          "distance_km": 1.01,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 10,
+          "sedentary_minutes": 1430
+        }
+      ],
+      "heart_history": [
+        {
+          "date": "2026-04-06",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-07",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-08",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-09",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-10",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-11",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-12",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 1909.124117999977,
+              "max": 109,
+              "min": 30,
+              "minutes": 1439,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        }
+      ],
+      "sleep_history": [
+        {
+          "date": "2026-04-06",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-07",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-08",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-09",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-10",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-11",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-12",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        }
+      ],
+      "weight_history": [
+        {
+          "date": "2026-04-06",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-07",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-08",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-09",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-10",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-11",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-12",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        }
+      ],
+      "food_history": [
+        {
+          "date": "2026-04-06",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-07",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-08",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-09",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-10",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-11",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-12",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        }
+      ],
+      "water_history": [
+        {
+          "date": "2026-04-06",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-07",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-08",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-09",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-10",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-11",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-12",
+          "water_ml": 0
+        }
+      ]
+    },
+    "last_sync_at": "2026-04-12T18:05:55.540235+00:00",
+    "created_at": "2026-04-12T17:31:56.823952+00:00",
+    "updated_at": "2026-04-12T18:05:55.540235+00:00"
+  },
+  "mock_mohnd_aboayyash_gmail_com": {
+    "user_id": "mock_mohnd_aboayyash_gmail_com",
+    "provider": "fitbit",
+    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyM1Y1UFkiLCJzdWIiOiJEM1JUWUgiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyYWN0IHJ3ZWkgcmhyIHJwcm8gcm51dCByc2xlIiwiZXhwIjoxNzc2MzY4MjYwLCJpYXQiOjE3NzYzMzk0NjB9.jCCdchP2ywrXUCfmDWZumughGxBkvpIBYQSNAGAEyLQ",
+    "refresh_token": "55055c51c0663d3d5a1b0ba1414ea671c64f7f810af3ae05c29440b477272d4c",
+    "token_type": "Bearer",
+    "scope": "heartrate profile nutrition sleep weight activity",
+    "expires_at": "2026-04-16T19:37:41.237044+00:00",
+    "fitbit_user_id": "D3RTYH",
+    "profile_data": {
+      "fitbit_user_id": "D3RTYH",
+      "display_name": "mohand a.",
+      "avatar_url": "https://static0.fitbit.com/images/profile/defaultProfile_150.png",
+      "member_since": "2026-03-29",
+      "age": 23,
+      "gender": "MALE",
+      "height_cm": 178,
+      "weight_kg": 110,
+      "timezone": "Europe/Athens"
+    },
+    "last_sync_data": {
+      "synced_at": "2026-04-16T13:01:15.155518+00:00",
+      "today_summary": {
+        "date": "2026-04-16",
+        "steps": 0,
+        "calories_out": 1405,
+        "distance_km": 0.0,
+        "fairly_active_minutes": 0,
+        "very_active_minutes": 0,
+        "lightly_active_minutes": 0,
+        "sedentary_minutes": 961,
+        "resting_heart_rate": null,
+        "weight_kg": null,
+        "latest_weight_kg": null,
+        "bmi": null,
+        "foods_logged": 0,
+        "calories_in": 0,
+        "protein_g": 0.0,
+        "carbs_g": 0.0,
+        "fat_g": 0.0,
+        "food_names": [],
+        "water_ml": 0
+      },
+      "activity_history": [
+        {
+          "date": "2026-04-10",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-11",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-12",
+          "steps": 1356,
+          "calories_out": 2163,
+          "distance_km": 1.01,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 10,
+          "sedentary_minutes": 1430
+        },
+        {
+          "date": "2026-04-13",
+          "steps": 2637,
+          "calories_out": 2129,
+          "distance_km": 2.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 25,
+          "sedentary_minutes": 1415
+        },
+        {
+          "date": "2026-04-14",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-15",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-16",
+          "steps": 0,
+          "calories_out": 1403,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        }
+      ],
+      "heart_history": [
+        {
+          "date": "2026-04-10",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-11",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-12",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2163.265037999966,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-13",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2129.9638139999647,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-14",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-15",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-16",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 1403.617379999999,
+              "max": 109,
+              "min": 30,
+              "minutes": 1439,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        }
+      ],
+      "sleep_history": [
+        {
+          "date": "2026-04-10",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-11",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-12",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-13",
+          "minutes_asleep": 480,
+          "time_in_bed": 480,
+          "efficiency": 100,
+          "start_time": "2026-04-13T06:41:00.000",
+          "end_time": "2026-04-13T14:41:00.000",
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-14",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-15",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-16",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        }
+      ],
+      "weight_history": [
+        {
+          "date": "2026-04-10",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-11",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-12",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-13",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-14",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-15",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-16",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        }
+      ],
+      "food_history": [
+        {
+          "date": "2026-04-10",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-11",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-12",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-13",
+          "foods_logged": 1,
+          "calories_in": 750,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": [
+            "egg"
+          ]
+        },
+        {
+          "date": "2026-04-14",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-15",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-16",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        }
+      ],
+      "water_history": [
+        {
+          "date": "2026-04-10",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-11",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-12",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-13",
+          "water_ml": 750
+        },
+        {
+          "date": "2026-04-14",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-15",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-16",
+          "water_ml": 0
+        }
+      ]
+    },
+    "last_sync_at": "2026-04-16T13:01:15.156523+00:00",
+    "created_at": "2026-04-13T07:54:44.045167+00:00",
+    "updated_at": "2026-04-16T13:01:15.156523+00:00"
+  },
+  "559a640a-adf7-410a-b8e3-05744c2140df": {
+    "user_id": "559a640a-adf7-410a-b8e3-05744c2140df",
+    "provider": "fitbit",
+    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyM1Y1UFkiLCJzdWIiOiJEM1JUWUgiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyYWN0IHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNzc3MDAwNzIxLCJpYXQiOjE3NzY5NzE5MjF9.rdPAGBv-2-Q_dAGVKQmSBpZ49Vr-wtup8Ecgjkic7YQ",
+    "refresh_token": "266139cdc80c6105fec05d0a854bfc13d8ee70881ad763405b5f4293314cb4f1",
+    "token_type": "Bearer",
+    "scope": "heartrate weight nutrition profile activity sleep",
+    "expires_at": "2026-04-24T03:18:41.844094+00:00",
+    "fitbit_user_id": "D3RTYH",
+    "profile_data": {
+      "fitbit_user_id": "D3RTYH",
+      "display_name": "mohand a.",
+      "avatar_url": "https://static0.fitbit.com/images/profile/defaultProfile_150.png",
+      "member_since": "2026-03-29",
+      "age": 23,
+      "gender": "MALE",
+      "height_cm": 178,
+      "weight_kg": 110,
+      "timezone": "Europe/Athens"
+    },
+    "last_sync_data": {
+      "synced_at": "2026-04-23T19:19:13.251510+00:00",
+      "today_summary": {
+        "date": "2026-04-23",
+        "steps": 0,
+        "calories_out": 1957,
+        "distance_km": 0.0,
+        "fairly_active_minutes": 0,
+        "very_active_minutes": 0,
+        "lightly_active_minutes": 0,
+        "sedentary_minutes": 1339,
+        "resting_heart_rate": null,
+        "weight_kg": null,
+        "latest_weight_kg": null,
+        "bmi": null,
+        "foods_logged": 0,
+        "calories_in": 0,
+        "protein_g": 0.0,
+        "carbs_g": 0.0,
+        "fat_g": 0.0,
+        "food_names": [],
+        "water_ml": 0
+      },
+      "activity_history": [
+        {
+          "date": "2026-04-17",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-18",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-19",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-20",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-21",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-22",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-23",
+          "steps": 0,
+          "calories_out": 1955,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        }
+      ],
+      "heart_history": [
+        {
+          "date": "2026-04-17",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-18",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-19",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-20",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-21",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-22",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-23",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 1955.716619999975,
+              "max": 109,
+              "min": 30,
+              "minutes": 1439,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        }
+      ],
+      "sleep_history": [
+        {
+          "date": "2026-04-17",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-18",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-19",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-20",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-21",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-22",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-23",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        }
+      ],
+      "weight_history": [
+        {
+          "date": "2026-04-17",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-18",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-19",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-20",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-21",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-22",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-23",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        }
+      ],
+      "food_history": [
+        {
+          "date": "2026-04-17",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-18",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-19",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-20",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-21",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-22",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-23",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        }
+      ],
+      "water_history": [
+        {
+          "date": "2026-04-17",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-18",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-19",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-20",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-21",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-22",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-23",
+          "water_ml": 0
+        }
+      ]
+    },
+    "last_sync_at": "2026-04-23T19:19:13.251510+00:00",
+    "created_at": "2026-04-22T15:53:44.178870+00:00",
+    "updated_at": "2026-04-23T19:19:13.251510+00:00"
+  },
+  "3eadd81d-ac58-4547-bd23-6c9bebb37ca2": {
+    "user_id": "3eadd81d-ac58-4547-bd23-6c9bebb37ca2",
+    "provider": "fitbit",
+    "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyM1Y1UFkiLCJzdWIiOiJEM1JUWUgiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyYWN0IHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNzc3NTg2MzU0LCJpYXQiOjE3Nzc1NTc1NTR9.JI10sW5ghpTsg0AUAPWJdpKd4Y6D464c9IiRrADLyOM",
+    "refresh_token": "af94c6e32824cc9b1beb6589646d1d7fa9842b9ae7637ce495dff8dc7a119b5c",
+    "token_type": "Bearer",
+    "scope": "weight sleep nutrition activity profile heartrate",
+    "expires_at": "2026-04-30T21:59:17.460699+00:00",
+    "fitbit_user_id": "D3RTYH",
+    "profile_data": {
+      "fitbit_user_id": "D3RTYH",
+      "display_name": "mohand a.",
+      "avatar_url": "https://static0.fitbit.com/images/profile/defaultProfile_150.png",
+      "member_since": "2026-03-29",
+      "age": 23,
+      "gender": "MALE",
+      "height_cm": 178,
+      "weight_kg": 110,
+      "timezone": "Europe/Athens"
+    },
+    "last_sync_data": {
+      "synced_at": "2026-04-30T14:02:10.243540+00:00",
+      "today_summary": {
+        "date": "2026-04-30",
+        "steps": 0,
+        "calories_out": 1494,
+        "distance_km": 0.0,
+        "fairly_active_minutes": 0,
+        "very_active_minutes": 0,
+        "lightly_active_minutes": 0,
+        "sedentary_minutes": 1022,
+        "resting_heart_rate": null,
+        "weight_kg": null,
+        "latest_weight_kg": null,
+        "bmi": null,
+        "foods_logged": 0,
+        "calories_in": 0,
+        "protein_g": 0.0,
+        "carbs_g": 0.0,
+        "fat_g": 0.0,
+        "food_names": [],
+        "water_ml": 0
+      },
+      "activity_history": [
+        {
+          "date": "2026-04-24",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-25",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-26",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-27",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-28",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-29",
+          "steps": 0,
+          "calories_out": 2103,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        },
+        {
+          "date": "2026-04-30",
+          "steps": 0,
+          "calories_out": 1492,
+          "distance_km": 0.0,
+          "very_active_minutes": 0,
+          "fairly_active_minutes": 0,
+          "lightly_active_minutes": 0,
+          "sedentary_minutes": 1440
+        }
+      ],
+      "heart_history": [
+        {
+          "date": "2026-04-24",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-25",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-26",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-27",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-28",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-29",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 2103.2351999999687,
+              "max": 109,
+              "min": 30,
+              "minutes": 1440,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        },
+        {
+          "date": "2026-04-30",
+          "resting_heart_rate": null,
+          "heart_rate_zones": [
+            {
+              "caloriesOut": 1492.7127599999951,
+              "max": 109,
+              "min": 30,
+              "minutes": 1439,
+              "name": "Out of Range"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 134,
+              "min": 110,
+              "minutes": 0,
+              "name": "Fat Burn"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 165,
+              "min": 135,
+              "minutes": 0,
+              "name": "Cardio"
+            },
+            {
+              "caloriesOut": 0,
+              "max": 220,
+              "min": 166,
+              "minutes": 0,
+              "name": "Peak"
+            }
+          ]
+        }
+      ],
+      "sleep_history": [
+        {
+          "date": "2026-04-24",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-25",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-26",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-27",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-28",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-29",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        },
+        {
+          "date": "2026-04-30",
+          "minutes_asleep": 0,
+          "time_in_bed": 0,
+          "efficiency": null,
+          "start_time": null,
+          "end_time": null,
+          "minutes_awake": 0,
+          "minutes_deep": 0,
+          "minutes_light": 0,
+          "minutes_rem": 0
+        }
+      ],
+      "weight_history": [
+        {
+          "date": "2026-04-24",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-25",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-26",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-27",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-28",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-29",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        },
+        {
+          "date": "2026-04-30",
+          "weight_kg": null,
+          "bmi": null,
+          "source": "",
+          "log_id": null
+        }
+      ],
+      "food_history": [
+        {
+          "date": "2026-04-24",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-25",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-26",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-27",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-28",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-29",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        },
+        {
+          "date": "2026-04-30",
+          "foods_logged": 0,
+          "calories_in": 0,
+          "protein_g": 0.0,
+          "carbs_g": 0.0,
+          "fat_g": 0.0,
+          "fiber_g": 0.0,
+          "sodium_mg": 0.0,
+          "food_names": []
+        }
+      ],
+      "water_history": [
+        {
+          "date": "2026-04-24",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-25",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-26",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-27",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-28",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-29",
+          "water_ml": 0
+        },
+        {
+          "date": "2026-04-30",
+          "water_ml": 0
+        }
+      ]
+    },
+    "last_sync_at": "2026-04-30T14:02:10.243540+00:00",
+    "created_at": "2026-04-23T20:39:17.057498+00:00",
+    "updated_at": "2026-04-30T14:02:10.243540+00:00"
   }
 }

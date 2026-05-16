@@ -1,0 +1,353 @@
+{
+  "dataset_root": "D:\\AiFitCoach-main\\ai_backend\\datasets",
+  "random_state": 42,
+  "benchmarked_datasets": 6,
+  "results": [
+    {
+      "dataset_name": "fitness_recommendation_goal",
+      "filename": "fitness-recommendation-dataset.csv",
+      "original_rows": 14589,
+      "original_columns": 15,
+      "target": "Fitness Goal",
+      "notes": "Predict the stated fitness goal from profile and health features.",
+      "rows_used": 14589,
+      "feature_count": 8,
+      "numeric_feature_count": 4,
+      "categorical_feature_count": 4,
+      "class_count": 2,
+      "class_distribution": {
+        "Weight Loss": 7581,
+        "Weight Gain": 7008
+      },
+      "baseline_accuracy": 0.5196380834875591,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 1.0,
+        "weighted_f1": 1.0,
+        "macro_f1": 1.0,
+        "report": {
+          "Weight Gain": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 1402.0
+          },
+          "Weight Loss": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 1516.0
+          },
+          "accuracy": 1.0,
+          "macro avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 2918.0
+          },
+          "weighted avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 2918.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "personalized_diet_meal_plan",
+      "filename": "Personalized_Diet_Recommendations.csv",
+      "original_rows": 5000,
+      "original_columns": 30,
+      "target": "Recommended_Meal_Plan",
+      "notes": "Predict meal-plan class from patient profile, vitals, habits, and intake features.",
+      "rows_used": 5000,
+      "feature_count": 24,
+      "numeric_feature_count": 15,
+      "categorical_feature_count": 9,
+      "class_count": 4,
+      "class_distribution": {
+        "Low-Fat Diet": 1313,
+        "High-Protein Diet": 1255,
+        "Balanced Diet": 1250,
+        "Low-Carb Diet": 1182
+      },
+      "baseline_accuracy": 0.2626,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.263,
+        "weighted_f1": 0.26251202043570465,
+        "macro_f1": 0.2621867167919799,
+        "report": {
+          "Balanced Diet": {
+            "precision": 0.25984251968503935,
+            "recall": 0.264,
+            "f1-score": 0.2619047619047619,
+            "support": 250.0
+          },
+          "High-Protein Diet": {
+            "precision": 0.2634146341463415,
+            "recall": 0.2151394422310757,
+            "f1-score": 0.23684210526315788,
+            "support": 251.0
+          },
+          "Low-Carb Diet": {
+            "precision": 0.23943661971830985,
+            "recall": 0.288135593220339,
+            "f1-score": 0.26153846153846155,
+            "support": 236.0
+          },
+          "Low-Fat Diet": {
+            "precision": 0.2918287937743191,
+            "recall": 0.28517110266159695,
+            "f1-score": 0.28846153846153844,
+            "support": 263.0
+          },
+          "accuracy": 0.263,
+          "macro avg": {
+            "precision": 0.26363064183100243,
+            "recall": 0.2631115345282529,
+            "f1-score": 0.2621867167919799,
+            "support": 1000.0
+          },
+          "weighted avg": {
+            "precision": 0.26433571810815865,
+            "recall": 0.263,
+            "f1-score": 0.26251202043570465,
+            "support": 1000.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "diet_recommendation_label",
+      "filename": "diet_recommendations_dataset.csv",
+      "original_rows": 1000,
+      "original_columns": 20,
+      "target": "Diet_Recommendation",
+      "notes": "Predict recommended diet class from patient health and lifestyle fields.",
+      "rows_used": 1000,
+      "feature_count": 18,
+      "numeric_feature_count": 11,
+      "categorical_feature_count": 7,
+      "class_count": 3,
+      "class_distribution": {
+        "Balanced": 426,
+        "Low_Sodium": 316,
+        "Low_Carb": 258
+      },
+      "baseline_accuracy": 0.426,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.8,
+        "weighted_f1": 0.8003652968036529,
+        "macro_f1": 0.8197869101978691,
+        "report": {
+          "Balanced": {
+            "precision": 0.8461538461538461,
+            "recall": 0.6470588235294118,
+            "f1-score": 0.7333333333333333,
+            "support": 85.0
+          },
+          "Low_Carb": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 52.0
+          },
+          "Low_Sodium": {
+            "precision": 0.6385542168674698,
+            "recall": 0.8412698412698413,
+            "f1-score": 0.726027397260274,
+            "support": 63.0
+          },
+          "accuracy": 0.8,
+          "macro avg": {
+            "precision": 0.8282360210071054,
+            "recall": 0.8294428882664177,
+            "f1-score": 0.8197869101978691,
+            "support": 200.0
+          },
+          "weighted avg": {
+            "precision": 0.8207599629286376,
+            "recall": 0.8,
+            "f1-score": 0.8003652968036529,
+            "support": 200.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "food_allergy_binary",
+      "filename": "food_allergy_dataset.csv",
+      "original_rows": 10000,
+      "original_columns": 11,
+      "target": "Allergic",
+      "notes": "Binary allergy risk classification from symptoms, history, and biomarker features.",
+      "rows_used": 10000,
+      "feature_count": 10,
+      "numeric_feature_count": 4,
+      "categorical_feature_count": 6,
+      "class_count": 2,
+      "class_distribution": {
+        "1": 9116,
+        "0": 884
+      },
+      "baseline_accuracy": 0.9116,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 1.0,
+        "weighted_f1": 1.0,
+        "macro_f1": 1.0,
+        "report": {
+          "0.0": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 177.0
+          },
+          "1.0": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 1823.0
+          },
+          "accuracy": 1.0,
+          "macro avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 2000.0
+          },
+          "weighted avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 2000.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "daily_activity_calorie_band",
+      "filename": "dailyActivity_merged.csv",
+      "original_rows": 940,
+      "original_columns": 15,
+      "target": "derived_calorie_band",
+      "notes": "3-class calorie-burn band predicted from steps, distances, active minutes, and weekday.",
+      "rows_used": 940,
+      "feature_count": 14,
+      "numeric_feature_count": 14,
+      "categorical_feature_count": 0,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 314,
+        "medium": 313,
+        "high": 313
+      },
+      "baseline_accuracy": 0.33404255319148934,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.7978723404255319,
+        "weighted_f1": 0.798379881292164,
+        "macro_f1": 0.798134485094851,
+        "report": {
+          "high": {
+            "precision": 0.8666666666666667,
+            "recall": 0.8253968253968254,
+            "f1-score": 0.8455284552845529,
+            "support": 63.0
+          },
+          "low": {
+            "precision": 0.7846153846153846,
+            "recall": 0.8095238095238095,
+            "f1-score": 0.796875,
+            "support": 63.0
+          },
+          "medium": {
+            "precision": 0.746031746031746,
+            "recall": 0.7580645161290323,
+            "f1-score": 0.752,
+            "support": 62.0
+          },
+          "accuracy": 0.7978723404255319,
+          "macro avg": {
+            "precision": 0.7991045991045991,
+            "recall": 0.7976617170165557,
+            "f1-score": 0.798134485094851,
+            "support": 188.0
+          },
+          "weighted avg": {
+            "precision": 0.7993869015145612,
+            "recall": 0.7978723404255319,
+            "f1-score": 0.798379881292164,
+            "support": 188.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "minute_intensity_second_half_band",
+      "filename": "minuteIntensitiesWide_merged.csv",
+      "original_rows": 21645,
+      "original_columns": 62,
+      "target": "derived_second_half_intensity_band",
+      "notes": "Forecast the next 30-minute intensity band from the first 30 minutes of the hour.",
+      "rows_used": 21645,
+      "feature_count": 32,
+      "numeric_feature_count": 32,
+      "categorical_feature_count": 0,
+      "class_count": 2,
+      "class_distribution": {
+        "low": 14841,
+        "medium": 6804
+      },
+      "baseline_accuracy": 0.6856548856548856,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.8098868098868098,
+        "weighted_f1": 0.8105653625029225,
+        "macro_f1": 0.7810941718517603,
+        "report": {
+          "low": {
+            "precision": 0.8659160696008188,
+            "recall": 0.855121293800539,
+            "f1-score": 0.8604848279369385,
+            "support": 2968.0
+          },
+          "medium": {
+            "precision": 0.6924177396280401,
+            "recall": 0.7112417340191036,
+            "f1-score": 0.7017035157665821,
+            "support": 1361.0
+          },
+          "accuracy": 0.8098868098868098,
+          "macro avg": {
+            "precision": 0.7791669046144294,
+            "recall": 0.7831815139098213,
+            "f1-score": 0.7810941718517603,
+            "support": 4329.0
+          },
+          "weighted avg": {
+            "precision": 0.8113697015959789,
+            "recall": 0.8098868098868098,
+            "f1-score": 0.8105653625029225,
+            "support": 4329.0
+          }
+        }
+      },
+      "status": "ok"
+    }
+  ]
+}

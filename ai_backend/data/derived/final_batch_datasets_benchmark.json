@@ -1,0 +1,142 @@
+{
+  "dataset_root": "D:\\AiFitCoach-main\\ai_backend\\datasets",
+  "random_state": 42,
+  "benchmarked_datasets": 5,
+  "results": [
+    {
+      "dataset_name": "food_nutrition_level",
+      "filename": "daily_food_nutrition_dataset.csv",
+      "status": "error",
+      "error": "Load failed"
+    },
+    {
+      "dataset_name": "food_allergen_risk",
+      "filename": "food.csv",
+      "original_rows": 78026,
+      "original_columns": 5,
+      "target": "derived_allergen_risk_band",
+      "notes": "3-class allergen risk from fdc_id.",
+      "rows_used": 5000,
+      "feature_count": 4,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 3,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 1667,
+        "high": 1667,
+        "medium": 1666
+      },
+      "baseline_accuracy": 0.3334,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.988,
+        "weighted_f1": 0.9879706082083431
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "program_summary_performance",
+      "filename": "program_summary.csv",
+      "original_rows": 2598,
+      "original_columns": 10,
+      "target": "derived_program_performance_band",
+      "notes": "3-class program performance from program_length.",
+      "rows_used": 2597,
+      "feature_count": 9,
+      "numeric_feature_count": 2,
+      "categorical_feature_count": 7,
+      "class_count": 3,
+      "class_distribution": {
+        "medium": 1436,
+        "low": 907,
+        "high": 254
+      },
+      "baseline_accuracy": 0.5529457065845206,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.7288461538461538,
+        "weighted_f1": 0.7126239617190322
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "boostcamp_program_level",
+      "filename": "programs_detailed_boostcamp_kaggle.csv",
+      "original_rows": 605033,
+      "original_columns": 16,
+      "target": "derived_boostcamp_program_level",
+      "notes": "3-class program difficulty level from intensity.",
+      "rows_used": 5000,
+      "feature_count": 15,
+      "numeric_feature_count": 7,
+      "categorical_feature_count": 8,
+      "class_count": 2,
+      "class_distribution": {
+        "low": 3528,
+        "medium": 1472
+      },
+      "baseline_accuracy": 0.7056,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.691,
+        "weighted_f1": 0.693184371627902
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "food_category_nutrition",
+      "filename": "food_category.csv",
+      "original_rows": 28,
+      "original_columns": 3,
+      "target": "derived_food_category_nutrition",
+      "notes": "3-class food nutrition category from code.",
+      "rows_used": 28,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 10,
+        "medium": 9,
+        "high": 9
+      },
+      "baseline_accuracy": 0.35714285714285715,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 1.0,
+        "weighted_f1": 1.0
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "health_condition_risk",
+      "filename": "health_fitness_dataset.csv",
+      "original_rows": 687701,
+      "original_columns": 22,
+      "target": "derived_health_condition_risk",
+      "notes": "3-class health condition risk from participant_id.",
+      "rows_used": 5000,
+      "feature_count": 20,
+      "numeric_feature_count": 14,
+      "categorical_feature_count": 6,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 1667,
+        "high": 1667,
+        "medium": 1666
+      },
+      "baseline_accuracy": 0.3334,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.486,
+        "weighted_f1": 0.4862664596273292
+      },
+      "status": "ok"
+    }
+  ]
+}

@@ -1,0 +1,315 @@
+{
+  "dataset_root": "D:\\AiFitCoach-main\\ai_backend\\datasets",
+  "random_state": 42,
+  "benchmarked_datasets": 5,
+  "results": [
+    {
+      "dataset_name": "gym_progress_weight_trend",
+      "filename": "Gym_Progress_Dataset.csv",
+      "original_rows": 200,
+      "original_columns": 6,
+      "target": "derived_next_day_weight_trend",
+      "notes": "Predict next-day weight trend from intake, protein, training duration, and steps.",
+      "rows_used": 199,
+      "feature_count": 4,
+      "numeric_feature_count": 4,
+      "categorical_feature_count": 0,
+      "class_count": 3,
+      "class_distribution": {
+        "loss": 90,
+        "gain": 89,
+        "stable": 20
+      },
+      "baseline_accuracy": 0.45226130653266333,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.275,
+        "weighted_f1": 0.26703296703296703,
+        "macro_f1": 0.1978021978021978,
+        "report": {
+          "gain": {
+            "precision": 0.2857142857142857,
+            "recall": 0.3333333333333333,
+            "f1-score": 0.3076923076923077,
+            "support": 18.0
+          },
+          "loss": {
+            "precision": 0.29411764705882354,
+            "recall": 0.2777777777777778,
+            "f1-score": 0.2857142857142857,
+            "support": 18.0
+          },
+          "stable": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 4.0
+          },
+          "accuracy": 0.275,
+          "macro avg": {
+            "precision": 0.19327731092436973,
+            "recall": 0.20370370370370372,
+            "f1-score": 0.1978021978021978,
+            "support": 40.0
+          },
+          "weighted avg": {
+            "precision": 0.2609243697478991,
+            "recall": 0.275,
+            "f1-score": 0.26703296703296703,
+            "support": 40.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "health_fitness_bmi_band",
+      "filename": "health_fitness_dataset.csv",
+      "original_rows": 687701,
+      "original_columns": 22,
+      "status": "error",
+      "error": "Prepare failed: BMI column not found"
+    },
+    {
+      "dataset_name": "weight_log_trend",
+      "filename": "weightLogInfo_merged.csv",
+      "original_rows": 67,
+      "original_columns": 8,
+      "target": "derived_weight_change_trend",
+      "notes": "Weight change direction from logged weight metrics.",
+      "rows_used": 66,
+      "feature_count": 6,
+      "numeric_feature_count": 6,
+      "categorical_feature_count": 0,
+      "class_count": 3,
+      "class_distribution": {
+        "loss": 35,
+        "gain": 28,
+        "stable": 3
+      },
+      "baseline_accuracy": 0.5303030303030303,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.9285714285714286,
+        "weighted_f1": 0.8952380952380953,
+        "macro_f1": 0.6444444444444445,
+        "report": {
+          "gain": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 6.0
+          },
+          "loss": {
+            "precision": 0.875,
+            "recall": 1.0,
+            "f1-score": 0.9333333333333333,
+            "support": 7.0
+          },
+          "stable": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 1.0
+          },
+          "accuracy": 0.9285714285714286,
+          "macro avg": {
+            "precision": 0.625,
+            "recall": 0.6666666666666666,
+            "f1-score": 0.6444444444444445,
+            "support": 14.0
+          },
+          "weighted avg": {
+            "precision": 0.8660714285714286,
+            "recall": 0.9285714285714286,
+            "f1-score": 0.8952380952380953,
+            "support": 14.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "hourly_calories_band",
+      "filename": "hourlyCalories_merged.csv",
+      "original_rows": 22099,
+      "original_columns": 3,
+      "target": "derived_hourly_calorie_band",
+      "notes": "3-class hourly calorie band from hourly activity data.",
+      "rows_used": 22099,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 7419,
+        "medium": 7350,
+        "high": 7330
+      },
+      "baseline_accuracy": 0.3357165482601023,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.5918552036199095,
+        "weighted_f1": 0.5803674218559536,
+        "macro_f1": 0.5799961639042098,
+        "report": {
+          "high": {
+            "precision": 0.6155157715260017,
+            "recall": 0.4924965893587995,
+            "f1-score": 0.5471769609700644,
+            "support": 1466.0
+          },
+          "low": {
+            "precision": 0.586141433317513,
+            "recall": 0.8322102425876011,
+            "f1-score": 0.6878306878306878,
+            "support": 1484.0
+          },
+          "medium": {
+            "precision": 0.5780701754385965,
+            "recall": 0.44829931972789117,
+            "f1-score": 0.5049808429118774,
+            "support": 1470.0
+          },
+          "accuracy": 0.5918552036199095,
+          "macro avg": {
+            "precision": 0.593242460094037,
+            "recall": 0.5910020505580973,
+            "f1-score": 0.5799961639042098,
+            "support": 4420.0
+          },
+          "weighted avg": {
+            "precision": 0.5931998113110961,
+            "recall": 0.5918552036199095,
+            "f1-score": 0.5803674218559536,
+            "support": 4420.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "sleep_quality_band",
+      "filename": "sleepDay_merged.csv",
+      "original_rows": 413,
+      "original_columns": 5,
+      "target": "derived_sleep_quality_band",
+      "notes": "3-class sleep quality band from sleep metrics.",
+      "rows_used": 413,
+      "feature_count": 2,
+      "numeric_feature_count": 2,
+      "categorical_feature_count": 0,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 139,
+        "high": 138,
+        "medium": 136
+      },
+      "baseline_accuracy": 0.3365617433414044,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.4819277108433735,
+        "weighted_f1": 0.4821579074386916,
+        "macro_f1": 0.4816127375449409,
+        "report": {
+          "high": {
+            "precision": 0.4838709677419355,
+            "recall": 0.5357142857142857,
+            "f1-score": 0.5084745762711864,
+            "support": 28.0
+          },
+          "low": {
+            "precision": 0.5416666666666666,
+            "recall": 0.4642857142857143,
+            "f1-score": 0.5,
+            "support": 28.0
+          },
+          "medium": {
+            "precision": 0.42857142857142855,
+            "recall": 0.4444444444444444,
+            "f1-score": 0.43636363636363634,
+            "support": 27.0
+          },
+          "accuracy": 0.4819277108433735,
+          "macro avg": {
+            "precision": 0.48470302099334356,
+            "recall": 0.48148148148148145,
+            "f1-score": 0.4816127375449409,
+            "support": 83.0
+          },
+          "weighted avg": {
+            "precision": 0.48537930523939077,
+            "recall": 0.4819277108433735,
+            "f1-score": 0.4821579074386916,
+            "support": 83.0
+          }
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "megagym_exercise_performance",
+      "filename": "megaGymDataset.csv",
+      "original_rows": 2918,
+      "original_columns": 9,
+      "target": "derived_performance_band",
+      "notes": "3-class performance band derived from Unnamed: 0.",
+      "rows_used": 2918,
+      "feature_count": 8,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 7,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 973,
+        "high": 973,
+        "medium": 972
+      },
+      "baseline_accuracy": 0.33344756682659354,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.9897260273972602,
+        "weighted_f1": 0.9897256186089038,
+        "macro_f1": 0.9897168831661801,
+        "report": {
+          "high": {
+            "precision": 0.9898477157360406,
+            "recall": 1.0,
+            "f1-score": 0.9948979591836735,
+            "support": 195.0
+          },
+          "low": {
+            "precision": 1.0,
+            "recall": 0.9794871794871794,
+            "f1-score": 0.9896373056994818,
+            "support": 195.0
+          },
+          "medium": {
+            "precision": 0.9795918367346939,
+            "recall": 0.9896907216494846,
+            "f1-score": 0.9846153846153847,
+            "support": 194.0
+          },
+          "accuracy": 0.9897260273972602,
+          "macro avg": {
+            "precision": 0.9898131841569114,
+            "recall": 0.9897259670455547,
+            "f1-score": 0.9897168831661801,
+            "support": 584.0
+          },
+          "weighted avg": {
+            "precision": 0.9898306864641412,
+            "recall": 0.9897260273972602,
+            "f1-score": 0.9897256186089038,
+            "support": 584.0
+          }
+        }
+      },
+      "status": "ok"
+    }
+  ]
+}

@@ -244,7 +244,7 @@ async def setup_fastapi_integration(app):
     async def startup():
         nonlocal coach_agent
         coach_agent = EnhancedCoachAgent(
-            enable_training_pipeline=True,
+            enable_training_pipeline=False,
         )
     
     @app.post("/api/chat")

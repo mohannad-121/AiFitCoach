@@ -4,7 +4,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BACKEND_DIR = Path(__file__).resolve().parent
-load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=True)
+# Load backend-local .env first, then fall back to the project root .env
+load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=False)
+load_dotenv(dotenv_path=BACKEND_DIR.parent / ".env", override=False)
 
 # LLM Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")

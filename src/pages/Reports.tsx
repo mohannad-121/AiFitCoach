@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { FileHeart, HeartPulse, Activity, ShieldCheck, RefreshCw } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
+import { HeartRateTimelinePanel } from '@/components/HeartRateTimelinePanel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-
-const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || 'http://127.0.0.1:8002').replace(/\/$/, '');
+import { AI_BACKEND_URL } from '@/lib/backendUrl';
 
 type WorkoutEvidenceRow = {
   id: string;
@@ -197,6 +197,10 @@ export function WorkoutEvidenceReportSection({ userId, compact = false }: Workou
               </div>
             </div>
           )}
+        </div>
+
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <HeartRateTimelinePanel userId={userId} />
         </div>
 
         <div className="glass-card rounded-2xl p-6">

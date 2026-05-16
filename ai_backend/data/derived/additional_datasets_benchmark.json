@@ -1,0 +1,127 @@
+{
+  "dataset_root": "D:\\AiFitCoach-main\\ai_backend\\datasets",
+  "random_state": 42,
+  "benchmarked_datasets": 4,
+  "results": [
+    {
+      "dataset_name": "minute_calories_narrow_band",
+      "filename": "minuteCaloriesNarrow_merged.csv",
+      "original_rows": 1325580,
+      "original_columns": 3,
+      "target": "derived_minute_calorie_narrow_band",
+      "notes": "3-class minute-level calorie band (narrow format).",
+      "rows_used": 5000,
+      "feature_count": 2,
+      "numeric_feature_count": 1,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 1747,
+        "medium": 1677,
+        "high": 1576
+      },
+      "baseline_accuracy": 0.3494,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 0.501,
+        "weighted_f1": 0.47165814300242653
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "minute_steps_narrow_band",
+      "filename": "minuteStepsNarrow_merged.csv",
+      "original_rows": 1325580,
+      "original_columns": 3,
+      "target": "derived_minute_steps_narrow_band",
+      "notes": "3-class minute-level steps band (narrow format).",
+      "status": "error",
+      "error": "Need at least 2 target classes for training."
+    },
+    {
+      "dataset_name": "minute_intensities_narrow_band",
+      "filename": "minuteIntensitiesNarrow_merged.csv",
+      "status": "error",
+      "error": "Prepare failed"
+    },
+    {
+      "dataset_name": "goal_model_eval",
+      "filename": "goal_model_eval_fixture.csv",
+      "original_rows": 18,
+      "original_columns": 10,
+      "target": "derived_goal_evaluation_band",
+      "notes": "3-class goal evaluation band from Age.",
+      "rows_used": 18,
+      "feature_count": 9,
+      "numeric_feature_count": 7,
+      "categorical_feature_count": 2,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 6,
+        "medium": 6,
+        "high": 6
+      },
+      "baseline_accuracy": 0.3333333333333333,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.75,
+        "weighted_f1": 0.75
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "success_model_eval",
+      "filename": "success_model_eval_fixture.csv",
+      "original_rows": 20,
+      "original_columns": 8,
+      "target": "derived_success_evaluation_band",
+      "notes": "3-class success evaluation band from age.",
+      "rows_used": 20,
+      "feature_count": 7,
+      "numeric_feature_count": 2,
+      "categorical_feature_count": 5,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 7,
+        "high": 7,
+        "medium": 6
+      },
+      "baseline_accuracy": 0.35,
+      "best_model": "logistic_regression",
+      "best_metrics": {
+        "model_name": "logistic_regression",
+        "accuracy": 1.0,
+        "weighted_f1": 1.0
+      },
+      "status": "ok"
+    },
+    {
+      "dataset_name": "gym_progress_metrics",
+      "filename": "Gym_Progress_Dataset.csv",
+      "original_rows": 200,
+      "original_columns": 6,
+      "target": "derived_gym_progress_band",
+      "notes": "3-class gym progress band from Steps_Walked.",
+      "rows_used": 200,
+      "feature_count": 5,
+      "numeric_feature_count": 4,
+      "categorical_feature_count": 1,
+      "class_count": 3,
+      "class_distribution": {
+        "low": 67,
+        "high": 67,
+        "medium": 66
+      },
+      "baseline_accuracy": 0.335,
+      "best_model": "random_forest",
+      "best_metrics": {
+        "model_name": "random_forest",
+        "accuracy": 0.4,
+        "weighted_f1": 0.3975455820476858
+      },
+      "status": "ok"
+    }
+  ]
+}

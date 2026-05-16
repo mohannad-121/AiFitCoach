@@ -6,10 +6,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Exercise } from '@/data/exercises';
 import { getExerciseVideoUrl, isLocalExerciseVideo } from '@/data/exerciseVideoResolver';
 import { bilingualLabel, repairMojibake } from '@/lib/text';
+import { buildExerciseInstructions } from '@/components/workout/exerciseInstructions';
 
 interface ExerciseCardProps {
   exercise: Exercise;
   selectedGender?: 'male' | 'female' | null;
+  isExpanded?: boolean;
+  onToggleExpanded?: () => void;
+  onCollapse?: () => void;
 }
 
 const muscleLabelsEn: Record<string, string> = {
@@ -38,9 +42,14 @@ const muscleLabelsAr: Record<string, string> = {
   calves: 'السمانة',
 };
 
-export function ExerciseCard({ exercise, selectedGender = null }: ExerciseCardProps) {
-  const { language, t } = useLanguage();
-  const [showVideo, setShowVideo] = useState<boolean>(false);
+export function ExerciseCard({
+  exercise,
+  selectedGender = null,
+  isExpanded = false,
+  onToggleExpanded,
+  onCollapse,
+}: ExerciseCardProps) {
+  const { language } = useLanguage();
   const resolvedVideoUrl = getExerciseVideoUrl(exercise, selectedGender);
   const localVideo = isLocalExerciseVideo(resolvedVideoUrl);
   const hasVideo = localVideo && resolvedVideoUrl.length > 0;
@@ -48,54 +57,36 @@ export function ExerciseCard({ exercise, selectedGender = null }: ExerciseCardPr
 
   const englishName = repairMojibake(exercise.name);
   const arabicName = repairMojibake(exercise.nameAr || exercise.name);
-  const englishDescription = repairMojibake(exercise.description);
-  const arabicDescription = repairMojibake(exercise.descriptionAr || exercise.description);
-
   const name = bilingualLabel(englishName, arabicName, language);
-  const description = bilingualLabel(englishDescription, arabicDescription, language);
   const noVideoLabel = bilingualLabel('Open demo', 'فتح شرح', language);
-  const setsLabel = bilingualLabel('Sets', 'مجموعات', language);
-  const repsLabel = bilingualLabel('Reps', 'تكرارات', language);
-
-  const muscleLabel = bilingualLabel(
-    muscleLabelsEn[exercise.muscle] || t(`muscle.${exercise.muscle}`),
-    muscleLabelsAr[exercise.muscle] || t(`muscle.${exercise.muscle}`),
-    language
-  );
-
-  const locationLabel =
-    exercise.location === 'home'
-      ? bilingualLabel('Home', 'البيت', language)
-      : exercise.location === 'gym'
-        ? bilingualLabel('Gym', 'الجيم', language)
-        : bilingualLabel('Both', 'كلاهما', language);
+  const descriptionPoints = buildExerciseInstructions(exercise);
+  const howToTitle = bilingualLabel('How to do this exercise', 'طريقة أداء التمرين', language);
 
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card rounded-xl overflow-hidden group hover:border-primary/50 transition-all duration-300"
+        className="glass-card rounded-2xl overflow-hidden group hover:border-primary/50 transition-all duration-300"
       >
-        {/* Video Thumbnail */}
         <div
-          className="relative h-40 bg-secondary overflow-hidden cursor-pointer"
+          className="relative h-72 bg-secondary overflow-hidden cursor-pointer"
           onClick={() => {
             if (hasVideo) {
-              setShowVideo(true);
+              onToggleExpanded?.();
               return;
             }
             window.open(externalDemoUrl, '_blank', 'noopener,noreferrer');
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent z-10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent z-10" />
           <div className="absolute inset-0 flex items-center justify-center z-20">
             {hasVideo ? (
-              <div className="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-glow">
-                <Play className="w-6 h-6 text-primary-foreground ml-1" />
+              <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-glow">
+                <Play className="w-7 h-7 text-primary-foreground ml-1" />
               </div>
             ) : (
-              <span className="text-xs px-3 py-1 rounded-full bg-background/70 text-muted-foreground border border-border/50">
+              <span className="text-sm px-4 py-2 rounded-full bg-background/70 text-muted-foreground border border-border/50">
                 {noVideoLabel}
               </span>
             )}
@@ -115,77 +106,65 @@ export function ExerciseCard({ exercise, selectedGender = null }: ExerciseCardPr
               className="w-full h-full object-cover"
             />
           )}
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          <h3 className="font-semibold text-lg text-foreground mb-1">{name}</h3>
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{description}</p>
-
-          {/* Stats */}
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1">
-              <span className="text-primary font-bold">{exercise.sets}</span>
-              <span className="text-muted-foreground">{setsLabel}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-primary font-bold">{exercise.reps}</span>
-              <span className="text-muted-foreground">{repsLabel}</span>
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div className="flex gap-2 mt-3 flex-wrap">
-            <span className="px-2 py-1 text-xs rounded-full bg-primary/20 text-primary">
-              {muscleLabel}
-            </span>
-            <span className="px-2 py-1 text-xs rounded-full bg-accent/20 text-accent">
-              {locationLabel}
-            </span>
+          <div className="absolute inset-x-0 bottom-0 z-20 p-5">
+            <h3 className="text-xl font-semibold text-white drop-shadow-md">{englishName}</h3>
           </div>
         </div>
-      </motion.div>
-
-      {/* Video Modal */}
-      {showVideo && hasVideo && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm p-4"
-          onClick={() => setShowVideo(false)}
-        >
+        {isExpanded && hasVideo && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-3xl aspect-video bg-card rounded-xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="border-t border-border/30 bg-card/95"
           >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 z-10 bg-background/50 hover:bg-background/80"
-              onClick={() => setShowVideo(false)}
-            >
-              <X className="w-5 h-5" />
-            </Button>
-            {localVideo ? (
-              <video
-                src={resolvedVideoUrl}
-                className="w-full h-full object-contain bg-black"
-                controls
-                autoPlay
-                playsInline
-              />
-            ) : (
-              <iframe
-                src={`${resolvedVideoUrl}?autoplay=1`}
-                className="w-full h-full"
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                title={name}
-              />
-            )}
+            <div className="flex items-center justify-between border-b border-border/30 px-5 py-4">
+              <h4 className="text-lg font-semibold text-foreground">{englishName}</h4>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => onCollapse?.()}
+                aria-label="Close exercise details"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div className="grid gap-0 lg:grid-cols-[1.35fr_0.95fr]">
+              <div className="relative aspect-video w-full bg-black">
+                {localVideo ? (
+                  <video
+                    src={resolvedVideoUrl}
+                    className="w-full h-full object-contain bg-black"
+                    controls
+                    autoPlay
+                    playsInline
+                  />
+                ) : (
+                  <iframe
+                    src={`${resolvedVideoUrl}?autoplay=1`}
+                    className="w-full h-full"
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                    title={name}
+                  />
+                )}
+              </div>
+
+              <div className="max-h-[34rem] overflow-y-auto border-t border-border/30 bg-card p-6 lg:border-l lg:border-t-0">
+                <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-primary">{howToTitle}</p>
+                <ol className="space-y-4 text-sm leading-7 text-muted-foreground">
+                  {descriptionPoints.map((point, index) => (
+                    <li key={`${exercise.id}-point-${index + 1}`} className="rounded-xl border border-border/40 bg-background/30 p-4">
+                      <p className="font-medium text-foreground">{index + 1}. {point.en}</p>
+                      <p className="mt-2 text-right" dir="rtl">{point.ar}</p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
           </motion.div>
-        </div>
-      )}
+        )}
+      </motion.div>
     </>
   );
 }

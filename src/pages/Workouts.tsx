@@ -15,6 +15,7 @@ export function WorkoutsPage() {
   const { profile } = useUser();
 
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
+  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   const [locationFilter, setLocationFilter] = useState<string | null>(profile?.location || null);
   const [goalFilter, setGoalFilter] = useState<string | null>(profile?.goal || null);
   const [genderFilter, setGenderFilter] = useState<'male' | 'female' | null>(
@@ -22,6 +23,7 @@ export function WorkoutsPage() {
   );
 
   const toggleMuscle = (muscleId: string) => {
+    setExpandedExerciseId(null);
     setSelectedMuscles((prev) =>
       prev.includes(muscleId) ? prev.filter((m) => m !== muscleId) : [...prev, muscleId]
     );
@@ -43,11 +45,17 @@ export function WorkoutsPage() {
   // Map selected muscles (which may be advanced/detailed) to exercise group filters
   const mappedMuscles = selectedMuscles.map(m => advancedToGroupMap[m] || m);
   const uniqueMuscles = [...new Set(mappedMuscles)];
+  const hasMuscleSelection = uniqueMuscles.length > 0;
 
   const exercises = getExercisesByFilters(uniqueMuscles, goalFilter, locationFilter, genderFilter);
   const genderLabel = bilingualLabel('Gender', 'الجنس', language);
   const placeLabel = bilingualLabel('Place', 'المكان', language);
   const goalLabel = bilingualLabel('Goal', 'الهدف', language);
+  const selectMusclePrompt = bilingualLabel(
+    'Select a muscle to view exercise videos.',
+    'اختر عضلة لعرض فيديوهات التمرين.',
+    language
+  );
 
   return (
     <div className="min-h-screen pb-24 md:pb-8">
@@ -75,7 +83,10 @@ export function WorkoutsPage() {
             <span className="text-xs text-muted-foreground px-2">{genderLabel}:</span>
             {[{ val: null, label: bilingualLabel('All', 'الكل', language) }, { val: 'male', label: bilingualLabel('Male', 'ذكر', language) }, { val: 'female', label: bilingualLabel('Female', 'أنثى', language) }].map(opt => (
               <Button key={String(opt.val)} variant={genderFilter === opt.val ? 'default' : 'ghost'} size="sm"
-                onClick={() => setGenderFilter(opt.val)}
+                onClick={() => {
+                  setExpandedExerciseId(null);
+                  setGenderFilter(opt.val);
+                }}
               >{opt.label}</Button>
             ))}
           </div>
@@ -85,7 +96,10 @@ export function WorkoutsPage() {
             <span className="text-xs text-muted-foreground px-2">{placeLabel}:</span>
             {[{ val: null, label: bilingualLabel('All', 'الكل', language) }, { val: 'home', label: bilingualLabel('Home', 'البيت', language), icon: HomeIcon }, { val: 'gym', label: bilingualLabel('Gym', 'الجيم', language), icon: Dumbbell }].map(opt => (
               <Button key={String(opt.val)} variant={locationFilter === opt.val ? 'default' : 'ghost'} size="sm"
-                onClick={() => setLocationFilter(opt.val)}
+                onClick={() => {
+                  setExpandedExerciseId(null);
+                  setLocationFilter(opt.val);
+                }}
               >
                 {opt.icon && <opt.icon className="w-3.5 h-3.5 mr-1" />}
                 {opt.label}
@@ -98,29 +112,53 @@ export function WorkoutsPage() {
             <span className="text-xs text-muted-foreground px-2">{goalLabel}:</span>
             {[{ val: null, label: bilingualLabel('All', 'الكل', language) }, { val: 'bulking', label: bilingualLabel('Build Muscle', 'بناء عضلات', language) }, { val: 'cutting', label: bilingualLabel('Lose Weight', 'إنقاص الوزن', language) }, { val: 'fitness', label: bilingualLabel('General Fitness', 'لياقة عامة', language) }].map(opt => (
               <Button key={String(opt.val)} variant={goalFilter === opt.val ? 'default' : 'ghost'} size="sm"
-                onClick={() => setGoalFilter(opt.val)}
+                onClick={() => {
+                  setExpandedExerciseId(null);
+                  setGoalFilter(opt.val);
+                }}
               >{opt.label}</Button>
             ))}
           </div>
         </motion.div>
 
         {/* Results Count */}
-        <div className="text-center mb-6">
-          <span className="text-sm text-muted-foreground">
-            {exercises.length} {t('workouts.exercises')}
-          </span>
-        </div>
+        {hasMuscleSelection && (
+          <div className="text-center mb-6">
+            <span className="text-sm text-muted-foreground">
+              {exercises.length} {t('workouts.exercises')}
+            </span>
+          </div>
+        )}
 
         {/* Exercises Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {exercises.map((exercise, index) => (
-            <motion.div key={exercise.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 + index * 0.02 }}>
-              <ExerciseCard exercise={exercise} selectedGender={genderFilter} />
-            </motion.div>
-          ))}
-        </div>
+        {hasMuscleSelection ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {exercises.map((exercise, index) => (
+              <motion.div
+                key={exercise.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 + index * 0.02 }}
+                className={expandedExerciseId === exercise.id ? 'sm:col-span-2 lg:col-span-3 xl:col-span-4' : ''}
+              >
+                <ExerciseCard
+                  exercise={exercise}
+                  selectedGender={genderFilter}
+                  isExpanded={expandedExerciseId === exercise.id}
+                  onToggleExpanded={() => setExpandedExerciseId((current) => current === exercise.id ? null : exercise.id)}
+                  onCollapse={() => setExpandedExerciseId(null)}
+                />
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <Dumbbell className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">{selectMusclePrompt}</p>
+          </div>
+        )}
 
-        {exercises.length === 0 && (
+        {hasMuscleSelection && exercises.length === 0 && (
           <div className="text-center py-16">
             <Dumbbell className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">{t('workouts.noResults')}</p>
