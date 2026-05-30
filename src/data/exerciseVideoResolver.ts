@@ -3,6 +3,7 @@
 type SourceGender = 'female' | 'male';
 type SourceLocation = 'home' | 'gym';
 type SourceGoal = 'build' | 'general';
+type SourceDifficulty = 'basic' | 'advanced';
 type PreferredGender = 'female' | 'male' | null;
 
 interface LocalClip {
@@ -12,6 +13,7 @@ interface LocalClip {
   muscle: string;
   location: SourceLocation;
   goal: SourceGoal;
+  difficulty?: SourceDifficulty;
 }
 
 const FEMALE_VIDEO_FILES = [
@@ -249,22 +251,136 @@ const parseClip = (file: string, gender: SourceGender): LocalClip => {
   };
 };
 
+// Helper to generate new video clips from folder structure
+const generateNewVideoClips = (): LocalClip[] => {
+  const clips: LocalClip[] = [];
+
+  // Muscle groups organized by name in the file system
+  const muscleMap: Record<string, string> = {
+    'Anterior Deltoid': 'anterior-deltoid',
+    'Lateral Deltoid': 'lateral-deltoid',
+    'Upper pectoralis': 'upper-pectoralis',
+    'Mid_lower Pectralis': 'mid-lower-pectralis',
+    'Upper Abdominals': 'upper-abdominals',
+    'Lower Abdominals': 'lower-abdominals',
+    'Obliques': 'obliques',
+    'Rectus Femoris': 'rectus-femoris',
+    'Outer Quadricep': 'outer-quadricep',
+    'Inner Quadricep': 'inner-quadricep',
+    'long Hand Bicep': 'long-hand-bicep',
+    'Short Head Bicep': 'short-head-bicep',
+  };
+
+  // Build Muscle collection
+  const buildMuscleGroups = {
+    'Front advanced': [
+      'Anterior Deltoid', 'Lateral Deltoid', 'Upper pectoralis', 'Mid_lower Pectralis',
+      'Upper Abdominals', 'Lower Abdominals', 'Obliques',
+      'Rectus Femoris', 'Outer Quadricep', 'Inner Quadricep',
+      'long Hand Bicep', 'Short Head Bicep',
+    ],
+    'Front normal': [
+      'Anterior Deltoid', 'Lateral Deltoid', 'Upper pectoralis', 'Mid_lower Pectralis',
+      'Upper Abdominals', 'Lower Abdominals', 'Obliques',
+      'Rectus Femoris', 'Outer Quadricep', 'Inner Quadricep',
+      'long Hand Bicep', 'Short Head Bicep',
+    ],
+  };
+
+  const generalFitnessGroups = {
+    'Front advance': [
+      'Anterior Deltoid', 'Lateral Deltoid', 'Upper pectoralis', 'Mid_lower Pectralis',
+      'Upper Abdominals', 'Lower Abdominals', 'Obliques',
+      'Rectus Femoris', 'Outer Quadricep', 'Inner Quadricep',
+      'long Hand Bicep', 'Short Head Bicep',
+    ],
+    'Front normal': [
+      'Anterior Deltoid', 'Lateral Deltoid', 'Upper pectoralis', 'Mid_lower Pectralis',
+      'Upper Abdominals', 'Lower Abdominals', 'Obliques',
+      'Rectus Femoris', 'Outer Quadricep', 'Inner Quadricep',
+      'long Hand Bicep', 'Short Head Bicep',
+    ],
+  };
+
+  // Add Build Muscle videos (both gym and home)
+  Object.entries(buildMuscleGroups).forEach(([diffLevel, muscles]) => {
+    const difficulty: SourceDifficulty = diffLevel.includes('advanced') ? 'advanced' : 'basic';
+    const folderName = diffLevel.replace(/\s+/g, '_');
+    
+    ['gym', 'home'].forEach((location) => {
+      muscles.forEach((muscle) => {
+        const filePrefix = muscleMap[muscle] || muscle.toLowerCase().replace(/\s+/g, '-');
+        
+        // Generate video file names based on the actual pattern
+        [1, 2].forEach((num) => {
+          ['female', 'male'].forEach((gender) => {
+            const file = `${filePrefix}_${difficulty}_${gender}(${num}).mp4`;
+            const path = `/videos/Build_Muscle/${folderName}/${location}/${muscle}/${file}`;
+            
+            clips.push({
+              file,
+              path,
+              gender: gender as SourceGender,
+              muscle,
+              location: location as SourceLocation,
+              goal: 'build',
+              difficulty,
+            });
+          });
+        });
+      });
+    });
+  });
+
+  // Add General Fitness videos (both gym and home)
+  Object.entries(generalFitnessGroups).forEach(([diffLevel, muscles]) => {
+    const difficulty: SourceDifficulty = diffLevel.includes('advance') && !diffLevel.includes('normal') ? 'advanced' : 'basic';
+    const folderName = diffLevel.replace(/\s+/g, '_');
+    
+    ['gym', 'home'].forEach((location) => {
+      muscles.forEach((muscle) => {
+        const filePrefix = muscleMap[muscle] || muscle.toLowerCase().replace(/\s+/g, '-');
+        
+        [1, 2].forEach((num) => {
+          ['female', 'male'].forEach((gender) => {
+            const file = `${filePrefix}_${difficulty}_${gender}(${num}).mp4`;
+            const path = `/videos/General_Fitness/${folderName}/${location}/${muscle}/${file}`;
+            
+            clips.push({
+              file,
+              path,
+              gender: gender as SourceGender,
+              muscle,
+              location: location as SourceLocation,
+              goal: 'general',
+              difficulty,
+            });
+          });
+        });
+      });
+    });
+  });
+
+  return clips;
+};
+
 const ALL_CLIPS: LocalClip[] = [
   ...FEMALE_VIDEO_FILES.map((file) => parseClip(file, 'female')),
   ...MALE_VIDEO_FILES.map((file) => parseClip(file, 'male')),
+  ...generateNewVideoClips(),
 ];
 
 const MUSCLE_TO_SOURCE_MUSCLES: Record<Exercise['muscle'], string[]> = {
-  chest: [],
-  back: ['LatissimusDorsi', 'ErectorSpinae', 'TeresMajor', 'TeresMinor', 'Trapezius', 'PosteriorDeltoid'],
-  shoulders: ['PosteriorDeltoid', 'Trapezius'],
-  biceps: [],
+  chest: ['Upper pectoralis', 'Mid_lower Pectralis'],
+  back: ['LatissimusDorsi', 'ErectorSpinae', 'TeresMajor', 'TeresMinor', 'Trapezius', 'PosteriorDeltoid', 'upper Trapezius'],
+  shoulders: ['PosteriorDeltoid', 'Trapezius', 'Anterior Deltoid', 'Lateral Deltoid', 'upper Trapezius'],
+  biceps: ['long Hand Bicep', 'Short Head Bicep'],
   triceps: ['TricepsLongHead', 'TricepsLateralHead', 'TricepsMedialHead'],
-  abs: [],
-  quads: [],
-  hamstrings: ['Hamstrings'],
-  glutes: ['GluteusMaximus', 'GluteusMedius'],
-  calves: ['Gastrocnemius', 'Soleus'],
+  abs: ['Upper Abdominals', 'Lower Abdominals', 'Mid_lower Pectralis', 'Obliques'],
+  quads: ['Rectus Femoris', 'Outer Quadricep', 'Inner Quadricep'],
+  hamstrings: ['Hamstrings', 'Inner Thigh'],
+  glutes: ['GluteusMaximus', 'GluteusMedius', 'Groin'],
+  calves: ['Gastrocnemius', 'Soleus', 'Tibialis'],
 };
 
 const goalToSourceGoal = (goal: Exercise['goal']): SourceGoal | null => {
@@ -354,5 +470,10 @@ export function getExerciseVideoUrl(exercise: Exercise, preferredGender: Preferr
 }
 
 export function isLocalExerciseVideo(videoUrl: string): boolean {
-  return videoUrl.startsWith('/videos/back-muscles/');
+  return (
+    videoUrl.startsWith('/videos/back-muscles/') ||
+    videoUrl.startsWith('/videos/Build_Muscle/') ||
+    videoUrl.startsWith('/videos/General_Fitness/') ||
+    videoUrl.startsWith('/videos/Lose_Weight/')
+  );
 }
