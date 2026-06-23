@@ -3,20 +3,27 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
 
+LOW_MEMORY_MODE = os.getenv("LOW_MEMORY_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+
 try:
+    if LOW_MEMORY_MODE:
+        raise ImportError("disabled in low-memory mode")
     import faiss  # type: ignore
-except Exception:  # pragma: no cover - optional dependency at runtime
+except ImportError:  # pragma: no cover - optional dependency at runtime
     faiss = None
 
 try:
+    if LOW_MEMORY_MODE:
+        raise ImportError("disabled in low-memory mode")
     from sentence_transformers import SentenceTransformer
-except Exception:  # pragma: no cover - optional dependency at runtime
+except ImportError:  # pragma: no cover - optional dependency at runtime
     SentenceTransformer = None
 
 from nlp_utils import normalize_text, tokenize

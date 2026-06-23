@@ -19,6 +19,8 @@ services:
         value: auto
       - key: TRAINING_PIPELINE_ENABLED
         value: "0"
+      - key: LOW_MEMORY_MODE
+        value: "1"
       - key: OLLAMA_MODEL
         value: llama3.2:3b
       - key: OLLAMA_BASE_URL
