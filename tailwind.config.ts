@@ -124,12 +124,12 @@ export default {
   					height: '0'
   				}
   			},
-  			'pulse-glow': {
-  				'0%, 100%': {
-  					boxShadow: '0 0 20px hsla(188, 100%, 48%, 0.3)'
-  				},
-  				'50%': {
-  					boxShadow: '0 0 40px hsla(188, 100%, 48%, 0.6)'
+			'pulse-glow': {
+				'0%, 100%': {
+					boxShadow: '0 0 20px rgba(217, 108, 219, 0.3)'
+				},
+				'50%': {
+					boxShadow: '0 0 40px rgba(155, 98, 244, 0.58)'
   				}
   			},
   			'fade-in-up': {
@@ -150,16 +150,16 @@ export default {
   			'fade-in-up': 'fade-in-up 0.6s ease-out forwards'
   		},
   		backgroundImage: {
-  			'gradient-primary': 'linear-gradient(135deg, hsl(188, 100%, 48%) 0%, hsl(200, 100%, 60%) 100%)',
-  			'gradient-accent': 'linear-gradient(135deg, hsl(24, 100%, 55%) 0%, hsl(35, 100%, 60%) 100%)',
+			'gradient-primary': 'linear-gradient(110deg, #e78ac8 0%, #d96cdb 48%, #9b62f4 100%)',
+			'gradient-accent': 'linear-gradient(110deg, #e78ac8 0%, #d96cdb 48%, #9b62f4 100%)',
   			'gradient-dark': 'linear-gradient(180deg, hsl(220, 20%, 8%) 0%, hsl(220, 25%, 5%) 100%)',
   			'gradient-card': 'linear-gradient(145deg, hsl(220, 18%, 14%) 0%, hsl(220, 18%, 10%) 100%)'
   		},
   		boxShadow: {
-  			glow: '0 0 40px hsla(188, 100%, 48%, 0.2)',
-  			'glow-lg': '0 0 60px hsla(188, 100%, 48%, 0.3)',
+			glow: '0 0 40px rgba(217, 108, 219, 0.24)',
+			'glow-lg': '0 0 60px rgba(155, 98, 244, 0.3)',
   			card: '0 4px 24px hsla(0, 0%, 0%, 0.4)',
-  			button: '0 4px 16px hsla(188, 100%, 48%, 0.3)',
+			button: '0 4px 18px rgba(217, 108, 219, 0.32)',
   			'2xs': 'var(--shadow-2xs)',
   			xs: 'var(--shadow-xs)',
   			sm: 'var(--shadow-sm)',

@@ -172,6 +172,30 @@ const MAX_CHAT_ATTACHMENTS = 4;
 const MAX_CHAT_ATTACHMENT_BYTES = 12 * 1024 * 1024;
 const ATTACHMENT_META_PREFIX = '[[fitcoach_attachments:';
 const ATTACHMENT_META_SUFFIX = ']]';
+const URGENT_HEART_RATE_PATTERN = /\b(heart|hr|pulse|bpm|tachycardia|قلب|نبض|دقات)\b/i;
+const HIGH_HEART_RATE_PATTERN = /\b(1[6-9]\d|2\d\d)\b/;
+const PLAN_REJECT_TEXTS = [
+  'reject',
+  'decline',
+  'cancel',
+  'cancel it',
+  'stop',
+  'no',
+  'رفض',
+  'ارفض',
+  'لا',
+  'الغاء',
+  'إلغاء',
+  'الغي',
+  'إلغي',
+  'ألغ',
+  'ألغِ',
+  'الغ',
+  'الغِ',
+  'كنسل',
+  'ما بدي',
+  'مش بدي',
+];
 const WEEK_TEMPLATE = [
   { day: 'Saturday', dayAr: 'السبت' },
   { day: 'Sunday', dayAr: 'الأحد' },
@@ -204,6 +228,30 @@ const DAY_NAME_TO_INDEX: Record<string, number> = {
   'الخميس': 4,
   'الجمعة': 5,
   'السبت': 6,
+};
+
+const getUrgentHeartRateFallback = (text: string, language: 'en' | 'ar'): string | null => {
+  if (!URGENT_HEART_RATE_PATTERN.test(text) || !HIGH_HEART_RATE_PATTERN.test(text)) {
+    return null;
+  }
+
+  if (language === 'ar') {
+    return [
+      'معدل نبض قريب من 180 أثناء التمرين يحتاج حذر، خصوصاً إذا كان غير معتاد أو معه ألم صدر، ضيق نفس، دوخة، إغماء، غثيان، أو خفقان قوي.',
+      '',
+      'أوقفي التمرين الآن، اجلسي أو استلقي، واشربي ماء بهدوء. إذا بقي النبض مرتفعاً بعد 5-10 دقائق راحة، أو ظهرت أي أعراض من المذكورة، تواصلي مع الطوارئ أو طبيب فوراً.',
+      '',
+      'لا تكملي الحصة اليوم قبل تقييم طبي، خصوصاً إذا تكرر هذا الرقم.',
+    ].join('\n');
+  }
+
+  return [
+    'A heart rate around 180 bpm during Pilates needs caution, especially if it is unusual for you or comes with chest pain, shortness of breath, dizziness, fainting, nausea, or strong palpitations.',
+    '',
+    'Stop exercising now, sit or lie down, and sip water. If your heart rate stays very high after 5-10 minutes of rest, or you have any of those symptoms, contact emergency services or a clinician right away.',
+    '',
+    'Do not continue today\'s class until you are medically cleared, especially if this has happened more than once.',
+  ].join('\n');
 };
 
 const buildWorkoutDayNames = (daysPerWeek: number, anchorDate?: string | null) => {
@@ -240,6 +288,25 @@ const formatIsoLocalDay = (date: Date) => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const normalizePlanCommandText = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[إأآا]/g, 'ا')
+    .replace(/[ًٌٍَُِّْـ]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const isPlanRejectText = (value: string) => {
+  const normalized = normalizePlanCommandText(value);
+  if (!normalized) return false;
+  return PLAN_REJECT_TEXTS.some((keyword) => {
+    const normalizedKeyword = normalizePlanCommandText(keyword);
+    return normalized === normalizedKeyword || normalized.includes(normalizedKeyword);
+  });
 };
 
 const getPlanDayIndex = (dayStr?: string | null) => {
@@ -2332,6 +2399,31 @@ export function CoachPage() {
       if (hasConversation) return updated;
       return [{ id: activeConversationId, title: '', messages: newMessages, updated_at: new Date().toISOString() }, ...updated];
     });
+
+    if (isPlanRejectText(text) && (pendingPlan || pendingPlanOptions)) {
+      clearPendingAttachments();
+      if (pendingPlan) {
+        try {
+          await handleRejectPlan(pendingPlan.id);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      setPendingPlanOptions(null);
+      setPendingPlan(null);
+      const rejectText = language === 'ar'
+        ? 'تمام، لغيت خيارات الخطة.'
+        : 'No problem. I canceled these plan options.';
+      try {
+        await appendAssistantMessage(rejectText);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     let timeoutId: number | null = null;
     try {
       const useCompactPublicPayload = isPublicAppOrigin();
@@ -2407,24 +2499,14 @@ export function CoachPage() {
             });
           })()
         : useCompactPublicPayload
-          ? await (async () => {
-              const params = new URLSearchParams({
-                message: fallbackPayload.message,
-                user_id: fallbackPayload.user_id,
-                conversation_id: fallbackPayload.conversation_id,
-                language: fallbackPayload.language,
-              });
-              if (fallbackPayload.user_profile) {
-                params.set('user_profile', JSON.stringify(fallbackPayload.user_profile));
-              }
-              if (fallbackPayload.recent_messages.length > 0) {
-                params.set('recent_messages', JSON.stringify(fallbackPayload.recent_messages));
-              }
-              return fetch(`${AI_BACKEND_URL}/chat-lite?${params.toString()}`, {
-                method: 'GET',
-                signal: controller.signal,
-              });
-            })()
+          ? await fetch(`${AI_BACKEND_URL}/chat`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json; charset=UTF-8',
+              },
+              body: JSON.stringify(fallbackPayload),
+              signal: controller.signal,
+            })
         : await fetch(`${AI_BACKEND_URL}/chat`, {
             method: 'POST',
             headers: {
@@ -2532,9 +2614,11 @@ export function CoachPage() {
             ? 'الرد تأخر. تأكد أن السيرفر شغال على المنفذ الصحيح ثم جرّب مرة ثانية.'
             : 'The response is taking too long. Make sure the backend is running on the correct port and try again.'))
         : null;
+      const urgentFallback = getUrgentHeartRateFallback(text.trim(), language === 'ar' ? 'ar' : 'en');
       const errMsg: ChatMessage = {
         role: 'assistant',
         content:
+          urgentFallback ||
           timeoutMessage ||
           (language === 'ar'
             ? `تعذر الاتصال بخادم الذكاء الاصطناعي (${AI_BACKEND_URL}). تأكد أنه يعمل ثم أعد المحاولة.`

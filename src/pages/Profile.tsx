@@ -1,6 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Ruler, Weight, Target, MapPin, Edit, LogOut, Calendar } from 'lucide-react';
+import {
+  Activity,
+  Calendar,
+  Camera,
+  Droplets,
+  Edit,
+  Flame,
+  Footprints,
+  HeartPulse,
+  LogOut,
+  MapPin,
+  Ruler,
+  Scale,
+  Target,
+  User,
+  Utensils,
+  Weight,
+} from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +63,58 @@ type FitbitStatus = {
 };
 
 const EXPIRED_FITBIT_MESSAGE = 'Your Fitbit connection expired. Reconnect Fitbit and try again.';
+const hasConfiguredSupabase = Boolean(
+  import.meta.env.VITE_SUPABASE_URL &&
+  (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)
+);
+
+type StatCardProps = {
+  icon: React.ElementType;
+  label: string;
+  value: React.ReactNode;
+};
+
+function StatCard({ icon: Icon, label, value }: StatCardProps) {
+  return (
+    <div className="rounded-lg bg-muted/60 px-4 py-3 min-h-[72px]">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Icon className="h-4 w-4 text-primary" />
+        <span>{label}</span>
+      </div>
+      <div className="mt-2 text-lg font-semibold leading-tight text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value?: React.ReactNode }) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 text-base font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  children,
+  className = '',
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`glass-card rounded-lg border border-border/70 p-5 ${className}`}>
+      <h2 className="mb-4 text-lg font-semibold text-foreground">{title}</h2>
+      {children}
+    </section>
+  );
+}
 
 function getFitbitErrorMessage(error: unknown, language: string) {
   if (error instanceof Error && error.message === EXPIRED_FITBIT_MESSAGE) {
@@ -54,20 +123,6 @@ function getFitbitErrorMessage(error: unknown, language: string) {
       : 'Your Fitbit session expired. Reconnect Fitbit and try again.';
   }
   return error instanceof Error ? error.message : (language === 'ar' ? 'تعذر تحديث Fitbit.' : 'Could not sync Fitbit.');
-}
-
-function getTimeGreeting(language: string) {
-  const hour = new Date().getHours();
-  const isMorning = hour < 12;
-  const isAfternoon = hour >= 12 && hour < 18;
-  if (language === 'ar') {
-    if (isMorning) return 'صباح الخير!';
-    if (isAfternoon) return 'مساء الخير!';
-    return 'مساء الخير!';
-  }
-  if (isMorning) return 'Good morning!';
-  if (isAfternoon) return 'Good afternoon!';
-  return 'Good evening!';
 }
 
 export function ProfilePage() {
@@ -82,9 +137,6 @@ export function ProfilePage() {
   const [fitbitStatus, setFitbitStatus] = useState<FitbitStatus | null>(null);
   const [fitbitLoading, setFitbitLoading] = useState(false);
   const [fitbitBusyAction, setFitbitBusyAction] = useState<'connect' | 'sync' | 'disconnect' | null>(null);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState(profile?.name || '');
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentUserId = user?.id || '';
@@ -113,7 +165,6 @@ export function ProfilePage() {
 
   useEffect(() => {
     setEditData(profile || {});
-    setNameDraft(profile?.name || '');
   }, [profile]);
 
   useEffect(() => {
@@ -151,6 +202,7 @@ export function ProfilePage() {
     navigate('/profile', { replace: true });
   }, [location.search, navigate, toast, language, currentUserId]);
 
+  // Sync profile from DB on mount
   useEffect(() => {
     if (user) {
       supabase
@@ -176,7 +228,7 @@ export function ProfilePage() {
               dietaryPreferences: (data as any).dietary_preferences || '',
               chronicConditions: (data as any).chronic_conditions || '',
               allergies: (data as any).allergies || '',
-              avatarUrl: (data as any).avatar_url || profile?.avatarUrl || '',
+              avatarUrl: (data as any).avatar_url || profile.avatarUrl || '',
               onboardingCompleted: data.onboarding_completed,
             });
           }
@@ -209,8 +261,138 @@ export function ProfilePage() {
 
   const bmi = profile.weight / Math.pow(profile.height / 100, 2);
   const bmiCategory = bmi < 18.5 ? (language === 'ar' ? 'نقص وزن' : 'Underweight') : bmi < 25 ? (language === 'ar' ? 'طبيعي' : 'Normal') : bmi < 30 ? (language === 'ar' ? 'زيادة وزن' : 'Overweight') : (language === 'ar' ? 'سمنة' : 'Obese');
-  const hasHealthInfo = Boolean(profile.chronicConditions || profile.allergies || profile.dietaryPreferences);
-  const hasTrainingInfo = Boolean(profile.fitnessLevel || profile.trainingDaysPerWeek || profile.equipment || profile.injuries || profile.activityLevel);
+  const displayAvatarUrl = profile.avatarUrl || fitbitStatus?.profile?.avatar_url || '';
+  const displayGoal = t(`onboarding.${profile.goal}`);
+  const displayGender = t(`onboarding.${profile.gender}`);
+  const fitbitMetricCards = [
+    { icon: Footprints, label: language === 'ar' ? 'الخطوات اليوم' : 'Steps today', value: fitbitStatus?.today_summary?.steps ?? 0 },
+    { icon: Flame, label: language === 'ar' ? 'السعرات المحروقة' : 'Calories out', value: fitbitStatus?.today_summary?.calories_out ?? 0 },
+    { icon: Activity, label: language === 'ar' ? 'المسافة' : 'Distance', value: `${fitbitStatus?.today_summary?.distance_km ?? 0} km` },
+    { icon: HeartPulse, label: language === 'ar' ? 'نبض الراحة' : 'Resting HR', value: fitbitStatus?.today_summary?.resting_heart_rate ?? '--' },
+    {
+      icon: Scale,
+      label: language === 'ar' ? 'الوزن المتزامن' : 'Synced weight',
+      value: `${fitbitStatus?.today_summary?.latest_weight_kg ?? fitbitStatus?.profile?.weight_kg ?? '--'}${(fitbitStatus?.today_summary?.latest_weight_kg ?? fitbitStatus?.profile?.weight_kg) != null ? ' kg' : ''}`,
+    },
+    { icon: Droplets, label: language === 'ar' ? 'الماء اليوم' : 'Water today', value: `${fitbitStatus?.today_summary?.water_ml ?? 0} ml` },
+    { icon: Utensils, label: language === 'ar' ? 'سعرات الطعام' : 'Calories in', value: fitbitStatus?.today_summary?.calories_in ?? 0 },
+    { icon: Target, label: language === 'ar' ? 'الأطعمة المسجلة' : 'Foods logged', value: fitbitStatus?.today_summary?.foods_logged ?? 0 },
+  ];
+
+  const saveAvatarUrl = async (avatarUrl: string) => {
+    updateProfile({ avatarUrl });
+    if (user && supabase && supabase.from) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({
+            avatar_url: avatarUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
+      } catch (error) {
+        console.warn('Failed updating profile avatar:', error);
+      }
+    }
+  };
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'ملف غير مدعوم' : 'Unsupported file',
+        description: language === 'ar' ? 'اختر صورة فقط.' : 'Choose an image file.',
+      });
+      return;
+    }
+
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      const processedImage = await new Promise<{ dataUrl: string; blob: Blob }>((resolve, reject) => {
+        image.onload = () => {
+          const size = 320;
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Canvas is unavailable.'));
+            return;
+          }
+
+          canvas.width = size;
+          canvas.height = size;
+          const sourceSize = Math.min(image.width, image.height);
+          const sourceX = (image.width - sourceSize) / 2;
+          const sourceY = (image.height - sourceSize) / 2;
+          context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Could not prepare the image.'));
+              return;
+            }
+            resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.82), blob });
+          }, 'image/jpeg', 0.82);
+        };
+        image.onerror = () => reject(new Error('Could not read the image.'));
+        image.src = objectUrl;
+      });
+      URL.revokeObjectURL(objectUrl);
+
+      if (user && hasConfiguredSupabase && supabase?.storage) {
+        const storagePath = `${user.id}/avatar.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('profile-pictures')
+          .upload(storagePath, processedImage.blob, {
+            contentType: 'image/jpeg',
+            cacheControl: '3600',
+            upsert: true,
+          });
+        if (uploadError) {
+          console.warn('Profile picture storage unavailable; saving optimized avatar to the profile record.', uploadError);
+          await saveAvatarUrl(processedImage.dataUrl);
+          toast({
+            title: language === 'ar' ? 'تم تحديث الصورة' : 'Profile image updated',
+            description: language === 'ar'
+              ? 'تم حفظ الصورة في ملفك الشخصي.'
+              : 'Your optimized image was saved to your profile.',
+          });
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('profile-pictures').getPublicUrl(storagePath);
+        const publicUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+        const { error: metadataError } = await supabase.from('profile_pictures').upsert({
+          user_id: user.id,
+          storage_path: storagePath,
+          public_url: publicUrl,
+          original_filename: file.name,
+          mime_type: 'image/jpeg',
+          size_bytes: processedImage.blob.size,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+        if (metadataError) throw metadataError;
+        await saveAvatarUrl(publicUrl);
+      } else {
+        await saveAvatarUrl(processedImage.dataUrl);
+      }
+      toast({
+        title: language === 'ar' ? 'تم تحديث الصورة' : 'Profile image updated',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'فشل تحديث الصورة' : 'Image update failed',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   const handleFitbitConnect = () => {
     if (!currentUserId) {
@@ -303,425 +485,294 @@ export function ProfilePage() {
     }
   };
 
-  const handleAvatarClick = () => {
-    avatarInputRef.current?.click();
-  };
-
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast({
-        variant: 'destructive',
-        title: language === 'ar' ? 'ملف غير صالح' : 'Invalid file',
-        description: language === 'ar' ? 'الرجاء اختيار صورة فقط.' : 'Please select an image file.',
-      });
-      return;
-    }
-
-    event.target.value = '';
-
-    const applyLocalPreview = (result: string) => {
-      if (result) {
-        updateProfile({ avatarUrl: result });
-      }
-    };
-
-    if (user && supabase?.storage?.from) {
-      try {
-        setAvatarUploading(true);
-        const extension = file.name.split('.').pop() || file.type.split('/')[1] || 'png';
-        const path = `users/${user.id}/avatar.${extension}`;
-        const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, {
-          upsert: true,
-          contentType: file.type,
-        });
-        if (uploadError) {
-          throw uploadError;
-        }
-        const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-        const publicUrl = data?.publicUrl || '';
-        if (publicUrl) {
-          updateProfile({ avatarUrl: publicUrl });
-          await supabase
-            .from('profiles')
-            .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-            .eq('user_id', user.id);
-          return;
-        }
-      } catch (error) {
-        console.warn('Avatar upload failed, falling back to local preview.', error);
-      } finally {
-        setAvatarUploading(false);
-      }
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      applyLocalPreview(result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSaveName = async () => {
-    const nextName = nameDraft.trim();
-    if (!nextName) {
-      toast({
-        variant: 'destructive',
-        title: language === 'ar' ? 'الاسم مطلوب' : 'Name required',
-        description: language === 'ar' ? 'اكتب اسمًا صالحًا.' : 'Please enter a valid name.',
-      });
-      return;
-    }
-
-    updateProfile({ name: nextName });
-    setIsEditingName(false);
-
-    if (user && supabase && supabase.from) {
-      try {
-        await supabase
-          .from('profiles')
-          .update({ name: nextName, updated_at: new Date().toISOString() })
-          .eq('user_id', user.id);
-      } catch (error) {
-        console.warn('Failed updating name in Supabase:', error);
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen pb-24 md:pb-8">
       <Navbar />
-      <main className="container mx-auto px-4 pt-24 max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex flex-col items-start gap-3">
-            <span className="text-5xl font-normal text-sky-400 font-[Forte]">
-              {getTimeGreeting(language)}
-            </span>
-
-            <div className="flex items-center gap-3">
-              <div className="relative inline-flex">
+      <main className="container mx-auto grid max-w-5xl gap-5 px-4 pt-24 lg:grid-cols-[0.85fr_1.2fr]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-2 lg:col-span-2">
+          <h1 className="font-display text-4xl text-primary md:text-5xl">
+            {language === 'ar' ? 'مساء الخير!' : 'Good evening!'}
+          </h1>
+          <div className="mt-3 flex items-center gap-4">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-primary/25 bg-muted shadow-glow">
+              {displayAvatarUrl ? (
+                <img src={displayAvatarUrl} alt={profile.name || 'Profile'} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-secondary">
+                  <User className="h-9 w-9 text-muted-foreground" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg"
+                aria-label={language === 'ar' ? 'تغيير صورة الملف الشخصي' : 'Change profile image'}
+                title={language === 'ar' ? 'تغيير الصورة' : 'Change image'}
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <h2 className="font-display text-3xl text-foreground md:text-4xl">{profile.name || 'User'}</h2>
                 <button
                   type="button"
-                  onClick={handleAvatarClick}
-                  className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow overflow-hidden"
-                  aria-label={language === 'ar' ? 'تغيير الصورة الشخصية' : 'Change profile photo'}
-                  title={language === 'ar' ? 'تغيير الصورة الشخصية' : 'Change profile photo'}
+                  onClick={() => setIsEditing(true)}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  aria-label={language === 'ar' ? 'تعديل البيانات' : 'Edit profile'}
                 >
-                  {profile.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt={profile.name || 'User avatar'} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="font-display text-4xl text-primary-foreground">
-                      {profile.name?.charAt(0).toUpperCase() || 'U'}
-                    </span>
-                  )}
+                  <Edit className="h-4 w-4" />
                 </button>
-                {avatarUploading && (
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
-                    {language === 'ar' ? 'جاري التحميل...' : 'Uploading...'}
-                  </span>
-                )}
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
               </div>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {displayGender} • {displayGoal}
+              </p>
+            </div>
+          </div>
+          <p className="hidden">
+            {t(`onboarding.${profile.gender}`)} • {t(`onboarding.${profile.goal}`)}
+          </p>
+        </motion.div>
 
-              <div className="flex flex-col items-start gap-2 text-left">
-                {isEditingName ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="text"
-                      value={nameDraft}
-                      onChange={(event) => setNameDraft(event.target.value)}
-                      className="min-w-[220px] rounded-xl border border-border/60 bg-background px-4 py-2 text-lg font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
-                      placeholder={language === 'ar' ? 'اكتب الاسم' : 'Enter name'}
-                    />
-                    <Button variant="hero" size="sm" onClick={handleSaveName}>
-                      {language === 'ar' ? 'حفظ' : 'Save'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditingName(false);
-                        setNameDraft(profile.name || '');
-                      }}
-                    >
-                      {language === 'ar' ? 'إلغاء' : 'Cancel'}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-4xl font-bold text-foreground font-[Forte]">{profile.name || 'User'}</h1>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingName(true)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-                <p className="text-muted-foreground">
-                  {t(`onboarding.${profile.gender}`)} • {t(`onboarding.${profile.goal}`)}
-                </p>
-                {user && <p className="text-xs text-muted-foreground">{user.email}</p>}
-              </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="glass-card rounded-lg border border-border/70 p-5 lg:col-start-1 lg:row-start-2"
+        >
+          <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'مؤشر كتلة الجسم' : 'Body Mass Index'}</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-4xl font-bold gradient-text">{bmi.toFixed(1)}</span>
+              <p className="text-muted-foreground mt-1">{bmiCategory}</p>
+            </div>
+            <div className="w-32 h-3 bg-secondary rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-primary rounded-full transition-all" style={{ width: `${Math.min((bmi / 40) * 100, 100)}%` }} />
             </div>
           </div>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)]">
-          <div className="space-y-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card rounded-2xl p-6"
-            >
-              <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'مؤشر كتلة الجسم' : 'Body Mass Index'}</h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-4xl font-bold gradient-text">{bmi.toFixed(1)}</span>
-                  <p className="text-muted-foreground mt-1">{bmiCategory}</p>
-                </div>
-                <div className="w-32 h-3 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-primary rounded-full transition-all" style={{ width: `${Math.min((bmi / 40) * 100, 100)}%` }} />
-                </div>
-              </div>
-            </motion.div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="glass-card rounded-lg border border-border/70 p-5 lg:col-start-1 lg:row-start-3"
+        >
+          <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'إحصائياتك' : 'Your Stats'}</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {stats.map((stat, index) => (
+              <StatCard key={index} icon={stat.icon} label={stat.label} value={stat.value} />
+            ))}
+          </div>
+        </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="glass-card rounded-2xl p-6"
-            >
-              <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'إحصائياتك' : 'Your Stats'}</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {stats.map((stat, index) => (
-                  <div key={index} className="bg-secondary/50 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <stat.icon className="w-4 h-4 text-primary" />
-                      <span className="text-sm text-muted-foreground">{stat.label}</span>
-                    </div>
-                    <p className="text-lg font-semibold">{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {hasHealthInfo && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                className="glass-card rounded-2xl p-6"
-              >
-                <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'معلومات صحية' : 'Health Information'}</h2>
-                <div className="space-y-4">
-                  {profile.chronicConditions && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {language === 'ar' ? 'الأمراض المزمنة' : 'Chronic Conditions'}
-                      </p>
-                      <p className="text-base text-foreground">{profile.chronicConditions}</p>
-                    </div>
-                  )}
-                  {profile.allergies && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {language === 'ar' ? 'الحساسيات' : 'Allergies'}
-                      </p>
-                      <p className="text-base text-foreground">{profile.allergies}</p>
-                    </div>
-                  )}
-                  {profile.dietaryPreferences && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {language === 'ar' ? 'التفضيلات الغذائية' : 'Dietary Preferences'}
-                      </p>
-                      <p className="text-base text-foreground">{profile.dietaryPreferences}</p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-
-            {hasTrainingInfo && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
-                className="glass-card rounded-2xl p-6"
-              >
-                <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'تفاصيل التدريب' : 'Training Details'}</h2>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      {language === 'ar' ? 'المستوى' : 'Level'}
-                    </p>
-                    <p className="text-base text-foreground">{t(`onboarding.${profile.fitnessLevel}`)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      {language === 'ar' ? 'أيام التمرين بالأسبوع' : 'Training Days / Week'}
-                    </p>
-                    <p className="text-base text-foreground">{profile.trainingDaysPerWeek}</p>
-                  </div>
-                  {profile.activityLevel && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {language === 'ar' ? 'مستوى النشاط' : 'Activity Level'}
-                      </p>
-                      <p className="text-base text-foreground">{t(`onboarding.activity.${profile.activityLevel}`)}</p>
-                    </div>
-                  )}
-                  {profile.equipment && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {language === 'ar' ? 'المعدات' : 'Equipment'}
-                      </p>
-                      <p className="text-base text-foreground">{profile.equipment}</p>
-                    </div>
-                  )}
-                  {profile.injuries && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {language === 'ar' ? 'إصابات' : 'Injuries'}
-                      </p>
-                      <p className="text-base text-foreground">{profile.injuries}</p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+          className="glass-card rounded-lg border border-border/70 p-5 lg:col-start-2 lg:row-span-4 lg:row-start-2"
+        >
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Fitbit</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {language === 'ar'
+                  ? 'اربط Fitbit لسحب النشاط، الوزن، الطعام، والماء من حسابك.'
+                  : 'Connect Fitbit to pull activity, weight, food, and water data from your account.'}
+              </p>
+            </div>
+            <div className={`text-xs px-3 py-1 rounded-full ${fitbitStatus?.connected ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+              {fitbitStatus?.connected
+                ? (language === 'ar' ? 'متصل' : 'Connected')
+                : (language === 'ar' ? 'غير متصل' : 'Not connected')}
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
-              className="glass-card rounded-2xl p-6"
-            >
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Fitbit</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {language === 'ar'
-                      ? 'اربط Fitbit لسحب النشاط، الوزن، الطعام، والماء من حسابك.'
-                      : 'Connect Fitbit to pull activity, weight, food, and water data from your account.'}
-                  </p>
+          {fitbitLoading ? (
+            <p className="text-sm text-muted-foreground">
+              {language === 'ar' ? 'جاري تحميل حالة Fitbit...' : 'Loading Fitbit status...'}
+            </p>
+          ) : !fitbitStatus?.configured ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {language === 'ar'
+                  ? 'يجب إعداد متغيرات Fitbit في الخادم أولاً، ثم تغيير Redirect URL في لوحة Fitbit إلى رابط callback الخاص بالباك إند.'
+                  : 'Set the Fitbit environment variables on the backend first, then change the Fitbit app Redirect URL to the backend callback URL.'}
+              </p>
+              <code className="block text-xs rounded-lg bg-secondary/50 px-3 py-2 break-all">
+                {AI_BACKEND_URL}/integrations/fitbit/callback
+              </code>
+            </div>
+          ) : fitbitStatus.connected ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الخطوات اليوم' : 'Steps today'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.steps ?? 0}</p>
                 </div>
-                <div className={`text-xs px-3 py-1 rounded-full ${fitbitStatus?.connected ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'}`}>
-                  {fitbitStatus?.connected
-                    ? (language === 'ar' ? 'متصل' : 'Connected')
-                    : (language === 'ar' ? 'غير متصل' : 'Not connected')}
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'السعرات المحروقة' : 'Calories out'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_out ?? 0}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'المسافة' : 'Distance'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.distance_km ?? 0} km</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبض الراحة' : 'Resting HR'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? '--'}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الوزن المتزامن' : 'Synced weight'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg ?? '--'}{(fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg) != null ? ' kg' : ''}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الماء اليوم' : 'Water today'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.water_ml ?? 0} ml</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'سعرات الطعام' : 'Calories in'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_in ?? 0}</p>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الأطعمة المسجلة' : 'Foods logged'}</p>
+                  <p className="text-xl font-semibold">{fitbitStatus.today_summary?.foods_logged ?? 0}</p>
                 </div>
               </div>
 
-              {fitbitLoading ? (
-                <p className="text-sm text-muted-foreground">
-                  {language === 'ar' ? 'جاري تحميل حالة Fitbit...' : 'Loading Fitbit status...'}
-                </p>
-              ) : !fitbitStatus?.configured ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    {language === 'ar'
-                      ? 'يجب إعداد متغيرات Fitbit في الخادم أولاً، ثم تغيير Redirect URL في لوحة Fitbit إلى رابط callback الخاص بالباك إند.'
-                      : 'Set the Fitbit environment variables on the backend first, then change the Fitbit app Redirect URL to the backend callback URL.'}
+              <HeartRateTimelinePanel userId={currentUserId} enabled={fitbitStatus.connected} />
+
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {fitbitStatus.profile?.display_name && (
+                  <p>
+                    {language === 'ar' ? 'اسم حساب Fitbit:' : 'Fitbit account:'} <span className="text-foreground font-medium">{fitbitStatus.profile.display_name}</span>
                   </p>
-                  <code className="block text-xs rounded-lg bg-secondary/50 px-3 py-2 break-all">
-                    {AI_BACKEND_URL}/integrations/fitbit/callback
-                  </code>
-                </div>
-              ) : fitbitStatus.connected ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الخطوات اليوم' : 'Steps today'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.steps ?? 0}</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'السعرات المحروقة' : 'Calories out'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_out ?? 0}</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'المسافة' : 'Distance'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.distance_km ?? 0} km</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'نبض الراحة' : 'Resting HR'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.resting_heart_rate ?? '--'}</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الوزن المتزامن' : 'Synced weight'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg ?? '--'}{(fitbitStatus.today_summary?.latest_weight_kg ?? fitbitStatus.profile?.weight_kg) != null ? ' kg' : ''}</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الماء اليوم' : 'Water today'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.water_ml ?? 0} ml</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'سعرات الطعام' : 'Calories in'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.calories_in ?? 0}</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <p className="text-sm text-muted-foreground mb-1">{language === 'ar' ? 'الأطعمة المسجلة' : 'Foods logged'}</p>
-                      <p className="text-xl font-semibold">{fitbitStatus.today_summary?.foods_logged ?? 0}</p>
-                    </div>
-                  </div>
-
-                  <HeartRateTimelinePanel userId={currentUserId} enabled={fitbitStatus.connected} />
-
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    {fitbitStatus.profile?.display_name && (
-                      <p>
-                        {language === 'ar' ? 'اسم حساب Fitbit:' : 'Fitbit account:'} <span className="text-foreground font-medium">{fitbitStatus.profile.display_name}</span>
-                      </p>
-                    )}
-                    {fitbitStatus.last_sync_at && (
-                      <p>
-                        {language === 'ar' ? 'آخر مزامنة:' : 'Last synced:'} <span className="text-foreground font-medium">{new Date(fitbitStatus.last_sync_at).toLocaleString()}</span>
-                      </p>
-                    )}
-                    {fitbitStatus.profile?.member_since && (
-                      <p>
-                        {language === 'ar' ? 'عضو منذ:' : 'Member since:'} <span className="text-foreground font-medium">{fitbitStatus.profile.member_since}</span>
-                      </p>
-                    )}
-                    {Array.isArray(fitbitStatus.today_summary?.food_names) && fitbitStatus.today_summary!.food_names!.length > 0 && (
-                      <p>
-                        {language === 'ar' ? 'طعام اليوم:' : 'Today\'s foods:'} <span className="text-foreground font-medium">{fitbitStatus.today_summary!.food_names!.join(', ')}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <Button variant="hero" onClick={handleFitbitSync} disabled={fitbitBusyAction !== null}>
-                      {fitbitBusyAction === 'sync'
-                        ? (language === 'ar' ? 'جاري التحديث...' : 'Syncing...')
-                        : (language === 'ar' ? 'تحديث البيانات' : 'Sync Data')}
-                    </Button>
-                    <Button variant="outline" onClick={handleFitbitDisconnect} disabled={fitbitBusyAction !== null}>
-                      {fitbitBusyAction === 'disconnect'
-                        ? (language === 'ar' ? 'جاري الفصل...' : 'Disconnecting...')
-                        : (language === 'ar' ? 'فصل Fitbit' : 'Disconnect Fitbit')}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    {language === 'ar'
-                      ? 'بعد الربط، سيستطيع التطبيق سحب النشاط، الوزن، الطعام، والماء من Fitbit مع كل مزامنة.'
-                      : 'After connecting, the app will be able to pull activity, weight, food, and water data from Fitbit on every sync.'}
+                )}
+                {fitbitStatus.last_sync_at && (
+                  <p>
+                    {language === 'ar' ? 'آخر مزامنة:' : 'Last synced:'} <span className="text-foreground font-medium">{new Date(fitbitStatus.last_sync_at).toLocaleString()}</span>
                   </p>
-                  <Button variant="hero" onClick={handleFitbitConnect} disabled={fitbitBusyAction !== null}>
-                    {fitbitBusyAction === 'connect'
-                      ? (language === 'ar' ? 'جاري التحويل...' : 'Redirecting...')
-                      : (language === 'ar' ? 'ربط Fitbit' : 'Connect Fitbit')}
-                  </Button>
+                )}
+                {fitbitStatus.profile?.member_since && (
+                  <p>
+                    {language === 'ar' ? 'عضو منذ:' : 'Member since:'} <span className="text-foreground font-medium">{fitbitStatus.profile.member_since}</span>
+                  </p>
+                )}
+                {Array.isArray(fitbitStatus.today_summary?.food_names) && fitbitStatus.today_summary!.food_names!.length > 0 && (
+                  <p>
+                    {language === 'ar' ? 'طعام اليوم:' : 'Today\'s foods:'} <span className="text-foreground font-medium">{fitbitStatus.today_summary!.food_names!.join(', ')}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button variant="hero" onClick={handleFitbitSync} disabled={fitbitBusyAction !== null}>
+                  {fitbitBusyAction === 'sync'
+                    ? (language === 'ar' ? 'جاري التحديث...' : 'Syncing...')
+                    : (language === 'ar' ? 'تحديث البيانات' : 'Sync Data')}
+                </Button>
+                <Button variant="outline" onClick={handleFitbitDisconnect} disabled={fitbitBusyAction !== null}>
+                  {fitbitBusyAction === 'disconnect'
+                    ? (language === 'ar' ? 'جاري الفصل...' : 'Disconnecting...')
+                    : (language === 'ar' ? 'فصل Fitbit' : 'Disconnect Fitbit')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {language === 'ar'
+                  ? 'بعد الربط، سيستطيع التطبيق سحب النشاط، الوزن، الطعام، والماء من Fitbit مع كل مزامنة.'
+                  : 'After connecting, the app will be able to pull activity, weight, food, and water data from Fitbit on every sync.'}
+              </p>
+              <Button variant="hero" onClick={handleFitbitConnect} disabled={fitbitBusyAction !== null}>
+                {fitbitBusyAction === 'connect'
+                  ? (language === 'ar' ? 'جاري التحويل...' : 'Redirecting...')
+                  : (language === 'ar' ? 'ربط Fitbit' : 'Connect Fitbit')}
+              </Button>
+            </div>
+          )}
+        </motion.div>
+
+        {(profile.chronicConditions || profile.allergies || profile.dietaryPreferences) && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            className="glass-card rounded-lg border border-border/70 p-5 lg:col-start-1"
+          >
+            <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'معلومات صحية' : 'Health Information'}</h2>
+            <div className="space-y-4">
+              {profile.chronicConditions && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {language === 'ar' ? 'الأمراض المزمنة' : 'Chronic Conditions'}
+                  </p>
+                  <p className="text-base text-foreground">{profile.chronicConditions}</p>
                 </div>
               )}
-            </motion.div>
-          </div>
-        </div>
+              {profile.allergies && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {language === 'ar' ? 'الحساسيات' : 'Allergies'}
+                  </p>
+                  <p className="text-base text-foreground">{profile.allergies}</p>
+                </div>
+              )}
+              {profile.dietaryPreferences && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {language === 'ar' ? 'التفضيلات الغذائية' : 'Dietary Preferences'}
+                  </p>
+                  <p className="text-base text-foreground">{profile.dietaryPreferences}</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-3">
+        {(profile.fitnessLevel || profile.trainingDaysPerWeek || profile.equipment || profile.injuries || profile.activityLevel) && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+            className="glass-card rounded-lg border border-border/70 p-5 lg:col-start-1"
+          >
+            <h2 className="text-lg font-semibold mb-4">{language === 'ar' ? 'تفاصيل التدريب' : 'Training Details'}</h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {language === 'ar' ? 'المستوى' : 'Level'}
+                </p>
+                <p className="text-base text-foreground">{t(`onboarding.${profile.fitnessLevel}`)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {language === 'ar' ? 'أيام التمرين بالأسبوع' : 'Training Days / Week'}
+                </p>
+                <p className="text-base text-foreground">{profile.trainingDaysPerWeek}</p>
+              </div>
+              {profile.activityLevel && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {language === 'ar' ? 'مستوى النشاط' : 'Activity Level'}
+                  </p>
+                  <p className="text-base text-foreground">{t(`onboarding.activity.${profile.activityLevel}`)}</p>
+                </div>
+              )}
+              {profile.equipment && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {language === 'ar' ? 'المعدات' : 'Equipment'}
+                  </p>
+                  <p className="text-base text-foreground">{profile.equipment}</p>
+                </div>
+              )}
+              {profile.injuries && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {language === 'ar' ? 'إصابات' : 'Injuries'}
+                  </p>
+                  <p className="text-base text-foreground">{profile.injuries}</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-3 lg:col-span-2">
           <Button variant="outline" className="w-full" onClick={() => setIsEditing(!isEditing)}>
             <Edit className="w-4 h-4 mr-2" />
             {isEditing ? (language === 'ar' ? 'إلغاء' : 'Cancel') : (language === 'ar' ? 'تعديل البيانات' : 'Edit Data')}

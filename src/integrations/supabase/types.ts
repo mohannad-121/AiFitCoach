@@ -73,6 +73,42 @@ export type Database = {
           },
         ]
       }
+      profile_pictures: {
+        Row: {
+          created_at: string
+          id: string
+          mime_type: string
+          original_filename: string | null
+          public_url: string
+          size_bytes: number | null
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mime_type?: string
+          original_filename?: string | null
+          public_url: string
+          size_bytes?: number | null
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mime_type?: string
+          original_filename?: string | null
+          public_url?: string
+          size_bytes?: number | null
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number

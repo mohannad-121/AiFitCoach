@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { WorkoutEvidenceReportSection } from '@/pages/Reports';
 import { useToast } from '@/hooks/use-toast';
 import { AI_BACKEND_URL } from '@/lib/backendUrl';
+import { useAuth } from '@/hooks/useAuth';
 const ADMIN_SESSION_KEY = 'fitcoach_admin_session';
 
 type AdminSession = {
@@ -18,6 +19,8 @@ type AdminSession = {
 type AdminUserSummary = {
   user_id: string;
   name: string;
+  username?: string;
+  is_named?: boolean;
   goal?: string;
   fitness_level?: string;
   location?: string;
@@ -42,6 +45,8 @@ type AdminUserSummary = {
 
 type AdminUserDetail = {
   user_id: string;
+  username?: string;
+  is_named?: boolean;
   user?: Record<string, unknown>;
   context?: {
     tracking_summary?: {
@@ -119,9 +124,24 @@ const compactText = (value: string | undefined, fallback: string) => {
   return clean || fallback;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const getUsername = (value?: { name?: string; username?: string; is_named?: boolean } | null) => {
+  const candidate = compactText(value?.username || value?.name, '');
+  if (!candidate || UUID_PATTERN.test(candidate) || value?.is_named === false) {
+    return '';
+  }
+  return candidate;
+};
+
+const getUserDisplayName = (value?: { name?: string; username?: string; is_named?: boolean } | null) => {
+  return getUsername(value) || 'Unnamed user';
+};
+
 export function AdminPage() {
   const { language } = useLanguage();
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
   const [session, setSession] = useState<AdminSession | null>(null);
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -178,7 +198,7 @@ export function AdminPage() {
       }
       const nextUsers = Array.isArray(payload?.users) ? (payload.users as AdminUserSummary[]) : [];
       setUsers(nextUsers);
-      setSelectedUserId((current) => current || nextUsers[0]?.user_id || null);
+      setSelectedUserId((current) => current || nextUsers.find((item) => getUsername(item))?.user_id || nextUsers[0]?.user_id || null);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -288,6 +308,16 @@ export function AdminPage() {
 
   const submitNote = async () => {
     if (!session || !selectedUserId) return;
+    if (!getUsername({ name: String(detail?.user?.name || ''), username: detail?.username, is_named: detail?.is_named })) {
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'لا يمكن إرسال الملاحظة' : 'Cannot send note',
+        description: language === 'ar'
+          ? 'هذا الملف لا يحتوي على اسم مستخدم. اختر مستخدمًا باسم واضح أولاً.'
+          : 'This profile has no username. Pick a named user first.',
+      });
+      return;
+    }
     setSavingNote(true);
     try {
       const response = await fetch(`${AI_BACKEND_URL}/admin/users/${encodeURIComponent(selectedUserId)}/notes`, {
@@ -374,7 +404,7 @@ export function AdminPage() {
       return users;
     }
 
-    return users.filter((user) => compactText(user.name, 'Unnamed user').toLowerCase().includes(normalizedSearch));
+    return users.filter((user) => getUsername(user).toLowerCase().includes(normalizedSearch));
   }, [searchTerm, users]);
   const detailTabs = [
     {
@@ -499,6 +529,9 @@ export function AdminPage() {
                 {filteredUsers.map((user) => {
                   const isActive = user.user_id === selectedUserId;
                   const weeklyStats = user.tracking_summary?.weekly_stats;
+                  const username = getUserDisplayName(user);
+                  const isUnnamed = !getUsername(user);
+                  const isCurrentWebsiteUser = Boolean(authUser?.id && user.user_id === authUser.id);
                   return (
                     <button
                       key={user.user_id}
@@ -508,8 +541,20 @@ export function AdminPage() {
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div>
-                          <div className="font-semibold text-foreground">{compactText(user.name, 'Unnamed user')}</div>
-                          <div className="text-xs text-muted-foreground">{language === 'ar' ? 'اسم المستخدم' : 'Username'}</div>
+                          <div className="flex flex-wrap items-center gap-2 font-semibold text-foreground">
+                            <span>{username}</span>
+                            {isCurrentWebsiteUser && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-500">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                {language === 'ar' ? 'نشط' : 'Active'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {isUnnamed
+                              ? (language === 'ar' ? 'يحتاج اسم مستخدم' : 'Needs username')
+                              : (language === 'ar' ? 'اسم المستخدم' : 'Username')}
+                          </div>
                         </div>
                         <span className="text-xs rounded-full bg-background/80 px-2 py-1 text-primary">{Math.round((user.tracking_summary?.adherence_score || 0) * 100)}%</span>
                       </div>
@@ -584,7 +629,9 @@ export function AdminPage() {
                   <div className="glass-card rounded-3xl border border-border/60 p-6">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between mb-6">
                       <div>
-                        <h2 className="mb-1 text-2xl font-semibold">{compactText(String(detail.user?.name || ''), 'Unnamed user')}</h2>
+                        <h2 className="mb-1 text-2xl font-semibold">
+                          {getUserDisplayName({ name: String(detail.user?.name || ''), username: detail.username, is_named: detail.is_named })}
+                        </h2>
                         <p className="text-sm text-muted-foreground">{language === 'ar' ? 'ملف المستخدم المختار' : 'Selected user profile'}</p>
                       </div>
                       <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-3 lg:min-w-[520px]">
@@ -791,7 +838,22 @@ export function AdminPage() {
                             className="w-full rounded-xl border border-border/60 bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40"
                             placeholder={language === 'ar' ? 'اكتب ملاحظة على التمرين، الغذاء، أو الالتزام...' : 'Write a note about workouts, food, or adherence...'}
                           />
-                          <Button onClick={submitNote} disabled={savingNote || !noteForm.note_text.trim()} className="w-full">
+                          {!getUsername({ name: String(detail.user?.name || ''), username: detail.username, is_named: detail.is_named }) && (
+                            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                              {language === 'ar'
+                                ? 'هذا الملف لا يحتوي على اسم مستخدم، لذلك لا يمكن إرسال ملاحظات إليه.'
+                                : 'This profile has no username, so notes cannot be sent to it.'}
+                            </div>
+                          )}
+                          <Button
+                            onClick={submitNote}
+                            disabled={
+                              savingNote
+                              || !noteForm.note_text.trim()
+                              || !getUsername({ name: String(detail.user?.name || ''), username: detail.username, is_named: detail.is_named })
+                            }
+                            className="w-full"
+                          >
                             {savingNote ? (language === 'ar' ? 'جار الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ الملاحظة' : 'Save note')}
                           </Button>
                         </div>

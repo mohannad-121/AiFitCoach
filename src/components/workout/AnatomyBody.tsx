@@ -1163,12 +1163,12 @@ export function AnatomyBody({ selectedMuscles, onMuscleToggle, muscleNames }: An
   const getMuscleStyle = (muscle: string) => {
     const active = isActive(muscle);
     return {
-      fill: active ? 'hsl(188, 100%, 48%)' : 'hsl(0, 65%, 55%)',
-      stroke: active ? 'hsl(188, 100%, 65%)' : 'hsl(0, 50%, 35%)',
+      fill: active ? 'hsl(318, 65%, 72%)' : 'hsl(0, 65%, 55%)',
+      stroke: active ? 'hsl(267, 86%, 72%)' : 'hsl(0, 50%, 35%)',
       strokeWidth: active ? 1.5 : 0.7,
       cursor: 'pointer' as const,
       transition: 'all 0.3s ease',
-      filter: active ? 'drop-shadow(0 0 12px hsla(188, 100%, 48%, 0.8))' : 'none',
+      filter: active ? 'drop-shadow(0 0 12px rgba(217, 108, 219, 0.78))' : 'none',
       opacity: active ? 1 : 0.95,
     };
   };
@@ -1287,15 +1287,15 @@ export function AnatomyBody({ selectedMuscles, onMuscleToggle, muscleNames }: An
                 key={`${layer.id}-${index}`}
                 d={pathD}
                 transform={`translate(${translateX} ${translateY}) scale(${scaleX} ${scaleY})`}
-                fill={active ? 'hsl(188, 100%, 48%)' : 'hsl(0, 65%, 55%)'}
-                stroke={active ? 'hsl(188, 100%, 65%)' : 'hsl(0, 50%, 35%)'}
+                fill={active ? 'hsl(318, 65%, 72%)' : 'hsl(0, 65%, 55%)'}
+                stroke={active ? 'hsl(267, 86%, 72%)' : 'hsl(0, 50%, 35%)'}
                 strokeWidth={(active ? 1.4 : 0.8) / strokeScale}
                 vectorEffect="non-scaling-stroke"
                 opacity={active ? 1 : 0.92}
                 style={{
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  filter: active ? 'drop-shadow(0 0 10px hsla(188, 100%, 48%, 0.8))' : 'none',
+                  filter: active ? 'drop-shadow(0 0 10px rgba(217, 108, 219, 0.78))' : 'none',
                 }}
                 onClick={() => onMuscleToggle(layer.muscleId)}
                 aria-label={getMuscleLabel(layer.muscleId)}
@@ -1829,4 +1829,3 @@ const renderMaleBackAdvanced = () => (
     </div>
   );
 }
-

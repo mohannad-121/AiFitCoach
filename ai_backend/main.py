@@ -356,6 +356,34 @@ class VoiceChatResponse(BaseModel):
         return repair_mojibake_deep(value)
 
 
+URGENT_HEART_RATE_PATTERN = re.compile(r"\b(heart|hr|pulse|bpm|tachycardia|قلب|نبض|دقات)\b", re.IGNORECASE)
+HIGH_HEART_RATE_PATTERN = re.compile(r"\b(1[6-9]\d|2\d\d)\b")
+
+
+def _urgent_heart_rate_reply(message: str, language: str, conversation_id: str) -> Optional[ChatResponse]:
+    if not URGENT_HEART_RATE_PATTERN.search(message or "") or not HIGH_HEART_RATE_PATTERN.search(message or ""):
+        return None
+
+    if language == "ar":
+        reply = (
+            "معدل نبض قريب من 180 أثناء التمرين يحتاج حذر، خصوصاً إذا كان غير معتاد أو معه ألم صدر، ضيق نفس، دوخة، "
+            "إغماء، غثيان، أو خفقان قوي.\n\n"
+            "أوقفي التمرين الآن، اجلسي أو استلقي، واشربي ماء بهدوء. إذا بقي النبض مرتفعاً بعد 5-10 دقائق راحة، "
+            "أو ظهرت أي أعراض من المذكورة، تواصلي مع الطوارئ أو طبيب فوراً.\n\n"
+            "لا تكملي الحصة اليوم قبل تقييم طبي، خصوصاً إذا تكرر هذا الرقم."
+        )
+    else:
+        reply = (
+            "A heart rate around 180 bpm during Pilates needs caution, especially if it is unusual for you or comes "
+            "with chest pain, shortness of breath, dizziness, fainting, nausea, or strong palpitations.\n\n"
+            "Stop exercising now, sit or lie down, and sip water. If your heart rate stays very high after 5-10 minutes "
+            "of rest, or you have any of those symptoms, contact emergency services or a clinician right away.\n\n"
+            "Do not continue today's class until you are medically cleared, especially if this has happened more than once."
+        )
+
+    return ChatResponse(reply=reply, conversation_id=conversation_id, language=language, action="urgent_health_guidance")
+
+
 class TextToSpeechRequest(BaseModel):
     text: str
     language: str = "en"
@@ -1071,8 +1099,32 @@ PERFORMANCE_ANALYSIS_KEYWORDS = {
     "شلون كان ادائي",
     "شلون كان أدائي",
 }
-APPROVE_KEYWORDS = {"approve", "yes", "ÙˆØ§ÙÙ‚", "Ø§Ø¹ØªÙ…Ø¯", "Ù…ÙˆØ§ÙÙ‚"}
-REJECT_KEYWORDS = {"reject", "no", "Ø±ÙØ¶", "Ù„Ø§", "ØºÙŠØ± Ø§Ù„Ø®Ø·Ø©", "Ø¨Ø¯Ù„ Ø§Ù„Ø®Ø·Ø©"}
+APPROVE_KEYWORDS = {"approve", "yes", "وافق", "اعتمد", "موافق", "ÙˆØ§ÙÙ‚", "Ø§Ø¹ØªÙ…Ø¯", "Ù…ÙˆØ§ÙÙ‚"}
+REJECT_KEYWORDS = {
+    "reject",
+    "no",
+    "رفض",
+    "ارفض",
+    "لا",
+    "الغاء",
+    "إلغاء",
+    "إلغي",
+    "الغي",
+    "ألغ",
+    "ألغِ",
+    "الغ",
+    "الغِ",
+    "كنسل",
+    "غير الخطة",
+    "بدل الخطة",
+    "ما بدي",
+    "مش بدي",
+    "Ù…Ø´",
+    "Ø±ÙØ¶",
+    "Ù„Ø§",
+    "ØºÙŠØ± Ø§Ù„Ø®Ø·Ø©",
+    "Ø¨Ø¯Ù„ Ø§Ù„Ø®Ø·Ø©",
+}
 JORDANIAN_HINTS = {"Ø´Ùˆ", "Ø¨Ø¯Ùƒ", "Ù‡Ù„Ø§", "Ù„Ø³Ø§", "Ù…Ø´", "ÙƒØªÙŠØ±", "Ù…Ù†ÙŠØ­", "ØªÙ…Ø§Ù…"}
 
 
@@ -1138,8 +1190,8 @@ PLAN_OPTION_RECOMMEND_KEYWORDS = {
     "اي خيار انسب",
     "أي خيار أنسب",
 }
-APPROVE_KEYWORDS = APPROVE_KEYWORDS | {"accept", "okay", "ok", "Ù…Ø§Ø´ÙŠ"}
-REJECT_KEYWORDS = REJECT_KEYWORDS | {"decline", "cancel"}
+APPROVE_KEYWORDS = APPROVE_KEYWORDS | {"accept", "okay", "ok", "ماشي", "تمام", "Ù…Ø§Ø´ÙŠ"}
+REJECT_KEYWORDS = REJECT_KEYWORDS | {"decline", "cancel", "stop", "cancel it", "delete it", "remove it"}
 WORKOUT_PLAN_KEYWORDS = WORKOUT_PLAN_KEYWORDS | {"workout", "training", "routine", "\u062a\u0645\u0627\u0631\u064a\u0646", "\u0628\u0631\u0646\u0627\u0645\u062c"}
 NUTRITION_PLAN_KEYWORDS = NUTRITION_PLAN_KEYWORDS | {"nutrition", "diet", "meal", "\u062a\u063a\u0630\u064a\u0629", "\u0648\u062c\u0628\u0627\u062a"}
 
@@ -1513,6 +1565,24 @@ MOTIVATION_LINES = {
 
 def _normalize_user_id(user_id: Optional[str]) -> str:
     return (user_id or "anonymous").strip() or "anonymous"
+
+
+def _looks_like_uuid(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    try:
+        uuid.UUID(text)
+        return True
+    except Exception:
+        return False
+
+
+def _profile_username(profile_row: dict[str, Any], user_id: str) -> str:
+    name = str(profile_row.get("name") or "").strip()
+    if name and not _looks_like_uuid(name):
+        return name
+    return ""
 
 
 def _table_ready(table: str) -> bool:
@@ -8721,56 +8791,55 @@ def _activity_progress_analysis_reply(language: str, tracking_summary: dict[str,
         elif completion_delta <= 0:
             recommendations_ar.append("الأداء ثابت مقارنة بالأسبوع السابق. استمر على الخطة لكن نظّم الأيام السبعة القادمة بشكل أوضح.")
         else:
-            recommendations_ar.append("أداؤك في تحسن. حافظ على نفس الهيكلة ولا ترفع الحمل إلا إذا كان التعافي جيدًا.")
+            recommendations_ar.append("اتجاه النشاط جيد. حافظ على نفس الإيقاع ولا ترفع الحمل إلا إذا كان التعافي جيدًا.")
         if logging_consistency_percent < 50:
-            recommendations_ar.append("سجّل على الأقل 4 أيام هذا الأسبوع حتى يظل تحليل التقدم موثوقًا.")
+            recommendations_ar.append("سجّل 4 أيام على الأقل هذا الأسبوع حتى يبقى تحليل التقدم دقيقًا.")
         if latest_nutrition_note:
-            recommendations_ar.append(f"إشارة التغذية: {latest_nutrition_note}")
+            recommendations_ar.append(f"إشارة التغذية الأخيرة: {latest_nutrition_note}")
         elif latest_workout_note:
-            recommendations_ar.append(f"إشارة التمرين: {latest_workout_note}")
+            recommendations_ar.append(f"إشارة التمرين الأخيرة: {latest_workout_note}")
         parts_ar = [
             f"مراجعة التقدم: {trend_label_ar}.",
-            f"آخر 7 أيام: أنجزت {recent_completed} مهام مقابل {prior_completed} في الأيام السبعة السابقة ({completion_delta:+d}).",
+            f"آخر 7 أيام: {recent_completed} مهام مكتملة مقابل {prior_completed} في السبعة السابقة ({completion_delta:+d}).",
             f"التزام التمرين: {workout_adherence_percent}%.",
             f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
-            f"استمرارية التمرين: {workout_streak} أيام. واستمرارية التسجيل: {logging_streak} أيام.",
+            f"سلسلة التمرين: {workout_streak} أيام. سلسلة التسجيل: {logging_streak} أيام.",
         ]
         if latest_workout_note:
             parts_ar.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
         if latest_mood:
-            parts_ar.append(f"آخر ملاحظة طاقة/مزاج: {latest_mood}")
+            parts_ar.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
         parts_ar.append("التوصيات:")
         parts_ar.extend(f"{index}. {text}" for index, text in enumerate(recommendations_ar[:3], start=1))
         return "\n".join(parts_ar)
 
-    if language == "ar_jo":
-        recommendations_jo = []
-        if workout_adherence_percent < 60:
-            recommendations_jo.append("العائق الرئيسي هسه هو الالتزام. ثبّت يومين تدريب واضحين قبل ما تزود الحجم التدريبي.")
-        elif completion_delta <= 0:
-            recommendations_jo.append("أداءك ثابت مقارنة بالأسبوع اللي فات. كمل على الخطة لكن رتّب الأيام السبعة الجايين بشكل أوضح.")
-        else:
-            recommendations_jo.append("اتجاهك إيجابي. حافظ على نفس الهيكلة وما تزود الحمل إلا إذا كان التعافي ممتاز.")
-        if logging_consistency_percent < 50:
-            recommendations_jo.append("سجّل على الأقل 4 أيام هالأسبوع عشان يضل التحليل دقيق.")
-        if latest_nutrition_note:
-            recommendations_jo.append(f"آخر إشارة تغذية: {latest_nutrition_note}")
-        elif latest_workout_note:
-            recommendations_jo.append(f"آخر إشارة تمرين: {latest_workout_note}")
-        parts_jo = [
-            f"مراجعة التقدم: {trend_label_ar}.",
-            f"آخر 7 أيام: أنجزت {recent_completed} مهام مقابل {prior_completed} بالأسبوع اللي قبله ({completion_delta:+d}).",
-            f"التزام التمرين: {workout_adherence_percent}%.",
-            f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
-            f"استمرارية التمرين: {workout_streak} أيام. واستمرارية التسجيل: {logging_streak} أيام.",
-        ]
-        if latest_workout_note:
-            parts_jo.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
-        if latest_mood:
-            parts_jo.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
-        parts_jo.append("التوصيات:")
-        parts_jo.extend(f"{index}. {text}" for index, text in enumerate(recommendations_jo[:3], start=1))
-        return "\n".join(parts_jo)
+    recommendations_jo = []
+    if workout_adherence_percent < 60:
+        recommendations_jo.append("المشكلة الأساسية هسا بالالتزام. ثبّت يومين تمرين ثابتين أول إشي قبل ما تزود الحجم.")
+    elif completion_delta <= 0:
+        recommendations_jo.append("أداؤك ثابت عن الأسبوع اللي قبله. كمّل على الخطة بس رتّب الأسبوع الجاي بشكل أوضح.")
+    else:
+        recommendations_jo.append("اتجاهك منيح. خليك على نفس النسق وزيد الحمل فقط إذا التعافي تمام.")
+    if logging_consistency_percent < 50:
+        recommendations_jo.append("سجل على الأقل 4 أيام هالأسبوع عشان يضل التحليل دقيق.")
+    if latest_nutrition_note:
+        recommendations_jo.append(f"آخر إشارة تغذية: {latest_nutrition_note}")
+    elif latest_workout_note:
+        recommendations_jo.append(f"آخر إشارة تمرين: {latest_workout_note}")
+    parts_jo = [
+        f"مراجعة التقدم: {trend_label_ar}.",
+        f"آخر 7 أيام: خلصت {recent_completed} مهام مقابل {prior_completed} بالأسبوع اللي قبله ({completion_delta:+d}).",
+        f"التزام التمرين: {workout_adherence_percent}%.",
+        f"الالتزام بالتسجيل: {logging_consistency_percent}%.",
+        f"ستريك التمرين: {workout_streak} أيام. ستريك التسجيل: {logging_streak} أيام.",
+    ]
+    if latest_workout_note:
+        parts_jo.append(f"آخر ملاحظة تمرين: {latest_workout_note}")
+    if latest_mood:
+        parts_jo.append(f"آخر ملاحظة مزاج/طاقة: {latest_mood}")
+    parts_jo.append("التوصيات:")
+    parts_jo.extend(f"{index}. {text}" for index, text in enumerate(recommendations_jo[:3], start=1))
+    return "\n".join(parts_jo)
 
 
 def _performance_analysis_reply(
@@ -9561,10 +9630,45 @@ def debug_rag_query(req: RagDebugQueryRequest) -> dict[str, Any]:
     }
 
 
+def _json_query_param(value: Optional[str], fallback: Any) -> Any:
+    if not value:
+        return fallback
+    try:
+        return json.loads(value)
+    except Exception:
+        return fallback
+
+
+@app.get("/chat-lite", response_model=ChatResponse)
+async def chat_lite(
+    message: str = Query(...),
+    user_id: Optional[str] = Query(None),
+    conversation_id: Optional[str] = Query(None),
+    language: Optional[str] = Query("en"),
+    user_profile: Optional[str] = Query(None),
+    recent_messages: Optional[str] = Query(None),
+) -> ChatResponse:
+    return await chat(
+        ChatRequest(
+            message=message,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            language=language,
+            user_profile=_json_query_param(user_profile, None),
+            recent_messages=_json_query_param(recent_messages, []),
+        )
+    )
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     user_id = _normalize_user_id(req.user_id)
     conversation_id = _normalize_conversation_id(req.conversation_id, user_id)
+    requested_language = _detect_language(req.language or "en", req.message, req.user_profile if isinstance(req.user_profile, dict) else {})
+    urgent_reply = _urgent_heart_rate_reply(req.message, requested_language, conversation_id)
+    if urgent_reply is not None:
+        return urgent_reply
+
     state = _get_user_state(user_id)
     database_context = _load_database_context(user_id, conversation_id)
     database_profile = database_context.get("profile") if isinstance(database_context.get("profile"), dict) else {}
@@ -9845,6 +9949,25 @@ async def chat(req: ChatRequest) -> ChatResponse:
         pending_total_pages = int(pending_options_payload.get("total_pages", 1) or 1)
         pending_total_options = int(pending_options_payload.get("total_options", len(pending_all_options)) or len(pending_all_options))
         selected_idx = _extract_plan_choice_index(user_input, len(pending_options))
+
+        if _contains_any(routing_input, REJECT_KEYWORDS):
+            state["pending_plan_options"] = None
+            state["pending_plan_type"] = None
+            state["last_pending_plan_id"] = None
+            reply = _lang_reply(
+                language,
+                "No problem. I canceled these plan options.",
+                "لا مشكلة. ألغيت خيارات الخطة.",
+                "تمام، لغيت خيارات الخطة.",
+            )
+            memory.add_assistant_message(reply)
+            return ChatResponse(
+                reply=reply,
+                conversation_id=conversation_id,
+                language=language,
+                action="plan_rejected",
+                data={"plan_type": pending_options_type},
+            )
 
         if selected_idx is not None:
             selected_plan = deepcopy(pending_options[selected_idx])
@@ -11002,16 +11125,20 @@ def admin_users(
     profiles = _list_profiles(limit)
     notes_ready = _table_ready("admin_user_notes")
     users: list[dict[str, Any]] = []
-    for profile_row in profiles:
+    for index, profile_row in enumerate(profiles):
         uid = _normalize_user_id(profile_row.get("user_id"))
         if not uid or uid == "anonymous":
             continue
+        username = _profile_username(profile_row, uid)
         latest_note_rows = _list_admin_notes(uid, 1) if notes_ready else []
         latest_note = latest_note_rows[0] if latest_note_rows else None
         users.append(
             {
                 "user_id": uid,
-                "name": profile_row.get("name") or uid,
+                "name": username,
+                "username": username,
+                "is_named": bool(username),
+                "_sort_index": index,
                 "goal": profile_row.get("goal") or None,
                 "fitness_level": profile_row.get("fitness_level") or None,
                 "location": profile_row.get("location") or None,
@@ -11036,6 +11163,9 @@ def admin_users(
                 ),
             }
         )
+    users.sort(key=lambda row: (0 if row.get("is_named") else 1, int(row.get("_sort_index") or 0)))
+    for row in users:
+        row.pop("_sort_index", None)
     return {"count": len(users), "storage_ready": notes_ready, "users": users}
 
 
@@ -11048,11 +11178,20 @@ def admin_user_detail(
 ) -> dict[str, Any]:
     uid = _normalize_user_id(user_id)
     context = SUPABASE_CONTEXT.load_user_context(uid)
+    profile = context.get("profile") if isinstance(context.get("profile"), dict) else {"user_id": uid}
+    username = _profile_username(profile, uid) if isinstance(profile, dict) else ""
     notes_ready = _table_ready("admin_user_notes")
     notes = _list_admin_notes(uid, notes_limit) if notes_ready and admin["role"] != "family" else []
     return {
         "user_id": uid,
-        "user": context.get("profile") if isinstance(context.get("profile"), dict) else {"user_id": uid},
+        "username": username,
+        "is_named": bool(username),
+        "user": {
+            **profile,
+            "name": username,
+            "username": username,
+            "is_named": bool(username),
+        },
         "context": {
             "tracking_summary": context.get("tracking_summary") if isinstance(context.get("tracking_summary"), dict) else {},
         },
@@ -11074,7 +11213,12 @@ def admin_user_add_note(
 ) -> dict[str, Any]:
     if not _table_ready("admin_user_notes"):
         raise HTTPException(status_code=503, detail="admin_user_notes table is not ready")
-    saved = _save_admin_note(_normalize_user_id(user_id), request, admin)
+    uid = _normalize_user_id(user_id)
+    context = SUPABASE_CONTEXT.load_user_context(uid)
+    profile = context.get("profile") if isinstance(context.get("profile"), dict) else {}
+    if not _profile_username(profile, uid):
+        raise HTTPException(status_code=400, detail="This profile has no username. Open the user's Profile page and save a name before sending notes.")
+    saved = _save_admin_note(uid, request, admin)
     return {"ok": True, "note": _parse_note_row(saved)}
 
 

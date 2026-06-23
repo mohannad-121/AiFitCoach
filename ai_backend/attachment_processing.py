@@ -389,24 +389,19 @@ class AttachmentProcessor:
         if should_attempt_ocr:
             ocr_text = self._extract_ocr(raw_bytes, filename=filename, user_message=user_message)
         prefer_ocr_only = self._should_prefer_ocr_only(filename, width, height, user_message, ocr_text)
-        vision_available, vision_reason = self._vision_support_status()
-        if vision_reason:
-            warnings.append(vision_reason)
-        vision_summary = ""
-        if not prefer_ocr_only and vision_available:
-            vision_summary = self._analyze_image(
-                raw_bytes,
-                content_type,
-                filename,
-                language,
-                user_message,
-                ocr_text,
-            )
-            if not vision_summary:
-                warnings.append("Vision model did not return a usable description for this image.")
+        vision_summary = "" if prefer_ocr_only else self._analyze_image(
+            raw_bytes,
+            content_type,
+            filename,
+            language,
+            user_message,
+            ocr_text,
+        )
+        if not vision_summary and not prefer_ocr_only:
+            warnings.append("Vision model did not return a usable description for this image.")
         if should_attempt_ocr and not ocr_text:
             warnings.append("OCR did not extract readable text from this image.")
-        if not vision_summary and not ocr_text and not vision_reason:
+        if not vision_summary and not ocr_text:
             warnings.append(
                 "Vision analysis is unavailable for the active model, and no readable text was found in the image."
             )
@@ -425,12 +420,6 @@ class AttachmentProcessor:
             height=height,
             warnings=warnings,
         )
-
-    def _vision_support_status(self) -> tuple[bool, str]:
-        status_fn = getattr(self.llm_client, "vision_support_status", None)
-        if callable(status_fn):
-            return status_fn()
-        return True, ""
 
     def _extract_ocr(
         self,
