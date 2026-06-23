@@ -1,0 +1,370 @@
+.app-page-shell {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+  overflow-x: clip;
+  background: #090910;
+  color: hsl(var(--foreground));
+}
+
+.app-page-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(231, 138, 200, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(155, 98, 244, 0.022) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(155, 98, 244, 0.065) 0, transparent 25rem),
+    #090910;
+  background-size: 72px 72px, 72px 72px, auto, auto;
+}
+
+.app-page-shell::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  top: 64px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  background: var(--gradient-primary);
+  opacity: 0.36;
+  box-shadow: 0 0 18px rgba(217, 108, 219, 0.28);
+}
+
+.app-page-shell > div,
+.app-page-shell > main {
+  background-color: transparent;
+}
+
+.app-page-shell nav {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.09);
+  backdrop-filter: none !important;
+  transform: none !important;
+  transform-style: flat !important;
+  perspective: none !important;
+  filter: none !important;
+  contain: none !important;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.3);
+}
+
+.app-page-shell nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(8, 8, 18, 0.78);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.app-page-shell nav > div:first-child { position: relative; z-index: 1; }
+.app-page-shell nav > div:last-child {
+  position: fixed !important;
+  inset: auto 0 0 !important;
+  z-index: 1;
+}
+
+.app-page-shell nav a,
+.app-page-shell nav button {
+  transition: color 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.app-page-shell nav a:hover,
+.app-page-shell nav button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(217, 108, 219, 0.34);
+}
+
+.app-page-shell nav a:hover svg,
+.app-page-shell nav button:hover svg {
+  color: hsl(var(--primary));
+  filter: drop-shadow(0 0 6px rgba(217, 108, 219, 0.42));
+}
+
+.app-page-shell nav a.bg-primary {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: var(--gradient-primary);
+  box-shadow: 0 7px 22px rgba(217, 108, 219, 0.25);
+}
+
+.app-page-shell nav > div:first-child > div > a[href='/'] > div {
+  background: var(--gradient-primary);
+  box-shadow: 0 0 20px rgba(217, 108, 219, 0.24);
+}
+
+.app-page-shell main {
+  animation: app-surface-fade 420ms ease both;
+  perspective: 1400px;
+}
+
+.app-page-shell main h1.font-display,
+.app-page-shell main h2.font-display {
+  letter-spacing: 0;
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+}
+
+.app-page-shell main h1.font-display::after {
+  content: '';
+  display: block;
+  width: 52px;
+  height: 2px;
+  margin-top: 10px;
+  background: var(--gradient-primary);
+  box-shadow: 0 0 12px rgba(217, 108, 219, 0.32);
+}
+
+.app-page-shell .glass-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px !important;
+  background: linear-gradient(145deg, rgba(23, 23, 39, 0.82), rgba(12, 12, 24, 0.68));
+  backdrop-filter: blur(20px) saturate(125%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  transform-style: preserve-3d;
+  transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+}
+
+.app-page-shell .glass-card:hover {
+  transform: perspective(1100px) translateY(-3px) rotateX(0.35deg);
+  border-color: rgba(217, 108, 219, 0.24);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.26), 0 0 30px rgba(217, 108, 219, 0.055);
+}
+
+.app-page-shell :is(input, textarea, [role='combobox']) {
+  border-color: rgba(255, 255, 255, 0.11);
+  border-radius: 7px;
+  background-color: rgba(255, 255, 255, 0.035);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.app-page-shell :is(input, textarea, [role='combobox']):focus,
+.app-page-shell :is(input, textarea, [role='combobox']):focus-visible {
+  border-color: rgba(217, 108, 219, 0.55);
+  box-shadow: 0 0 0 3px rgba(217, 108, 219, 0.1), 0 0 22px rgba(155, 98, 244, 0.08);
+}
+
+.app-page-shell button.bg-primary,
+.app-page-shell a.bg-primary {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--gradient-primary);
+  box-shadow: 0 7px 20px rgba(217, 108, 219, 0.22);
+}
+
+.app-page-shell button.bg-primary:hover,
+.app-page-shell a.bg-primary:hover {
+  box-shadow: 0 10px 28px rgba(217, 108, 219, 0.32);
+  transform: translateY(-2px);
+}
+
+.app-page-shell :is(table, [role='table']) {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.app-page-shell thead,
+.app-page-shell [role='rowgroup']:first-child {
+  background: rgba(155, 98, 244, 0.055);
+}
+
+.app-page-shell tbody tr,
+.app-page-shell [role='row'] {
+  transition: background-color 160ms ease;
+}
+
+.app-page-shell tbody tr:hover {
+  background: rgba(217, 108, 219, 0.045);
+}
+
+.app-page-shell [class*='rounded-2xl'],
+.app-page-shell [class*='rounded-3xl'] {
+  border-radius: 8px;
+}
+
+.app-page-shell ::selection,
+.app-premium-mode ::selection {
+  color: #160d1b;
+  background: #e78ac8;
+}
+
+.app-premium-mode [data-radix-popper-content-wrapper] [role='menu'],
+.app-premium-mode [data-radix-popper-content-wrapper] [role='listbox'],
+.app-premium-mode [role='dialog'] {
+  border-color: rgba(217, 108, 219, 0.2);
+  border-radius: 8px !important;
+  background: rgba(17, 17, 31, 0.96);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48), 0 0 40px rgba(155, 98, 244, 0.07);
+}
+
+.app-premium-mode [data-radix-popper-content-wrapper] [role='option'][data-highlighted],
+.app-premium-mode [data-radix-popper-content-wrapper] [role='menuitem'][data-highlighted] {
+  background: rgba(217, 108, 219, 0.12);
+  color: hsl(var(--foreground));
+}
+
+.app-page-shell.app-route-workouts main,
+.app-page-shell.app-route-profile main,
+.app-page-shell.app-route-schedule main,
+.app-page-shell.app-route-admin main {
+  position: relative;
+}
+
+.app-page-shell.app-route-workouts main::before,
+.app-page-shell.app-route-profile main::before,
+.app-page-shell.app-route-schedule main::before,
+.app-page-shell.app-route-admin main::before {
+  content: '';
+  position: absolute;
+  top: 78px;
+  left: 50%;
+  width: min(900px, 75vw);
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(217, 108, 219, 0.3), transparent);
+  pointer-events: none;
+}
+
+.app-route-coach .chat-bubble-user {
+  background: var(--gradient-primary);
+  box-shadow: 0 10px 28px rgba(217, 108, 219, 0.16);
+}
+
+.app-route-coach .chat-bubble-ai {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(24, 24, 40, 0.82);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
+}
+
+.app-route-live-coach video,
+.app-route-live-coach canvas {
+  border-radius: 7px 7px 0 0;
+}
+
+.app-route-auth main,
+.app-route-onboarding main {
+  perspective: 1200px;
+}
+
+.app-route-auth .glass-card,
+.app-route-onboarding .glass-card {
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.34), 0 0 50px rgba(217, 108, 219, 0.08);
+}
+
+.app-route-not-found .not-found-panel {
+  width: min(620px, 100%);
+  padding: 52px;
+  text-align: center;
+  transform-style: preserve-3d;
+}
+
+.app-route-not-found .not-found-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: linear-gradient(#141424, #141424) padding-box, var(--gradient-primary) border-box;
+  color: hsl(var(--primary));
+  box-shadow: 0 0 28px rgba(217, 108, 219, 0.16);
+  transform: translateZ(24px);
+}
+
+.app-route-not-found .not-found-icon svg { width: 27px; height: 27px; }
+.app-route-not-found .not-found-panel > span { color: hsl(var(--primary)); font-size: 0.68rem; font-weight: 800; }
+.app-route-not-found .not-found-panel h1 { margin: 8px 0 0; font-family: 'Bebas Neue', sans-serif; font-size: 8rem; line-height: 0.82; letter-spacing: 0; background: var(--gradient-primary); background-clip: text; color: transparent; }
+.app-route-not-found .not-found-panel h2 { margin: 24px 0 0; font-size: 1.25rem; }
+.app-route-not-found .not-found-panel p { max-width: 440px; margin: 12px auto 0; color: hsl(var(--muted-foreground)); line-height: 1.7; }
+.app-route-not-found .not-found-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
+.app-route-not-found .not-found-actions a { min-width: 140px; }
+.app-route-not-found .not-found-actions svg { width: 16px; }
+
+@keyframes app-surface-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 767px) {
+  .app-page-shell nav > div:first-child > div > a[href='/'] > span { display: none; }
+  .app-page-shell nav > div:first-child > div > div:last-child > button:nth-child(2) { font-size: 0; }
+  .app-page-shell nav > div:first-child > div > div:last-child > button:nth-child(2) svg { margin-right: 0; }
+  .app-page-shell main h1.font-display::after { margin-inline: auto; }
+  .app-route-not-found .not-found-panel { padding: 36px 22px; }
+  .app-route-not-found .not-found-panel h1 { font-size: 6.5rem; }
+}
+
+body.app-native-mode {
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  background: #090910;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-native-mode nav > div:first-child {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.app-native-mode nav > div:last-child {
+  padding-bottom: max(0.45rem, env(safe-area-inset-bottom, 0px));
+  background: rgba(9, 9, 18, 0.96);
+  box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.34);
+}
+
+.app-native-mode .app-page-shell,
+.app-native-mode .route-home {
+  min-height: 100dvh;
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.app-native-mode .app-page-shell main {
+  min-height: calc(100dvh - 4.5rem);
+}
+
+.app-native-mode :is(button, a, input, select, [role='button'], [role='combobox']) {
+  touch-action: manipulation;
+}
+
+.app-native-mode button:not(.mobile-nav-item),
+.app-native-mode a[role='button'] {
+  min-height: 44px;
+}
+
+.app-native-mode .mobile-nav-item {
+  min-height: 54px;
+  border-radius: 6px;
+}
+
+.app-native-mode .mobile-nav-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-native-mode .mobile-app-menu {
+  padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .app-native-mode .glass-card:hover,
+  .app-native-mode nav a:hover,
+  .app-native-mode nav button:hover,
+  .app-native-mode button.bg-primary:hover,
+  .app-native-mode a.bg-primary:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-page-shell *, .app-page-shell *::before, .app-page-shell *::after,
+  .app-premium-mode *, .app-premium-mode *::before, .app-premium-mode *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -4,9 +4,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BACKEND_DIR = Path(__file__).resolve().parent
-# Load backend-local .env first, then fall back to the project root .env
-load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=False)
+# Load project defaults, then let backend-local settings win for the running API.
 load_dotenv(dotenv_path=BACKEND_DIR.parent / ".env", override=False)
+load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=True)
 
 # LLM Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -19,7 +19,7 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")
 OLLAMA_VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "")
 OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
-OLLAMA_VISION_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_VISION_TIMEOUT_SECONDS", str(min(OLLAMA_TIMEOUT_SECONDS, 90))))
+OLLAMA_VISION_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_VISION_TIMEOUT_SECONDS", "180"))
 
 # Supabase Configuration
 SUPABASE_URL = os.getenv("VITE_SUPABASE_URL", "")

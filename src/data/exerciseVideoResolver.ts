@@ -1,5 +1,7 @@
 ﻿import type { Exercise } from './exercises';
 
+import { LOCAL_VIDEO_CLIPS } from './exerciseVideoManifest';
+
 type SourceGender = 'female' | 'male';
 type SourceLocation = 'home' | 'gym';
 type SourceGoal = 'build' | 'general';
@@ -364,23 +366,19 @@ const generateNewVideoClips = (): LocalClip[] => {
   return clips;
 };
 
-const ALL_CLIPS: LocalClip[] = [
-  ...FEMALE_VIDEO_FILES.map((file) => parseClip(file, 'female')),
-  ...MALE_VIDEO_FILES.map((file) => parseClip(file, 'male')),
-  ...generateNewVideoClips(),
-];
+const ALL_CLIPS: LocalClip[] = LOCAL_VIDEO_CLIPS.map((clip) => ({ ...clip }));
 
 const MUSCLE_TO_SOURCE_MUSCLES: Record<Exercise['muscle'], string[]> = {
-  chest: ['Upper pectoralis', 'Mid_lower Pectralis'],
-  back: ['LatissimusDorsi', 'ErectorSpinae', 'TeresMajor', 'TeresMinor', 'Trapezius', 'PosteriorDeltoid', 'upper Trapezius'],
-  shoulders: ['PosteriorDeltoid', 'Trapezius', 'Anterior Deltoid', 'Lateral Deltoid', 'upper Trapezius'],
-  biceps: ['long Hand Bicep', 'Short Head Bicep'],
+  chest: ['Upper pectoralis', 'Upper Pectoralis', 'Mid_lower Pectralis', 'Mid_Lower Pectoralis'],
+  back: ['LatissimusDorsi', 'ErectorSpinae', 'TeresMajor', 'TeresMinor', 'Trapezius', 'PosteriorDeltoid', 'upper Trapezius', 'Upper Trapezius'],
+  shoulders: ['PosteriorDeltoid', 'Trapezius', 'Anterior Deltoid', 'Lateral Deltoid', 'upper Trapezius', 'Upper Trapezius'],
+  biceps: ['long Hand Bicep', 'Long Head Bicep', 'Short Head Bicep'],
   triceps: ['TricepsLongHead', 'TricepsLateralHead', 'TricepsMedialHead'],
-  abs: ['Upper Abdominals', 'Lower Abdominals', 'Mid_lower Pectralis', 'Obliques'],
+  abs: ['Upper Abdominals', 'Lower Abdominals', 'Mid_lower Pectralis', 'Mid_Lower Pectoralis', 'Obliques'],
   quads: ['Rectus Femoris', 'Outer Quadricep', 'Inner Quadricep'],
   hamstrings: ['Hamstrings', 'Inner Thigh'],
   glutes: ['GluteusMaximus', 'GluteusMedius', 'Groin'],
-  calves: ['Gastrocnemius', 'Soleus', 'Tibialis'],
+  calves: ['Gastrocnemius', 'Gastroncemius', 'Soleus', 'Tibialis'],
 };
 
 const goalToSourceGoal = (goal: Exercise['goal']): SourceGoal | null => {

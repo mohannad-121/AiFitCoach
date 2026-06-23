@@ -16,11 +16,11 @@ export function BodySelector({ selectedMuscles, onMuscleToggle, muscleNames }: B
 
   const muscleStyle = (muscle: string) => ({
     fill: isActive(muscle) ? 'url(#activeGradient)' : 'hsl(220, 15%, 50%)',
-    stroke: isActive(muscle) ? 'hsl(188, 100%, 60%)' : 'hsl(220, 15%, 35%)',
+    stroke: isActive(muscle) ? 'hsl(318, 65%, 72%)' : 'hsl(220, 15%, 35%)',
     strokeWidth: isActive(muscle) ? 1.5 : 0.8,
     cursor: 'pointer' as const,
     transition: 'all 0.3s ease',
-    filter: isActive(muscle) ? 'drop-shadow(0 0 8px hsla(188, 100%, 48%, 0.6))' : 'none',
+    filter: isActive(muscle) ? 'drop-shadow(0 0 8px rgba(217, 108, 219, 0.65))' : 'none',
     opacity: isActive(muscle) ? 1 : 0.75,
   });
 
@@ -72,8 +72,8 @@ export function BodySelector({ selectedMuscles, onMuscleToggle, muscleNames }: B
           <svg viewBox="0 0 220 480" className="w-48 h-[26rem] md:w-60 md:h-[32rem]">
             <defs>
               <linearGradient id="activeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(188, 100%, 45%)" />
-                <stop offset="100%" stopColor="hsl(200, 100%, 55%)" />
+                <stop offset="0%" stopColor="#e78ac8" />
+                <stop offset="100%" stopColor="#9b62f4" />
               </linearGradient>
               <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="hsl(220, 12%, 32%)" />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, BellRing, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
+import { Activity, BellRing, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
+import './Schedule.css';
 
 interface WorkoutExercise {
   name: string;
@@ -767,6 +768,7 @@ export function SchedulePage() {
     : (language === 'ar' ? 'بدون عناصر مجدولة' : 'No scheduled items');
   const selectedItemsTotal = (dayExercises?.length || 0) + (dayMeals?.length || 0);
   const selectedItemsRemaining = dailyProgress ? Math.max(0, dailyProgress.total - dailyProgress.completed) : 0;
+  const nextItemName = viewTab === 'workout' ? missingExercisesToday[0] : missingMealsToday[0];
   const overviewCards = [
     {
       key: 'plan',
@@ -811,6 +813,8 @@ export function SchedulePage() {
         : (language === 'ar' ? 'لا يوجد عناصر لهذا اليوم' : 'No items for this day'),
     },
   ];
+
+  void overviewCards;
 
   useEffect(() => {
     if (currentDailyLog) {
@@ -975,10 +979,10 @@ export function SchedulePage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8">
+    <div className="schedule-page min-h-screen pb-24 md:pb-8">
       <Navbar />
-      <main className="container mx-auto px-4 pt-24 max-w-6xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 space-y-5">
+      <main className="schedule-container container mx-auto px-4 pt-24 max-w-6xl">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="schedule-header mb-6 space-y-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="font-display text-4xl md:text-5xl text-foreground mb-2">
@@ -991,7 +995,7 @@ export function SchedulePage() {
               </p>
             </div>
 
-            <div className="flex bg-card/80 rounded-xl p-1 gap-1 border border-border/50 self-start lg:self-auto">
+            <div className="schedule-mode-switcher flex bg-card/80 rounded-xl p-1 gap-1 border border-border/50 self-start lg:self-auto">
             <button onClick={() => setViewTab('workout')}
               className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
                 viewTab === 'workout' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
@@ -1008,18 +1012,24 @@ export function SchedulePage() {
             </button>
           </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {overviewCards.map((card) => (
-              <div key={card.key} className="glass-card rounded-2xl p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{card.label}</p>
-                <p className="mt-2 text-base font-semibold text-foreground line-clamp-2">{card.value}</p>
-                <p className="mt-2 text-xs text-muted-foreground">{card.helper}</p>
-              </div>
-            ))}
+          <div className="schedule-focus-bar">
+            <div className="schedule-focus-plan">
+              <span>{language === 'ar' ? 'الخطة النشطة' : 'Active plan'}</span>
+              <strong>{currentPlan ? (language === 'ar' ? currentPlan.title_ar || currentPlan.title : currentPlan.title) : (language === 'ar' ? 'لا توجد خطة' : 'No active plan')}</strong>
+            </div>
+            <div className="schedule-focus-progress">
+              <span>{language === 'ar' ? 'تقدم اليوم' : "Today's progress"}</span>
+              <strong>{dailyProgress?.completed ?? 0} / {dailyProgress?.total ?? 0}</strong>
+              <Progress value={dailyProgress?.percent ?? 0} className="h-1.5" />
+            </div>
+            <div className="schedule-focus-next">
+              <span>{selectedItemsRemaining > 0 ? (language === 'ar' ? 'التالي' : 'Up next') : (language === 'ar' ? 'الحالة' : 'Status')}</span>
+              <strong>{nextItemName || (selectedItemsTotal > 0 ? (language === 'ar' ? 'اكتمل يومك' : 'Day complete') : (language === 'ar' ? 'يوم راحة' : 'Rest day'))}</strong>
+            </div>
           </div>
         </motion.div>
 
-        <section className="glass-card rounded-2xl p-5 mb-6">
+        <section className="schedule-calendar glass-card rounded-2xl p-5 mb-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-foreground">
@@ -1087,7 +1097,7 @@ export function SchedulePage() {
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
+        <div className="schedule-main-grid grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.82fr)]">
           <section>
         {currentPlan ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
@@ -1147,7 +1157,7 @@ export function SchedulePage() {
               </div>
             )}
 
-            <div className="glass-card rounded-2xl p-6">
+            <div className="schedule-plan-panel glass-card rounded-2xl p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-5">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
@@ -1175,16 +1185,16 @@ export function SchedulePage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3 mb-5">
-                <div className="rounded-2xl border border-border/40 bg-card/40 p-4">
+              <div className="schedule-day-stats grid gap-3 md:grid-cols-3 mb-5">
+                <div className="rounded-lg border border-border/40 bg-card/40 p-4">
                   <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'المكتمل اليوم' : 'Completed today'}</p>
                   <p className="mt-2 text-2xl font-bold text-foreground">{dailyProgress?.completed ?? 0}</p>
                 </div>
-                <div className="rounded-2xl border border-border/40 bg-card/40 p-4">
+                <div className="rounded-lg border border-border/40 bg-card/40 p-4">
                   <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'المتبقي اليوم' : 'Remaining today'}</p>
                   <p className="mt-2 text-2xl font-bold text-foreground">{selectedItemsRemaining}</p>
                 </div>
-                <div className="rounded-2xl border border-border/40 bg-card/40 p-4">
+                <div className="rounded-lg border border-border/40 bg-card/40 p-4">
                   <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'عناصر اليوم' : 'Scheduled today'}</p>
                   <p className="mt-2 text-2xl font-bold text-foreground">{selectedItemsTotal}</p>
                 </div>
@@ -1295,7 +1305,7 @@ export function SchedulePage() {
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="space-y-3"
+                  className="schedule-task-list space-y-3"
                 >
                   {matchingDay ? (
                     <>
@@ -1324,7 +1334,7 @@ export function SchedulePage() {
                                 toggleCompletion(matchingDay.index, exIdx, currentPlan.id);
                               }
                             }}
-                            className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-start ${
+                            className={`schedule-task-row w-full flex items-center gap-4 p-4 rounded-lg border transition-all text-start ${
                               isHighlighted
                                 ? 'border-primary bg-primary/10 shadow-[0_0_0_2px_hsl(var(--primary)/0.4)]'
                                 : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
@@ -1370,7 +1380,7 @@ export function SchedulePage() {
                                 toggleCompletion(matchingDay.index, idx, currentPlan.id);
                               }
                             }}
-                            className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-start ${
+                            className={`schedule-task-row w-full flex items-center gap-4 p-4 rounded-lg border transition-all text-start ${
                               isHighlighted
                                 ? 'border-primary bg-primary/10 shadow-[0_0_0_2px_hsl(var(--primary)/0.4)]'
                                 : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
@@ -1437,8 +1447,8 @@ export function SchedulePage() {
         )}
           </section>
 
-          <aside className="space-y-6">
-            <div className="glass-card rounded-2xl p-6">
+          <aside className="schedule-side space-y-6">
+            <div className="schedule-next-panel glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
                   {language === 'ar' ? 'ملخص اليوم' : 'Day summary'}
@@ -1446,7 +1456,19 @@ export function SchedulePage() {
                 <span className="text-xs text-muted-foreground">{selectedLogDate}</span>
               </div>
 
-              <div className="space-y-3 text-sm">
+              <div className="schedule-next-action">
+                <div className="schedule-next-icon">
+                  {viewTab === 'workout' ? <Dumbbell className="h-5 w-5" /> : <UtensilsCrossed className="h-5 w-5" />}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'خطوتك التالية' : 'Your next step'}</p>
+                  <p className="mt-1 font-semibold text-foreground">
+                    {nextItemName || (selectedItemsTotal > 0 ? (language === 'ar' ? 'كل شيء مكتمل' : 'Everything is complete') : (language === 'ar' ? 'لا يوجد شيء مجدول' : 'Nothing scheduled'))}
+                  </p>
+                </div>
+              </div>
+
+              <div className="schedule-summary-grid space-y-3 text-sm">
                 <div className="rounded-xl border border-border/40 bg-card/40 p-3">
                   <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'نوع العرض' : 'Current view'}</p>
                   <p className="font-medium text-foreground">{language === 'ar' ? (viewTab === 'workout' ? 'التمارين' : 'التغذية') : (viewTab === 'workout' ? 'Workouts' : 'Nutrition')}</p>
@@ -1466,7 +1488,7 @@ export function SchedulePage() {
               </div>
             </div>
 
-            <div className="glass-card rounded-2xl p-6">
+            <div className="schedule-log-panel glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
                   {language === 'ar' ? 'ملاحظات اليوم' : 'Daily log'}
@@ -1532,8 +1554,9 @@ export function SchedulePage() {
 
         {/* All Plans */}
         {planCollection.length > 0 && (
-          <section>
-            <h3 className="text-lg font-semibold mb-4 text-foreground">
+          <section className="schedule-library">
+            <h3 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" />
               {language === 'ar' ? 'مكتبة الخطط' : 'Plan library'}
             </h3>
             <div className="grid gap-3 md:grid-cols-2">

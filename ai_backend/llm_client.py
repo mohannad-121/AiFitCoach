@@ -356,9 +356,15 @@ class LLMClient:
         max_tokens: int | None,
     ) -> str | None:
         vision_model = str(OLLAMA_VISION_MODEL or "").strip() or OLLAMA_MODEL
-        if not self._ollama_model_supports_vision(vision_model):
+        candidates = self._ollama_vision_model_candidates(vision_model)
+        if not candidates:
             return None
-        return self._analyze_image_ollama_with_model(vision_model, image_bytes, prompt, max_tokens)
+
+        for candidate in candidates:
+            result = self._analyze_image_ollama_with_model(candidate, image_bytes, prompt, max_tokens)
+            if result:
+                return result
+        return None
 
     def _analyze_image_ollama_with_model(
         self,
@@ -390,14 +396,96 @@ class LLMClient:
                 payload,
                 timeout=OLLAMA_VISION_TIMEOUT_SECONDS,
             )
+            if response.status_code == 404:
+                return self._analyze_image_ollama_generate(vision_model, image_bytes, prompt, max_tokens)
             if response.status_code >= 400:
+                log_error(
+                    "LLM_OLLAMA_VISION_HTTP_ERROR",
+                    None,
+                    RuntimeError(f"Ollama vision HTTP {response.status_code}"),
+                    {
+                        "model": vision_model,
+                        "status": response.status_code,
+                        "body": response.text[:2000],
+                    },
+                )
                 return None
             response.raise_for_status()
             data = response.json()
             text = str(data.get("message", {}).get("content", "")).strip()
-            return text or None
+            if text:
+                return text
+
+            log_error(
+                "LLM_OLLAMA_VISION_EMPTY_RESPONSE",
+                None,
+                RuntimeError("Ollama vision chat returned an empty message."),
+                {
+                    "model": vision_model,
+                    "done_reason": data.get("done_reason"),
+                    "response_keys": sorted(data.keys()),
+                },
+            )
+            return self._analyze_image_ollama_generate(vision_model, image_bytes, prompt, max_tokens)
         except Exception as exc:
             log_error("LLM_OLLAMA_VISION_ERROR", None, exc, {"model": vision_model})
+            return None
+
+    def _analyze_image_ollama_generate(
+        self,
+        vision_model: str,
+        image_bytes: bytes,
+        prompt: str,
+        max_tokens: int | None,
+    ) -> str | None:
+        payload = {
+            "model": vision_model,
+            "prompt": prompt,
+            "images": [base64.b64encode(image_bytes).decode("utf-8")],
+            "stream": False,
+            "options": {
+                "temperature": 0.2,
+                "num_ctx": self._ollama_num_ctx(max_tokens),
+            },
+        }
+        if max_tokens is not None:
+            payload["options"]["num_predict"] = max_tokens
+        try:
+            response = self._post_ollama(
+                "/api/generate",
+                payload,
+                timeout=OLLAMA_VISION_TIMEOUT_SECONDS,
+            )
+            if response.status_code >= 400:
+                log_error(
+                    "LLM_OLLAMA_VISION_GENERATE_HTTP_ERROR",
+                    None,
+                    RuntimeError(f"Ollama vision generate HTTP {response.status_code}"),
+                    {
+                        "model": vision_model,
+                        "status": response.status_code,
+                        "body": response.text[:2000],
+                    },
+                )
+                return None
+            response.raise_for_status()
+            data = response.json()
+            text = str(data.get("response", "")).strip()
+            if text:
+                return text
+            log_error(
+                "LLM_OLLAMA_VISION_GENERATE_EMPTY_RESPONSE",
+                None,
+                RuntimeError("Ollama vision generate returned an empty response."),
+                {
+                    "model": vision_model,
+                    "done_reason": data.get("done_reason"),
+                    "response_keys": sorted(data.keys()),
+                },
+            )
+            return None
+        except Exception as exc:
+            log_error("LLM_OLLAMA_VISION_GENERATE_ERROR", None, exc, {"model": vision_model})
             return None
 
     @staticmethod
@@ -533,6 +621,64 @@ class LLMClient:
                 "qwen3vl",
                 "bakllava",
             )
+        )
+
+    def _ollama_vision_model_candidates(self, configured_model: str) -> list[str]:
+        configured = str(configured_model or "").strip()
+        raw_candidates = [
+            configured,
+            *self._ollama_installed_vision_models(),
+        ]
+
+        candidates: list[str] = []
+        seen: set[str] = set()
+        for candidate in raw_candidates:
+            normalized = str(candidate or "").strip()
+            if not normalized:
+                continue
+            key = normalized.lower()
+            if key in seen or not self._ollama_model_supports_vision(normalized):
+                continue
+            candidates.append(normalized)
+            seen.add(key)
+        return candidates
+
+    def _ollama_installed_vision_models(self) -> list[str]:
+        try:
+            response = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=3)
+            if response.status_code >= 400:
+                return []
+            payload = response.json()
+        except Exception:
+            return []
+
+        models = payload.get("models", []) if isinstance(payload, dict) else []
+        if not isinstance(models, list):
+            return []
+
+        preferred_order = (
+            "minicpm-v",
+            "qwen2.5vl",
+            "qwen3-vl",
+            "qwen3vl",
+            "llava",
+            "gemma3",
+            "bakllava",
+        )
+        names: list[str] = []
+        for item in models:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or item.get("model") or "").strip()
+            if name and self._ollama_model_supports_vision(name):
+                names.append(name)
+
+        return sorted(
+            names,
+            key=lambda name: next(
+                (index for index, tag in enumerate(preferred_order) if tag in name.lower()),
+                len(preferred_order),
+            ),
         )
 
     @staticmethod

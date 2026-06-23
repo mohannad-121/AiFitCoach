@@ -2,7 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -16,8 +18,10 @@ import { CoachPage } from "./pages/Coach";
 import { CoachNotificationsPage } from "./pages/CoachNotifications";
 import { ProfilePage } from "./pages/Profile";
 import { SchedulePage } from "./pages/Schedule";
+import { LiveCoachPage } from "./pages/LiveCoach";
 import { AdminPage } from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import "./AppSurface.css";
 
 const hasConfiguredSupabase = Boolean(
   import.meta.env.VITE_SUPABASE_URL &&
@@ -52,6 +56,42 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AppRoutes() {
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+  const routeSegment = location.pathname.split("/").filter(Boolean)[0] || "not-found";
+  const knownRoutes = new Set(["auth", "onboarding", "workouts", "coach", "coach-notifications", "profile", "schedule", "live-coach", "admin", "reports"]);
+  const routeName = isHome ? "home" : (knownRoutes.has(routeSegment) ? routeSegment : "not-found");
+
+  useEffect(() => {
+    document.body.classList.toggle("app-premium-mode", !isHome);
+    document.body.classList.toggle("app-native-mode", Capacitor.isNativePlatform());
+    return () => {
+      document.body.classList.remove("app-premium-mode");
+      document.body.classList.remove("app-native-mode");
+    };
+  }, [isHome]);
+
+  return (
+    <div className={isHome ? "route-home" : `app-page-shell app-route-${routeName}`}>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+        <Route path="/workouts" element={<ProtectedRoute><WorkoutsPage /></ProtectedRoute>} />
+        <Route path="/coach" element={<ProtectedRoute><CoachPage /></ProtectedRoute>} />
+        <Route path="/coach-notifications" element={<ProtectedRoute><CoachNotificationsPage /></ProtectedRoute>} />
+        <Route path="/reports" element={<Navigate to="/admin" replace />} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
+        <Route path="/live-coach" element={<ProtectedRoute><LiveCoachPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -62,19 +102,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <CoachNotificationsListener />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
-                <Route path="/workouts" element={<ProtectedRoute><WorkoutsPage /></ProtectedRoute>} />
-                <Route path="/coach" element={<ProtectedRoute><CoachPage /></ProtectedRoute>} />
-                <Route path="/coach-notifications" element={<ProtectedRoute><CoachNotificationsPage /></ProtectedRoute>} />
-                <Route path="/reports" element={<Navigate to="/admin" replace />} />
-                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
-                <Route path="/admin" element={<AdminPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <AppRoutes />
             </BrowserRouter>
           </TooltipProvider>
         </UserProvider>
