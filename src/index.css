@@ -258,28 +258,36 @@
 
   /* Chat bubble styles */
   .chat-bubble-user {
-    background: var(--gradient-primary);
-    border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+    background:
+      linear-gradient(135deg, rgba(236, 72, 153, 0.96), rgba(139, 92, 246, 0.92) 58%, rgba(56, 189, 248, 0.78));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(168, 85, 247, 0.18);
+    border-radius: 1.4rem 1.4rem 0.4rem 1.4rem;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
   .chat-bubble-ai {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+    background:
+      linear-gradient(180deg, rgba(19, 23, 40, 0.94), rgba(10, 12, 24, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 20px 60px rgba(0, 0, 0, 0.24);
+    border-radius: 1.4rem 1.4rem 1.4rem 0.4rem;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
 
   .chat-message-content {
     font-family: 'Poppins', 'Inter', 'Noto Sans Arabic', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
-    font-size: 1rem;
-    line-height: 1.75;
+    font-size: 1.015rem;
+    line-height: 1.82;
     letter-spacing: 0;
     overflow-wrap: anywhere;
     word-break: break-word;
     unicode-bidi: plaintext;
     text-wrap: pretty;
+    color: rgba(245, 247, 255, 0.92);
   }
 
   .chat-message-content > * + * {
@@ -288,8 +296,8 @@
 
   .chat-message-content-ar {
     font-family: 'Noto Sans Arabic', 'Poppins', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
-    font-size: 1.04rem;
-    line-height: 1.9;
+    font-size: 1.06rem;
+    line-height: 2;
     font-weight: 500;
   }
 
@@ -315,9 +323,31 @@
   .chat-message-content h2,
   .chat-message-content h3,
   .chat-message-content h4 {
-    margin-top: 1rem;
-    margin-bottom: 0.55rem;
+    margin-top: 1.15rem;
+    margin-bottom: 0.7rem;
     line-height: 1.35;
+    color: rgba(255, 255, 255, 0.98);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .chat-message-content h1 {
+    font-size: 1.35rem;
+  }
+
+  .chat-message-content h2 {
+    font-size: 1.18rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .chat-message-content h3 {
+    font-size: 1.05rem;
+  }
+
+  .chat-message-content strong {
+    color: rgba(255, 255, 255, 0.98);
+    font-weight: 700;
   }
 
   .chat-message-content p,
@@ -334,6 +364,11 @@
     padding-inline-start: 1.15rem;
   }
 
+  .chat-message-content ul li::marker,
+  .chat-message-content ol li::marker {
+    color: rgba(103, 232, 249, 0.8);
+  }
+
   .chat-message-content li + li {
     margin-top: 0.42rem;
   }
@@ -346,6 +381,11 @@
   }
 
   .chat-message-content code {
+    display: inline-block;
+    padding: 0.14rem 0.42rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     word-break: break-word;
     white-space: pre-wrap;
   }
@@ -353,6 +393,19 @@
   .chat-message-content pre {
     overflow-x: auto;
     white-space: pre-wrap;
+    padding: 0.95rem 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .chat-message-content blockquote {
+    margin-inline: 0;
+    padding: 0.9rem 1rem;
+    border-inline-start: 3px solid rgba(103, 232, 249, 0.72);
+    border-radius: 0.9rem;
+    background: rgba(103, 232, 249, 0.07);
+    color: rgba(229, 244, 255, 0.88);
   }
 
   .fitbit-summary-card {
@@ -515,6 +568,81 @@
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+@keyframes workoutGridDrift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 72px, 0);
+  }
+}
+
+@keyframes workoutOrbFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.04);
+  }
+}
+
+@keyframes workoutScan {
+  0% {
+    transform: translateY(-160px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(360px);
+    opacity: 0;
+  }
+}
+
+@keyframes workoutPulseRing {
+  0% {
+    transform: scale(0.88);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+}
+
+@keyframes workoutParticle {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translate3d(0, -18px, 0);
+    opacity: 0.78;
+  }
+}
+
+@keyframes workoutUnderline {
+  0%, 100% {
+    transform: translateX(-55%);
+  }
+  50% {
+    transform: translateX(155%);
+  }
+}
+
+.workout-noise {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.06) 0, transparent 24%),
+    radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.04) 0, transparent 18%),
+    radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.035) 0, transparent 20%);
+  background-size: 180px 180px, 210px 210px, 240px 240px;
+  mix-blend-mode: soft-light;
 }
 
 .animate-fade-in-up {

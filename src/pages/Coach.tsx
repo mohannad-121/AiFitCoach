@@ -2792,6 +2792,54 @@ export function CoachPage() {
     return d.toLocaleDateString(language === 'ar' ? 'ar' : 'en', { month: 'short', day: 'numeric' });
   };
 
+  const formatMessageTime = (timestamp: number) => {
+    try {
+      return new Date(timestamp).toLocaleTimeString(language === 'ar' ? 'ar' : 'en', {
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  const isArabic = language === 'ar';
+  const quickPrompts = isArabic
+    ? [
+        'ابنِ لي خطة تمارين',
+        'أنشئ لي خطة غذائية للتنشيف',
+        'عدّل جدولي هذا الأسبوع',
+        'ماذا أتمرن اليوم؟',
+        'حلّل تقدمي',
+        'أعطني تمارين آمنة للكتف',
+      ]
+    : [
+        'Build me a workout plan',
+        'Create a fat-loss meal plan',
+        'Adjust my schedule',
+        'What should I train today?',
+        'Analyze my progress',
+        'Give me shoulder-safe exercises',
+      ];
+  const profileContextEntries = [
+    {
+      label: isArabic ? 'الهدف' : 'Goal',
+      value: profile?.goal || (isArabic ? 'غير محدد' : 'Not set'),
+    },
+    {
+      label: isArabic ? 'مكان التدريب' : 'Training place',
+      value: profile?.location || profile?.equipment || (isArabic ? 'مرن' : 'Flexible'),
+    },
+    {
+      label: isArabic ? 'أيام التدريب' : 'Training days',
+      value: profile?.trainingDaysPerWeek ? `${profile.trainingDaysPerWeek}/week` : (isArabic ? 'حسب الخطة' : 'Plan-based'),
+    },
+    {
+      label: isArabic ? 'تنبيهات الإصابات' : 'Injury note',
+      value: profile?.injuries || (isArabic ? 'لا يوجد' : 'None listed'),
+    },
+  ];
+
   const handleVoiceSelect = (voiceName: string) => {
     setSelectedVoice(voiceName);
     localStorage.setItem(getVoiceStorageKey(language), voiceName);
@@ -2847,19 +2895,37 @@ export function CoachPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="relative min-h-screen overflow-hidden bg-[#060816] text-foreground">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(129,92,255,0.18),_transparent_32%),radial-gradient(circle_at_85%_18%,_rgba(34,211,238,0.12),_transparent_24%),radial-gradient(circle_at_50%_100%,_rgba(236,72,153,0.1),_transparent_34%)]" />
+        <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:54px_54px]" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_45%,_rgba(1,3,10,0.75)_100%)]" />
+      </div>
       <Navbar />
 
-      <div className="flex-1 flex pt-16 pb-20 md:pb-0">
-        {/* Sidebar - Desktop */}
-        <aside className="hidden md:flex w-72 flex-col border-r border-border/50 bg-card/50">
-          <div className="p-4">
-            <Button variant="hero" className="w-full" onClick={createConversation}>
+      <div className="relative z-10 flex flex-1 pt-16 pb-20 md:pb-0">
+        <aside className="hidden md:flex w-80 shrink-0 flex-col border-r border-white/10 bg-[rgba(10,12,24,0.72)] backdrop-blur-2xl">
+          <div className="border-b border-white/10 p-5">
+            <div className="mb-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
+                {isArabic ? 'جلسات المدرب' : 'Coach Sessions'}
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isArabic ? 'سجل المحادثات والخطط والردود الذكية.' : 'Your premium conversation vault for plans, insights, and follow-ups.'}
+              </p>
+            </div>
+            <Button variant="hero" className="h-12 w-full rounded-2xl shadow-[0_18px_40px_rgba(168,85,247,0.28)]" onClick={createConversation}>
               <Plus className="w-4 h-4" />
               {t('coach.newChat')}
             </Button>
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin px-2">
+          <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
+            {loadingConvs && (
+              <div className="rounded-3xl border border-white/8 bg-white/[0.04] px-4 py-5 text-sm text-muted-foreground">
+                {isArabic ? 'جاري تحميل الجلسات...' : 'Loading sessions...'}
+              </div>
+            )}
             {conversations.map(conv => (
               <div
                 key={conv.id}
@@ -2867,18 +2933,24 @@ export function CoachPage() {
                 tabIndex={0}
                 onClick={() => selectConversation(conv.id)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { selectConversation(conv.id); } }}
-                className={`w-full text-left px-3 py-3 rounded-xl mb-1 flex items-center gap-3 transition-all group ${
-                  conv.id === currentId ? 'bg-primary/10 text-primary' : 'hover:bg-secondary/50 text-muted-foreground'
+                className={`mb-2 flex w-full items-center gap-3 rounded-3xl border px-4 py-3 text-left transition-all duration-300 group ${
+                  conv.id === currentId
+                    ? 'border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/18 via-violet-500/16 to-cyan-400/16 text-white shadow-[0_16px_40px_rgba(168,85,247,0.18)]'
+                    : 'border-white/8 bg-white/[0.03] text-muted-foreground hover:-translate-y-0.5 hover:border-fuchsia-300/20 hover:bg-white/[0.06] hover:text-foreground'
                 }`}
               >
-                <MessageSquare className="w-4 h-4 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate">{conv.title || t('coach.newChat')}</p>
-                  <p className="text-xs opacity-60">{formatDate(conv.updated_at)}</p>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
+                  conv.id === currentId ? 'border-white/20 bg-white/10 text-fuchsia-200' : 'border-white/8 bg-black/20 text-muted-foreground'
+                }`}>
+                  <MessageSquare className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{conv.title || t('coach.newChat')}</p>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.24em] opacity-60">{formatDate(conv.updated_at)}</p>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all"
+                  className="rounded-full border border-transparent p-2 opacity-0 transition-all hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -2887,38 +2959,61 @@ export function CoachPage() {
           </div>
         </aside>
 
-        {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {sidebarOpen && (
             <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
-                onClick={() => setSidebarOpen(false)} />
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+                onClick={() => setSidebarOpen(false)}
+              />
               <motion.aside
-                initial={{ x: language === 'ar' ? 300 : -300 }} animate={{ x: 0 }} exit={{ x: language === 'ar' ? 300 : -300 }}
-                className="fixed top-16 bottom-0 w-72 bg-card border-r border-border/50 z-50 md:hidden flex flex-col"
+                initial={{ x: language === 'ar' ? 300 : -300 }}
+                animate={{ x: 0 }}
+                exit={{ x: language === 'ar' ? 300 : -300 }}
+                className="fixed top-16 bottom-0 z-50 flex w-80 max-w-[88vw] flex-col border-r border-white/10 bg-[rgba(10,12,24,0.94)] backdrop-blur-2xl md:hidden"
                 style={{ [language === 'ar' ? 'right' : 'left']: 0 }}
               >
-                <div className="p-4 flex items-center justify-between">
-                  <Button variant="hero" size="sm" onClick={createConversation} className="flex-1">
+                <div className="border-b border-white/10 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
+                        {isArabic ? 'جلسات المدرب' : 'Coach Sessions'}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {isArabic ? 'كل محادثاتك الذكية في مكان واحد.' : 'Every coaching conversation in one place.'}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="rounded-2xl border border-white/10 bg-white/[0.04]">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <Button variant="hero" size="sm" onClick={createConversation} className="h-11 w-full rounded-2xl">
                     <Plus className="w-4 h-4" />
                     {t('coach.newChat')}
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="ml-2">
-                    <X className="w-4 h-4" />
-                  </Button>
                 </div>
-                <div className="flex-1 overflow-y-auto px-2">
+                <div className="flex-1 overflow-y-auto px-3 py-4">
                   {conversations.map(conv => (
-                    <button key={conv.id} onClick={() => selectConversation(conv.id)}
-                      className={`w-full text-left px-3 py-3 rounded-xl mb-1 flex items-center gap-3 transition-all ${
-                        conv.id === currentId ? 'bg-primary/10 text-primary' : 'hover:bg-secondary/50 text-muted-foreground'
+                    <button
+                      key={conv.id}
+                      onClick={() => selectConversation(conv.id)}
+                      className={`mb-2 flex w-full items-center gap-3 rounded-3xl border px-4 py-3 text-left transition-all ${
+                        conv.id === currentId
+                          ? 'border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/18 via-violet-500/16 to-cyan-400/16 text-white'
+                          : 'border-white/8 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground'
                       }`}
                     >
-                      <MessageSquare className="w-4 h-4 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{conv.title || t('coach.newChat')}</p>
-                        <p className="text-xs opacity-60">{formatDate(conv.updated_at)}</p>
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
+                        conv.id === currentId ? 'border-white/20 bg-white/10 text-fuchsia-200' : 'border-white/8 bg-black/20 text-muted-foreground'
+                      }`}>
+                        <MessageSquare className="w-4 h-4 shrink-0" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{conv.title || t('coach.newChat')}</p>
+                        <p className="mt-1 text-[11px] uppercase tracking-[0.24em] opacity-60">{formatDate(conv.updated_at)}</p>
                       </div>
                     </button>
                   ))}
@@ -2928,498 +3023,676 @@ export function CoachPage() {
           )}
         </AnimatePresence>
 
-        {/* Main Chat Area */}
-        <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4">
-          <div className="flex items-center gap-3 py-3 border-b border-border/30">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
-              <Menu className="w-5 h-5" />
-            </Button>
-            <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
-              <Bot className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div className="flex-1">
-              <h1 className="font-semibold text-foreground">{t('coach.title')}</h1>
-              <p className="text-xs text-muted-foreground">{t('coach.subtitle')}</p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={() => setShowVoiceSettings(!showVoiceSettings)}>
-              <Settings2 className="w-4 h-4" />
-            </Button>
-            <Button variant={showRagDebug ? 'default' : 'ghost'} size="sm" onClick={() => setShowRagDebug((prev) => !prev)}>
-              RAG
-            </Button>
-            {isSupported && (
-              <Button
-                variant={voiceMode ? 'default' : 'ghost'}
-                size="sm"
-                className="gap-2"
-                onClick={toggleVoiceMode}
-                title={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
-                aria-label={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
-              >
-                {voiceMode ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                <span className="hidden md:inline">
-                  {voiceMode
-                    ? (language === 'ar' ? 'إيقاف التسجيل' : 'Stop voice')
-                    : (language === 'ar' ? 'رسالة صوتية' : 'Voice turn')}
-                </span>
-              </Button>
-            )}
-            <Button
-              variant={autoSpeak ? 'default' : 'ghost'} size="icon"
-              onClick={() => { setAutoSpeak(!autoSpeak); if (isAssistantSpeaking) stopAllSpeech(); }}
-            >
-              {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </Button>
-          </div>
-
-          {/* Voice Settings */}
-          <AnimatePresence>
-            {showVoiceSettings && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden border-b border-border/30"
-              >
-                <div className="p-3 flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {language === 'ar' ? 'صوت المدرب:' : 'Coach voice:'}
-                  </span>
-                  <Select value={selectedVoice || 'default'} onValueChange={handleVoiceSelect}>
-                    <SelectTrigger className="flex-1 bg-secondary/50 border-0 h-9">
-                      <SelectValue placeholder={language === 'ar' ? 'افتراضي' : 'Default'} />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      <SelectItem value="default">{language === 'ar' ? 'افتراضي' : 'Default'}</SelectItem>
-                      <SelectItem value={ARABIC_VOICE_AGENT_ID}>
-                        {language === 'ar' ? 'المساعد الصوتي العربي' : 'Arabic Voice Agent'}
-                      </SelectItem>
-                      {filteredVoices.length > 0 && (
-                        <>
-                          <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
-                            {language === 'ar' ? 'أصوات عربية' : 'Matching Language'}
-                          </div>
-                          {filteredVoices.map((voice) => (
-                            <SelectItem key={voice.name} value={voice.name}>
-                              {voice.name} ({voice.lang})
-                            </SelectItem>
-                          ))}
-                        </>
-                      )}
-                      {availableVoices.filter(v => !filteredVoices.includes(v)).length > 0 && (
-                        <>
-                          <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
-                            {language === 'ar' ? 'أصوات أخرى' : 'Other Voices'}
-                          </div>
-                          {availableVoices.filter(v => !filteredVoices.includes(v)).map((voice) => (
-                            <SelectItem key={voice.name} value={voice.name}>
-                              {voice.name} ({voice.lang})
-                            </SelectItem>
-                          ))}
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" variant="ghost" onClick={() => speakWithVoice(voicePreviewText)}>
-                    <Volume2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin space-y-5 py-5">
-            {currentMessages.map((message, index) => (
-              (() => {
-                const messageKey = `${currentId}-${index}-${message.timestamp}`;
-                const isCopied = copiedMessageKey === messageKey;
-                const displayMessageText = getDisplayMessageContent(message.content, language);
-                const visibleMessageText = displayMessageText.trim();
-                const fitbitSummaryCard = message.role === 'assistant' ? parseFitbitSummaryCard(displayMessageText) : null;
-                const copyText = buildMessageCopyText(message, language);
-                const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
-                return (
-              <motion.div key={`${currentId}-${index}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-              >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                  message.role === 'user' ? 'bg-accent' : 'bg-gradient-primary'
-                }`}>
-                  {message.role === 'user' ? <User className="w-4 h-4 text-accent-foreground" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
-                </div>
-                <div className="max-w-[82%] md:max-w-[78%]">
-                  {hasAttachments && (
-                    <div className={`mb-2 flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      {message.attachments!.map((attachment) => renderAttachmentBadge(attachment))}
+        <main className="mx-auto flex w-full max-w-[1680px] flex-1 px-3 py-4 sm:px-4 lg:px-6">
+          <div className="grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.92),rgba(8,10,22,0.94))] shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+              <div className="sticky top-16 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(14,16,30,0.96),rgba(14,16,30,0.78))] px-4 py-4 backdrop-blur-2xl sm:px-5 lg:px-6">
+                <div className="absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    <Button variant="ghost" size="icon" className="rounded-2xl border border-white/10 bg-white/[0.04] md:hidden" onClick={() => setSidebarOpen(true)}>
+                      <Menu className="w-5 h-5" />
+                    </Button>
+                    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/30 via-violet-500/20 to-cyan-400/20 shadow-[0_0_40px_rgba(168,85,247,0.22)]">
+                      <div className="absolute inset-1 rounded-[14px] border border-white/10" />
+                      <Bot className="relative z-10 w-5 h-5 text-primary-foreground" />
                     </div>
-                  )}
-                  {visibleMessageText && (
-                    <div className={`px-5 py-4.5 ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}>
-                      {message.role === 'assistant' && fitbitSummaryCard ? (
-                        <FitbitSummaryCard data={fitbitSummaryCard} />
-                      ) : message.role === 'assistant' ? (
-                        <div className={`chat-message-content prose prose-sm prose-invert max-w-none ${language === 'ar' ? 'chat-message-content-ar' : ''}`}>
-                          <ReactMarkdown components={markdownComponents}>{displayMessageText}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        <p className="chat-message-content whitespace-pre-wrap">{renderEmojiAwareChildren(displayMessageText, `user-${messageKey}`)}</p>
-                      )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h1 className="text-lg font-semibold text-foreground sm:text-xl">{isArabic ? 'المدرب الذكي للياقة' : 'AI Fitness Coach'}</h1>
+                        <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-200">
+                          {isArabic ? 'جاهز' : 'Ready'}
+                        </span>
+                      </div>
+                      <p className="mt-1 max-w-3xl text-xs leading-6 text-muted-foreground sm:text-sm">
+                        {isArabic
+                          ? 'إرشاد ذكي مخصص للتمارين والتغذية والتعافي والجدولة، داخل مركز قيادة واحد أنيق.'
+                          : 'Personalized fitness, nutrition, recovery, and schedule intelligence in one luxury command center.'}
+                      </p>
                     </div>
-                  )}
-                  <div className={`mt-2 flex items-center gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {copyText && (
-                      <button
-                        type="button"
-                        onClick={() => void copyMessage(messageKey, copyText)}
-                        className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                      >
-                        {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                        <span>{isCopied ? (language === 'ar' ? 'تم النسخ' : 'Copied') : (language === 'ar' ? 'نسخ' : 'Copy')}</span>
-                      </button>
-                    )}
-                    {message.role === 'assistant' && (
-                      <button
-                        type="button"
-                        onClick={() => isAssistantSpeaking ? stopAllSpeech() : speakWithVoice(message.content)}
-                        className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                      >
-                        {isAssistantSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                        <span>{isAssistantSpeaking ? (language === 'ar' ? 'إيقاف' : 'Stop') : (language === 'ar' ? 'استماع' : 'Listen')}</span>
-                      </button>
-                    )}
+                    <Button variant="ghost" size="icon" onClick={() => setShowVoiceSettings(!showVoiceSettings)} className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]">
+                      <Settings2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                </div>
-              </motion.div>
-                );
-              })()
-            ))}
-            {isLoading && !isTypingReply && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <div className="chat-bubble-ai p-4">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">{language === 'ar' ? 'جاري التفكير...' : 'Thinking...'}</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            {isVoiceProcessing && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <div className="chat-bubble-ai p-4">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">
-                      {language === 'ar' ? 'جاري معالجة الصوت...' : 'Processing voice...'}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant={showRagDebug ? 'default' : 'ghost'} size="sm" onClick={() => setShowRagDebug((prev) => !prev)} className={`rounded-full border ${showRagDebug ? 'border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-500/80 to-cyan-400/70 text-white' : 'border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground'}`}>
+                      {showRagDebug ? (isArabic ? 'عرض RAG' : 'RAG View') : (isArabic ? 'أدوات RAG' : 'RAG Tools')}
+                    </Button>
+                    {isSupported && (
+                      <Button
+                        variant={voiceMode ? 'default' : 'ghost'}
+                        size="sm"
+                        className={`gap-2 rounded-full border ${voiceMode ? 'border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-500/80 to-violet-500/80 text-white' : 'border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground'}`}
+                        onClick={toggleVoiceMode}
+                        title={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
+                        aria-label={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
+                      >
+                        {voiceMode ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                        <span className="hidden md:inline">
+                          {voiceMode
+                            ? (language === 'ar' ? 'إيقاف التسجيل' : 'Stop voice')
+                            : (language === 'ar' ? 'رسالة صوتية' : 'Voice turn')}
+                        </span>
+                      </Button>
+                    )}
+                    <Button
+                      variant={autoSpeak ? 'default' : 'ghost'}
+                      size="icon"
+                      className={`rounded-full border ${autoSpeak ? 'border-cyan-300/40 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground'}`}
+                      onClick={() => { setAutoSpeak(!autoSpeak); if (isAssistantSpeaking) stopAllSpeech(); }}
+                    >
+                      {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                    </Button>
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-muted-foreground">
+                      {isArabic ? 'الملف الشخصي مفعل' : 'Using your profile data'}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-muted-foreground">
+                      {isSupported ? (isArabic ? 'الصوت جاهز' : 'Voice ready') : (isArabic ? 'الصوت غير متاح' : 'Voice unavailable')}
                     </span>
                   </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {[
+                      isArabic ? 'يعتمد على ملفك الشخصي' : 'Profile-aware coaching',
+                      isArabic ? 'يبني الخطط ويحفظها' : 'Builds plans + saves to schedule',
+                      isArabic ? 'صوت + ملفات + RAG' : 'Voice + uploads + RAG',
+                    ].map((chip) => (
+                      <span
+                        key={chip}
+                        className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] font-medium text-foreground/90"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </motion.div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {showRagDebug && (
-            <div className="mb-4 rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">RAG Debug</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'ar' ? 'فحص المقاطع المسترجعة وسياق التقدم من قاعدة البيانات' : 'Inspect retrieved chunks and database-backed progress context'}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const latestUserMessage = [...currentMessages].reverse().find((message) => message.role === 'user');
-                    void loadRagDebug(latestUserMessage?.content || 'progress');
-                  }}
-                  disabled={ragDebugLoading}
-                >
-                  {ragDebugLoading ? 'Loading...' : 'Refresh'}
-                </Button>
               </div>
 
-              {ragDebugError && (
-                <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                  {ragDebugError}
-                </div>
-              )}
-
-              {ragDebugData?.database?.counts && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                  {Object.entries(ragDebugData.database.counts).map(([key, value]) => (
-                    <div key={key} className="rounded-xl bg-secondary/40 px-3 py-2">
-                      <div className="text-muted-foreground">{key}</div>
-                      <div className="font-semibold text-foreground">{value}</div>
+              <AnimatePresence>
+                {showVoiceSettings && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-b border-white/10 bg-white/[0.03]">
+                    <div className="flex items-center gap-3 p-3 sm:px-5 lg:px-6">
+                      <span className="whitespace-nowrap text-sm text-muted-foreground">
+                        {language === 'ar' ? 'صوت المدرب:' : 'Coach voice:'}
+                      </span>
+                      <Select value={selectedVoice || 'default'} onValueChange={handleVoiceSelect}>
+                        <SelectTrigger className="h-10 flex-1 rounded-2xl border-white/10 bg-black/20">
+                          <SelectValue placeholder={language === 'ar' ? 'افتراضي' : 'Default'} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          <SelectItem value="default">{language === 'ar' ? 'افتراضي' : 'Default'}</SelectItem>
+                          <SelectItem value={ARABIC_VOICE_AGENT_ID}>
+                            {language === 'ar' ? 'المساعد الصوتي العربي' : 'Arabic Voice Agent'}
+                          </SelectItem>
+                          {filteredVoices.length > 0 && (
+                            <>
+                              <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                                {language === 'ar' ? 'أصوات عربية' : 'Matching Language'}
+                              </div>
+                              {filteredVoices.map((voice) => (
+                                <SelectItem key={voice.name} value={voice.name}>
+                                  {voice.name} ({voice.lang})
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
+                          {availableVoices.filter(v => !filteredVoices.includes(v)).length > 0 && (
+                            <>
+                              <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                                {language === 'ar' ? 'أصوات أخرى' : 'Other Voices'}
+                              </div>
+                              {availableVoices.filter(v => !filteredVoices.includes(v)).map((voice) => (
+                                <SelectItem key={voice.name} value={voice.name}>
+                                  {voice.name} ({voice.lang})
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" variant="ghost" className="rounded-2xl border border-white/10 bg-white/[0.04]" onClick={() => speakWithVoice(voicePreviewText)}>
+                        <Volume2 className="w-4 h-4" />
+                      </Button>
                     </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-5 sm:px-5 lg:px-6">
+                {currentMessages.length === 0 && !isLoading && !isVoiceProcessing && (
+                  <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.32)]">
+                    <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+                      <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/25 via-violet-500/18 to-cyan-400/18 shadow-[0_0_70px_rgba(168,85,247,0.22)]">
+                        <div className="absolute inset-2 rounded-full border border-white/10" />
+                        <Bot className="relative z-10 h-8 w-8 text-white" />
+                      </div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
+                        {isArabic ? 'مركز قيادة المدرب الذكي' : 'AI COACH COMMAND CENTER'}
+                      </div>
+                      <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+                        {isArabic ? 'كيف أساعدك اليوم؟' : 'How can I coach you today?'}
+                      </h2>
+                      <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
+                        {isArabic
+                          ? 'اطلب خطة تمرين، إرشادًا غذائيًا، نصائح للتعافي، أو تحسينًا لجدولك — وسأبني لك ردًا مخصصًا حسب ملفك الشخصي.'
+                          : 'Ask for a workout plan, nutrition guidance, recovery advice, or schedule optimization — and I’ll personalize it around your profile.'}
+                      </p>
+                      <p className="mt-3 text-xs text-cyan-100/80">
+                        {isArabic ? 'المدرب يستطيع استخدام هدفك وبياناتك ونشاطك لتخصيص الإجابة.' : 'Your coach can use your profile, goal, and activity data to personalize answers.'}
+                      </p>
+                      <div className="mt-5 flex flex-wrap justify-center gap-2">
+                        {quickPrompts.map((prompt) => (
+                          <button
+                            key={prompt}
+                            type="button"
+                            onClick={() => { setInput(prompt); focusInput(); }}
+                            className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-foreground transition-all hover:-translate-y-0.5 hover:border-fuchsia-300/30 hover:bg-white/[0.08]"
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                <div className="space-y-5">
+                  {currentMessages.map((message, index) => (
+                    (() => {
+                      const messageKey = `${currentId}-${index}-${message.timestamp}`;
+                      const isCopied = copiedMessageKey === messageKey;
+                      const displayMessageText = getDisplayMessageContent(message.content, language);
+                      const visibleMessageText = displayMessageText.trim();
+                      const fitbitSummaryCard = message.role === 'assistant' ? parseFitbitSummaryCard(displayMessageText) : null;
+                      const copyText = buildMessageCopyText(message, language);
+                      const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
+                      return (
+                        <motion.div key={`${currentId}-${index}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`group flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                          <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
+                            message.role === 'user'
+                              ? 'border-fuchsia-300/20 bg-gradient-to-br from-fuchsia-500/85 to-violet-500/85 text-white'
+                              : 'border-cyan-300/20 bg-gradient-to-br from-violet-500/75 via-fuchsia-500/60 to-cyan-400/70 text-white shadow-[0_0_40px_rgba(34,211,238,0.12)]'
+                          }`}>
+                            {message.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                          </div>
+                          <div className="max-w-[92%] md:max-w-[82%]">
+                            {hasAttachments && (
+                              <div className={`mb-2 flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                {message.attachments!.map((attachment) => renderAttachmentBadge(attachment))}
+                              </div>
+                            )}
+                            {visibleMessageText && (
+                              <>
+                                <div className={`mb-2 flex items-center gap-2 px-1 text-[11px] uppercase tracking-[0.22em] ${
+                                  message.role === 'user'
+                                    ? 'justify-end text-fuchsia-100/75'
+                                    : 'justify-start text-cyan-100/70'
+                                }`}>
+                                  <span>{message.role === 'user' ? (isArabic ? 'أنت' : 'You') : (isArabic ? 'المدرب الذكي' : 'AI Coach')}</span>
+                                  <span className="text-white/25">•</span>
+                                  <span className="tracking-[0.16em] text-white/45 normal-case">{formatMessageTime(message.timestamp)}</span>
+                                </div>
+                              <div
+                                dir={isArabic ? 'rtl' : 'ltr'}
+                                className={`px-5 py-4.5 shadow-[0_20px_60px_rgba(0,0,0,0.18)] ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}
+                              >
+                                {message.role === 'assistant' && fitbitSummaryCard ? (
+                                  <FitbitSummaryCard data={fitbitSummaryCard} />
+                                ) : message.role === 'assistant' ? (
+                                  <div className={`chat-message-content prose prose-sm prose-invert max-w-none ${language === 'ar' ? 'chat-message-content-ar' : ''}`}>
+                                    <ReactMarkdown components={markdownComponents}>{displayMessageText}</ReactMarkdown>
+                                  </div>
+                                ) : (
+                                  <p className="chat-message-content whitespace-pre-wrap">{renderEmojiAwareChildren(displayMessageText, `user-${messageKey}`)}</p>
+                                )}
+                              </div>
+                              </>
+                            )}
+                            <div className={`mt-2 flex items-center gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                              {copyText && (
+                                <button
+                                  type="button"
+                                  onClick={() => void copyMessage(messageKey, copyText)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[11px] text-muted-foreground transition-all hover:border-fuchsia-300/25 hover:bg-white/[0.08] hover:text-foreground"
+                                >
+                                  {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                  <span>{isCopied ? (language === 'ar' ? 'تم النسخ' : 'Copied') : (language === 'ar' ? 'نسخ' : 'Copy')}</span>
+                                </button>
+                              )}
+                              {message.role === 'assistant' && (
+                                <button
+                                  type="button"
+                                  onClick={() => isAssistantSpeaking ? stopAllSpeech() : speakWithVoice(message.content)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[11px] text-muted-foreground transition-all hover:border-cyan-300/25 hover:bg-white/[0.08] hover:text-foreground"
+                                >
+                                  {isAssistantSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                                  <span>{isAssistantSpeaking ? (language === 'ar' ? 'إيقاف' : 'Stop') : (language === 'ar' ? 'استماع' : 'Listen')}</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })()
                   ))}
                 </div>
-              )}
 
-              {ragDebugData?.database?.tracking_summary?.progress_metrics && (
-                <pre className="overflow-x-auto rounded-xl bg-secondary/30 p-3 text-xs text-foreground whitespace-pre-wrap">
-                  {JSON.stringify(ragDebugData.database.tracking_summary.progress_metrics, null, 2)}
-                </pre>
-              )}
-
-              <div className="space-y-2">
-                {(ragDebugData?.hits || []).map((hit, index) => (
-                  <div key={`${hit.id || 'hit'}-${index}`} className="rounded-xl border border-border/40 bg-background/50 p-3">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
-                      <span>{hit.namespace || 'rag'}</span>
-                      {typeof hit.score === 'number' && <span>{hit.score.toFixed(3)}</span>}
-                      {hit.metadata?.kind && <span>{String(hit.metadata.kind)}</span>}
+                {isLoading && !isTypingReply && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 flex gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-violet-500/75 via-fuchsia-500/60 to-cyan-400/70">
+                      <Bot className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{repairMojibake(hit.text || '')}</p>
+                    <div className="chat-bubble-ai p-4">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        <span className="text-sm text-muted-foreground">{language === 'ar' ? 'المدرب يحلل ملفك الآن...' : 'AI Coach is analyzing your profile...'}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+                {isVoiceProcessing && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 flex gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-violet-500/75 via-fuchsia-500/60 to-cyan-400/70">
+                      <Bot className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                    <div className="chat-bubble-ai p-4">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        <span className="text-sm text-muted-foreground">
+                          {language === 'ar' ? 'جاري تجهيز الرد الصوتي...' : 'Processing your voice request...'}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {showRagDebug && (
+                <div className="mx-4 mb-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-4 space-y-3 sm:mx-5 lg:mx-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-semibold text-foreground">RAG Debug</h2>
+                      <p className="text-xs text-muted-foreground">
+                        {language === 'ar' ? 'فحص المقاطع المسترجعة وسياق التقدم من قاعدة البيانات' : 'Inspect retrieved chunks and database-backed progress context'}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const latestUserMessage = [...currentMessages].reverse().find((message) => message.role === 'user');
+                        void loadRagDebug(latestUserMessage?.content || 'progress');
+                      }}
+                      disabled={ragDebugLoading}
+                    >
+                      {ragDebugLoading ? 'Loading...' : 'Refresh'}
+                    </Button>
                   </div>
-                ))}
-                {!ragDebugLoading && (ragDebugData?.hits || []).length === 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    {language === 'ar' ? 'لا توجد مقاطع مسترجعة بعد.' : 'No retrieved chunks yet.'}
+
+                  {ragDebugError && (
+                    <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                      {ragDebugError}
+                    </div>
+                  )}
+
+                  {ragDebugData?.database?.counts && (
+                    <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                      {Object.entries(ragDebugData.database.counts).map(([key, value]) => (
+                        <div key={key} className="rounded-xl bg-secondary/40 px-3 py-2">
+                          <div className="text-muted-foreground">{key}</div>
+                          <div className="font-semibold text-foreground">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {ragDebugData?.database?.tracking_summary?.progress_metrics && (
+                    <pre className="overflow-x-auto rounded-xl bg-secondary/30 p-3 text-xs text-foreground whitespace-pre-wrap">
+                      {JSON.stringify(ragDebugData.database.tracking_summary.progress_metrics, null, 2)}
+                    </pre>
+                  )}
+
+                  <div className="space-y-2">
+                    {(ragDebugData?.hits || []).map((hit, index) => (
+                      <div key={`${hit.id || 'hit'}-${index}`} className="rounded-xl border border-border/40 bg-background/50 p-3">
+                        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span>{hit.namespace || 'rag'}</span>
+                          {typeof hit.score === 'number' && <span>{hit.score.toFixed(3)}</span>}
+                          {hit.metadata?.kind && <span>{String(hit.metadata.kind)}</span>}
+                        </div>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{repairMojibake(hit.text || '')}</p>
+                      </div>
+                    ))}
+                    {!ragDebugLoading && (ragDebugData?.hits || []).length === 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        {language === 'ar' ? 'لا توجد مقاطع مسترجعة بعد.' : 'No retrieved chunks yet.'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {profileUpdateFeedback && (
+                <div className="mx-4 mb-4 rounded-[28px] border border-emerald-400/30 bg-emerald-400/10 p-4 space-y-2 sm:mx-5 lg:mx-6">
+                  <div className="text-sm font-semibold text-foreground">
+                    {language === 'ar' ? 'تم تحديث الملف الشخصي' : 'Profile updated'}
+                  </div>
+                  <div className="text-sm text-foreground">
+                    {profileUpdateFeedback.fieldLabel}: {profileUpdateFeedback.displayValue}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{profileUpdateFeedback.message}</div>
+                </div>
+              )}
+
+              {pendingProfileConfirmation && (
+                <div className="mx-4 mb-4 rounded-[28px] border border-amber-400/30 bg-amber-400/10 p-4 space-y-3 sm:mx-5 lg:mx-6">
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {language === 'ar' ? 'تأكيد تعديل الملف الشخصي' : 'Confirm profile change'}
+                    </h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {pendingProfileConfirmation.fieldLabel}: {pendingProfileConfirmation.displayValue}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={confirmPendingProfileUpdate} disabled={isBusy}>
+                      {language === 'ar' ? 'تأكيد' : 'Confirm'}
+                    </Button>
+                    <Button variant="outline" onClick={cancelPendingProfileUpdate} disabled={isBusy}>
+                      {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {pendingPlanOptions && pendingPlanOptions.options.length > 0 && (
+                <div className="mx-4 mb-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-4 space-y-3 sm:mx-5 lg:mx-6">
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {language === 'ar' ? 'اختر الخطة التي تريدها' : 'Choose the plan you want'}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'ar'
+                        ? 'بعد اختيار الخطة سيظهر لك زر الاعتماد أو الرفض مباشرة.'
+                        : 'After choosing an option, you will get direct Approve and Reject buttons.'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {pendingPlanOptions.options.map((option) => (
+                      <button
+                        key={`${pendingPlanOptions.type}-${option.index}`}
+                        type="button"
+                        onClick={() => choosePlanOption(option.index)}
+                        className="w-full rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-left transition-colors hover:bg-secondary/40"
+                      >
+                        <div className="text-sm font-medium text-foreground">{option.index}. {option.title}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{option.summary}</div>
+                      </button>
+                    ))}
+                  </div>
+                  {pendingPlanOptions.page + 1 < pendingPlanOptions.totalPages && (
+                    <Button variant="outline" onClick={loadMorePlanOptions} disabled={isBusy}>
+                      {language === 'ar' ? 'خيارات أكثر' : 'More options'}
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {workoutApprovalPlan && (
+                <div className="mx-4 mb-4 sm:mx-5 lg:mx-6">
+                  <PlanApprovalUI
+                    type="workout"
+                    plan={workoutApprovalPlan}
+                    onApprove={handleApprovePlan}
+                    onReject={handleRejectPlan}
+                  />
+                </div>
+              )}
+
+              {nutritionApprovalPlan && (
+                <div className="mx-4 mb-4 sm:mx-5 lg:mx-6">
+                  <PlanApprovalUI
+                    type="nutrition"
+                    plan={nutritionApprovalPlan}
+                    onApprove={handleApprovePlan}
+                    onReject={handleRejectPlan}
+                  />
+                </div>
+              )}
+
+              <AnimatePresence>
+                {isListening && (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="flex items-center justify-center gap-3 px-4 py-3">
+                    <div className="flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-destructive shadow-[0_0_30px_rgba(239,68,68,0.18)]">
+                      <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
+                      <span className="text-sm font-medium">
+                        {language === 'ar' ? 'جاري الاستماع... اضغط المايك للإرسال' : 'Listening... tap mic again to send'}
+                      </span>
+                      <button onClick={stopListening} className="ml-2"><MicOff className="w-4 h-4" /></button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {isAssistantSpeaking && (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="flex items-center justify-center gap-3 px-4 py-1">
+                    <div className="flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-cyan-100 shadow-[0_0_34px_rgba(34,211,238,0.16)]">
+                      <Volume2 className="w-4 h-4 animate-pulse" />
+                      <span className="text-sm font-medium">
+                        {language === 'ar' ? 'المدرب يتحدث...' : 'Coach is speaking...'}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {voiceError && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="flex items-center justify-center py-1">
+                    <button
+                      type="button"
+                      onClick={clearError}
+                      className="rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1 text-xs text-destructive/90"
+                    >
+                      {voiceError}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="sticky bottom-0 z-20 border-t border-white/10 bg-[linear-gradient(180deg,rgba(7,9,18,0),rgba(7,9,18,0.92)_20%,rgba(7,9,18,0.98))] px-4 pb-4 pt-4 sm:px-5 lg:px-6">
+                {currentMessages.length <= 1 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {quickPrompts.slice(0, 4).map((prompt) => (
+                      <button
+                        key={`quick-${prompt}`}
+                        type="button"
+                        onClick={() => { setInput(prompt); focusInput(); }}
+                        className="rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-2 text-xs text-muted-foreground transition-all hover:border-fuchsia-300/25 hover:bg-white/[0.08] hover:text-foreground"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {profileUpdateFeedback && (
-            <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-2">
-              <div className="text-sm font-semibold text-foreground">
-                {language === 'ar' ? 'تم تحديث الملف الشخصي' : 'Profile updated'}
-              </div>
-              <div className="text-sm text-foreground">
-                {profileUpdateFeedback.fieldLabel}: {profileUpdateFeedback.displayValue}
-              </div>
-              <div className="text-xs text-muted-foreground">{profileUpdateFeedback.message}</div>
-            </div>
-          )}
-
-          {pendingProfileConfirmation && (
-            <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {language === 'ar' ? 'تأكيد تعديل الملف الشخصي' : 'Confirm profile change'}
-                </h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {pendingProfileConfirmation.fieldLabel}: {pendingProfileConfirmation.displayValue}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={confirmPendingProfileUpdate} disabled={isBusy}>
-                  {language === 'ar' ? 'تأكيد' : 'Confirm'}
-                </Button>
-                <Button variant="outline" onClick={cancelPendingProfileUpdate} disabled={isBusy}>
-                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {pendingPlanOptions && pendingPlanOptions.options.length > 0 && (
-            <div className="mb-4 rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {language === 'ar' ? 'اختر الخطة التي تريدها' : 'Choose the plan you want'}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {language === 'ar'
-                    ? 'بعد اختيار الخطة سيظهر لك زر الاعتماد أو الرفض مباشرة.'
-                    : 'After choosing an option, you will get direct Approve and Reject buttons.'}
-                </p>
-              </div>
-              <div className="space-y-2">
-                {pendingPlanOptions.options.map((option) => (
-                  <button
-                    key={`${pendingPlanOptions.type}-${option.index}`}
-                    type="button"
-                    onClick={() => choosePlanOption(option.index)}
-                    className="w-full rounded-xl border border-border/50 bg-background/60 px-4 py-3 text-left hover:bg-secondary/40 transition-colors"
-                  >
-                    <div className="text-sm font-medium text-foreground">{option.index}. {option.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{option.summary}</div>
-                  </button>
-                ))}
-              </div>
-              {pendingPlanOptions.page + 1 < pendingPlanOptions.totalPages && (
-                <Button variant="outline" onClick={loadMorePlanOptions} disabled={isBusy}>
-                  {language === 'ar' ? 'خيارات أكثر' : 'More options'}
-                </Button>
-              )}
-            </div>
-          )}
-
-          {workoutApprovalPlan && (
-            <div className="mb-4">
-              <PlanApprovalUI
-                type="workout"
-                plan={workoutApprovalPlan}
-                onApprove={handleApprovePlan}
-                onReject={handleRejectPlan}
-              />
-            </div>
-          )}
-
-          {nutritionApprovalPlan && (
-            <div className="mb-4">
-              <PlanApprovalUI
-                type="nutrition"
-                plan={nutritionApprovalPlan}
-                onApprove={handleApprovePlan}
-                onReject={handleRejectPlan}
-              />
-            </div>
-          )}
-
-          {/* Voice Indicator */}
-          <AnimatePresence>
-            {isListening && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-                className="flex items-center justify-center gap-3 py-3"
-              >
-                <div className="flex items-center gap-2 bg-destructive/10 text-destructive px-4 py-2 rounded-full">
-                  <div className="w-3 h-3 bg-destructive rounded-full animate-pulse" />
-                  <span className="text-sm font-medium">
-                    {language === 'ar' ? 'جاري الاستماع... اضغط المايك للإرسال' : 'Listening... tap mic again to send'}
-                  </span>
-                  <button onClick={stopListening} className="ml-2"><MicOff className="w-4 h-4" /></button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <AnimatePresence>
-            {isAssistantSpeaking && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-                className="flex items-center justify-center gap-3 py-1"
-              >
-                <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
-                  <Volume2 className="w-4 h-4 animate-pulse" />
-                  <span className="text-sm font-medium">
-                    {language === 'ar' ? 'المدرب يتحدث...' : 'Coach is speaking...'}
-                  </span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <AnimatePresence>
-            {voiceError && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                className="flex items-center justify-center py-1"
-              >
-                <button
-                  type="button"
-                  onClick={clearError}
-                  className="text-xs text-destructive/90 bg-destructive/10 border border-destructive/30 rounded-full px-3 py-1"
-                >
-                  {voiceError}
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Input */}
-          <div className="glass-card rounded-2xl p-3 mb-4">
-            <input
-              ref={attachmentInputRef}
-              type="file"
-              accept=".pdf,image/*"
-              multiple
-              className="hidden"
-              onChange={handleAttachmentSelection}
-            />
-            {selectedAttachments.length > 0 && (
-              <div className="mb-3 grid gap-2 sm:grid-cols-2">
-                {selectedAttachments.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-border/60 bg-background/70 p-3">
-                    <div className="flex items-start gap-3">
-                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-secondary/40 flex items-center justify-center">
-                        {item.previewUrl ? (
-                          <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
-                        ) : item.kind === 'pdf' ? (
-                          <FileText className="w-6 h-6 text-primary" />
-                        ) : (
-                          <FileImage className="w-6 h-6 text-primary" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium text-foreground truncate">{item.file.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.kind === 'pdf'
-                                ? (language === 'ar' ? 'ملف PDF' : 'PDF document')
-                                : (language === 'ar' ? 'صورة للتحليل' : 'Image for analysis')}
-                              {' • '}
-                              {formatAttachmentSize(item.file.size)}
-                            </p>
+                <div className="glass-card rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(20,23,40,0.92),rgba(10,12,24,0.94))] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    accept=".pdf,image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleAttachmentSelection}
+                  />
+                  {selectedAttachments.length > 0 && (
+                    <div className="mb-3 grid gap-2 sm:grid-cols-2">
+                      {selectedAttachments.map((item) => (
+                        <div key={item.id} className="rounded-2xl border border-border/60 bg-background/70 p-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-secondary/40">
+                              {item.previewUrl ? (
+                                <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
+                              ) : item.kind === 'pdf' ? (
+                                <FileText className="w-6 h-6 text-primary" />
+                              ) : (
+                                <FileImage className="w-6 h-6 text-primary" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="truncate text-sm font-medium text-foreground">{item.file.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {item.kind === 'pdf'
+                                      ? (language === 'ar' ? 'ملف PDF' : 'PDF document')
+                                      : (language === 'ar' ? 'صورة للتحليل' : 'Image for analysis')}
+                                    {' • '}
+                                    {formatAttachmentSize(item.file.size)}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={() => removePendingAttachment(item.id)}
+                                  disabled={isBusy}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            onClick={() => removePendingAttachment(item.id)}
-                            disabled={isBusy}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  )}
+                  {attachmentError && (
+                    <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                      {attachmentError}
+                    </div>
+                  )}
+                  <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs text-muted-foreground">
+                    <span className="leading-6">
+                      {language === 'ar'
+                        ? 'ارفع ملفات PDF أو صور مثل تقارير التحاليل، صور الوجبات، ملصقات المكملات، أو لقطات التقدم.'
+                        : 'Upload PDFs or images like lab reports, meal photos, supplement labels, or progress screenshots.'}
+                    </span>
+                    <span className="shrink-0 rounded-full border border-cyan-300/15 bg-cyan-400/10 px-2.5 py-1 text-cyan-100">
+                      {selectedAttachments.length}/{MAX_CHAT_ATTACHMENTS}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1">
+                        {isArabic ? 'خطة ذكية' : 'Plan builder'}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1">
+                        {isArabic ? 'مزامنة الجدول' : 'Schedule sync'}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1">
+                        {isArabic ? 'السياق مفعل' : 'Context active'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-cyan-100/80">
+                      {isArabic ? 'الردود تعتمد على ملفك الشخصي والجلسة الحالية' : 'Responses use your profile and current session context'}
+                    </span>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <Button variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isBusy} className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]">
+                      <Paperclip className="w-4 h-4" />
+                    </Button>
+                    {isSupported && (
+                      <Button
+                        variant={isListening ? 'destructive' : 'ghost'}
+                        size="icon"
+                        onClick={isListening ? stopListening : startListeningIfPossible}
+                        disabled={isBusy || isAssistantSpeaking}
+                        className={`h-11 w-11 shrink-0 rounded-2xl border ${isListening ? 'animate-pulse border-destructive/30 bg-destructive/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'}`}
+                      >
+                        {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      </Button>
+                    )}
+                    <Textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={
+                        language === 'ar'
+                          ? 'اسأل مدربك الذكي عن التمارين أو الوجبات أو التعافي أو جدولك...'
+                          : 'Ask your AI Coach about workouts, meals, recovery, or your schedule...'
+                      }
+                      className="min-h-[56px] max-h-40 resize-y rounded-2xl border-white/10 bg-black/20 px-4 py-3 focus-visible:ring-1"
+                      disabled={isBusy}
+                      rows={2}
+                    />
+                    <Button variant="hero" size="icon" onClick={sendMessage} disabled={isBusy || (!input.trim() && selectedAttachments.length === 0)} className="h-12 w-12 shrink-0 rounded-2xl shadow-[0_18px_38px_rgba(168,85,247,0.28)]">
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <aside className="hidden xl:flex">
+              <div className="sticky top-20 flex h-fit w-full flex-col gap-4 rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.9),rgba(8,10,22,0.92))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
+                    {isArabic ? 'حالة المدرب' : 'Coach Status'}
+                  </div>
+                  <h2 className="mt-2 text-xl font-semibold text-white">
+                    {isArabic ? 'لوحة السياق الذكي' : 'AI Context Panel'}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    {isArabic ? 'عرض سريع لبيانات الملف الشخصي وحالة الجلسة والملفات المرفوعة.' : 'A quick view of your profile context, session state, and uploaded assets.'}
+                  </p>
+                </div>
+
+                <div className="grid gap-3">
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
+                        {isArabic ? 'وضع الجلسة' : 'Session mode'}
+                      </span>
+                      <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                        {isArabic ? 'نشط' : 'Online'}
+                      </span>
+                    </div>
+                    <div className="grid gap-2 text-sm text-foreground">
+                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'المحادثة' : 'Conversation'}</span><span>{conversations.length}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'الملفات' : 'Files attached'}</span><span>{selectedAttachments.length}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'الصوت' : 'Voice mode'}</span><span>{voiceMode ? (isArabic ? 'مفعل' : 'On') : (isArabic ? 'متوقف' : 'Off')}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'RAG' : 'RAG'}</span><span>{showRagDebug ? (isArabic ? 'مرئي' : 'Visible') : (isArabic ? 'هادئ' : 'Idle')}</span></div>
                     </div>
                   </div>
-                ))}
+
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
+                      {isArabic ? 'سياق الملف الشخصي' : 'Profile Context'}
+                    </div>
+                    <div className="space-y-3">
+                      {profileContextEntries.map((item) => (
+                        <div key={item.label} className="flex items-start justify-between gap-3 border-b border-white/6 pb-3 last:border-b-0 last:pb-0">
+                          <span className="text-sm text-muted-foreground">{item.label}</span>
+                          <span className="max-w-[58%] text-right text-sm font-medium text-foreground">{String(item.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.08))] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
+                      {isArabic ? 'تلميح ذكي' : 'AI Tip'}
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-foreground/90">
+                      {isArabic
+                        ? 'كلما أضفت تفاصيل أكثر عن الهدف أو الوقت أو الإصابات أو الأجهزة المتاحة، أصبحت الخطة أدق وأكثر فائدة.'
+                        : 'The more detail you share about your goal, schedule, injuries, and available equipment, the sharper your plan becomes.'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
-            {attachmentError && (
-              <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                {attachmentError}
-              </div>
-            )}
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
-              <span>
-                {language === 'ar'
-                  ? 'ارفع ملفات PDF أو صور مثل تقارير التحاليل، صور الوجبات، ملصقات المكملات، أو لقطات التقدم.'
-                  : 'Upload PDFs or images like lab reports, meal photos, supplement labels, or progress screenshots.'}
-              </span>
-              <span className="shrink-0">
-                {selectedAttachments.length}/{MAX_CHAT_ATTACHMENTS}
-              </span>
-            </div>
-            <div className="flex gap-2 items-end">
-              <Button variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isBusy} className="shrink-0">
-                <Paperclip className="w-4 h-4" />
-              </Button>
-              {isSupported && (
-                <Button variant={isListening ? 'destructive' : 'ghost'} size="icon"
-                  onClick={isListening ? stopListening : startListeningIfPossible}
-                  disabled={isBusy || isAssistantSpeaking}
-                  className={`shrink-0 ${isListening ? 'animate-pulse' : ''}`}
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </Button>
-              )}
-              <Textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  language === 'ar'
-                    ? 'اكتب رسالتك...'
-                    : 'Type your message...'
-                }
-                className="bg-secondary/50 border-0 focus-visible:ring-1 min-h-[52px] max-h-40 resize-y"
-                disabled={isBusy}
-                rows={2}
-              />
-              <Button variant="hero" size="icon" onClick={sendMessage} disabled={isBusy || (!input.trim() && selectedAttachments.length === 0)} className="shrink-0">
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
+            </aside>
           </div>
         </main>
       </div>
