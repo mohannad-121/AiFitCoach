@@ -30,8 +30,9 @@ services:
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
 
-  - type: static
+  - type: web
     name: fit-coach-ai-frontend
+    env: static
     rootDir: .
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
