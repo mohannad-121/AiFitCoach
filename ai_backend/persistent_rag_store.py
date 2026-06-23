@@ -10,7 +10,12 @@ from typing import Any, Optional
 
 import numpy as np
 
-LOW_MEMORY_MODE = os.getenv("LOW_MEMORY_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+LOW_MEMORY_MODE = bool(os.getenv("RENDER")) or os.getenv("LOW_MEMORY_MODE", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 try:
     if LOW_MEMORY_MODE:
