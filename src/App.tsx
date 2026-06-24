@@ -20,6 +20,7 @@ import { ProfilePage } from "./pages/Profile";
 import { SchedulePage } from "./pages/Schedule";
 import { LiveCoachPage } from "./pages/LiveCoach";
 import { AdminPage } from "./pages/Admin";
+import { SubscriptionPage } from "./pages/Subscription";
 import NotFound from "./pages/NotFound";
 import "./AppSurface.css";
 
@@ -60,7 +61,7 @@ function AppRoutes() {
   const location = useLocation();
   const isHome = location.pathname === "/";
   const routeSegment = location.pathname.split("/").filter(Boolean)[0] || "not-found";
-  const knownRoutes = new Set(["auth", "onboarding", "workouts", "coach", "coach-notifications", "profile", "schedule", "live-coach", "admin", "reports"]);
+  const knownRoutes = new Set(["auth", "onboarding", "workouts", "coach", "coach-notifications", "profile", "subscription", "schedule", "live-coach", "admin", "reports"]);
   const routeName = isHome ? "home" : (knownRoutes.has(routeSegment) ? routeSegment : "not-found");
 
   useEffect(() => {
@@ -83,6 +84,7 @@ function AppRoutes() {
         <Route path="/coach-notifications" element={<ProtectedRoute><CoachNotificationsPage /></ProtectedRoute>} />
         <Route path="/reports" element={<Navigate to="/admin" replace />} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
         <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
         <Route path="/live-coach" element={<ProtectedRoute><LiveCoachPage /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminPage />} />

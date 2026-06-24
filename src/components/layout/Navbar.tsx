@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Home, Dumbbell, MessageCircle, User, Globe, Calendar, LogOut, LogIn, Shield, BellRing, Moon, Sun, ScanLine, Menu } from 'lucide-react';
+import { Home, Dumbbell, MessageCircle, User, Globe, Calendar, LogOut, LogIn, Shield, BellRing, Moon, Sun, ScanLine, Menu, Crown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -22,11 +22,10 @@ export function Navbar() {
     { path: '/schedule', icon: Calendar, label: language === 'ar' ? 'الجدول' : 'Schedule' },
     { path: '/coach-notifications', icon: BellRing, label: language === 'ar' ? 'إشعارات المدرب' : 'Coach Notes' },
     { path: '/profile', icon: User, label: t('nav.profile') },
+    { path: '/subscription', icon: Crown, label: language === 'ar' ? 'الاشتراك' : 'Subscription' },
   ];
 
   const mobileNavItems = navItems.filter((item) => ['/', '/workouts', '/live-coach', '/coach', '/schedule'].includes(item.path));
-  const mobileMoreItems = navItems.filter((item) => ['/coach-notifications', '/profile'].includes(item.path));
-
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'ar' : 'en');
   };
@@ -46,7 +45,7 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden xl:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -91,7 +90,7 @@ export function Navbar() {
               to="/admin"
               className={cn(
                 buttonVariants({ variant: location.pathname === '/admin' ? 'default' : 'outline', size: 'sm' }),
-                'hidden md:inline-flex',
+                'hidden xl:inline-flex',
                 location.pathname === '/admin'
                   ? 'bg-primary text-primary-foreground'
                   : 'border-border/50 text-muted-foreground hover:text-foreground'
@@ -103,7 +102,7 @@ export function Navbar() {
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="md:hidden border-border/50" aria-label="Open app menu">
+                <Button variant="outline" size="icon" className="xl:hidden border-border/50" aria-label="Open app menu">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -112,7 +111,7 @@ export function Navbar() {
                   <SheetTitle>{language === 'ar' ? 'القائمة' : 'More'}</SheetTitle>
                 </SheetHeader>
                 <div className="mt-6 grid gap-2">
-                  {mobileMoreItems.map((item) => (
+                  {navItems.map((item) => (
                     <SheetClose asChild key={item.path}>
                       <Link to={item.path} className={cn(buttonVariants({ variant: location.pathname === item.path ? 'default' : 'ghost' }), 'h-12 justify-start gap-3')}>
                         <item.icon className="h-5 w-5" />
@@ -146,7 +145,7 @@ export function Navbar() {
             </Sheet>
 
             {user ? (
-              <Button variant="ghost" size="sm" onClick={signOut} className="hidden md:flex text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" onClick={signOut} className="hidden xl:flex text-muted-foreground hover:text-foreground">
                 <LogOut className="w-4 h-4 mr-1" />
                 {language === 'ar' ? 'خروج' : 'Logout'}
               </Button>
@@ -155,7 +154,7 @@ export function Navbar() {
                 to="/auth?force=1"
                 className={cn(
                   buttonVariants({ variant: 'ghost', size: 'sm' }),
-                  'hidden md:flex text-muted-foreground hover:text-foreground'
+                  'hidden xl:flex text-muted-foreground hover:text-foreground'
                 )}
               >
                 <LogIn className="w-4 h-4 mr-1" />

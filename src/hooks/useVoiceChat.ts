@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { authHeaders } from '@/lib/subscription';
 
 export interface VoiceChatApiResponse {
   transcript: string;
@@ -17,6 +18,7 @@ interface UseVoiceChatOptions {
   conversationId?: string | null;
   websiteContext?: Record<string, unknown> | null;
   onResponse: (payload: VoiceChatApiResponse) => void | Promise<void>;
+  onLimitReached?: (code: string, message: string) => void | Promise<void>;
 }
 
 const CANDIDATE_MIME_TYPES = [
@@ -33,6 +35,7 @@ export function useVoiceChat({
   conversationId,
   websiteContext,
   onResponse,
+  onLimitReached,
 }: UseVoiceChatOptions) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -74,17 +77,24 @@ export function useVoiceChat({
 
         const response = await fetch(`${backendUrl}/voice-chat`, {
           method: 'POST',
+          headers: await authHeaders(),
           body: formData,
           signal: abortRef.current.signal,
         });
 
         if (!response.ok) {
           let details = '';
+          let code = '';
           try {
             const errPayload = await response.json();
-            details = String(errPayload?.detail || '');
+            code = String(errPayload?.code || errPayload?.detail?.code || '');
+            details = String(errPayload?.message || errPayload?.detail?.message || errPayload?.detail || '');
           } catch {
             details = await response.text();
+          }
+          if (code.endsWith('_LIMIT_REACHED')) {
+            await onLimitReached?.(code, details);
+            return;
           }
           throw new Error(details || `Voice chat failed (${response.status})`);
         }
@@ -105,7 +115,7 @@ export function useVoiceChat({
         setIsProcessing(false);
       }
     },
-    [backendUrl, conversationId, language, onResponse, userId, websiteContext]
+    [backendUrl, conversationId, language, onLimitReached, onResponse, userId, websiteContext]
   );
 
   const startListening = useCallback(async () => {
@@ -229,4 +239,3 @@ export function useVoiceChat({
     cancelVoiceRequest,
   };
 }
-

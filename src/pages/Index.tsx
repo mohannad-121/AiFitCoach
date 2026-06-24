@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Activity,
@@ -58,11 +58,11 @@ const coachingFeatures = [
 const workflow = [
   { icon: UserRound, step: '01', title: 'Profile Data', copy: 'Goals, ability, schedule' },
   { icon: Cpu, step: '02', title: 'AI Analysis', copy: 'Context becomes insight' },
-  { icon: Sparkles, step: '03', title: 'Smart Plan', copy: 'Training built for you' },
-  { icon: Activity, step: '04', title: 'Progress Tracking', copy: 'Every session improves the next' },
+  { icon: Sparkles, step: '03', title: 'Smart Plan Generation', copy: 'Training built for you' },
+  { icon: Activity, step: '04', title: 'Progress Optimization', copy: 'Every session improves the next' },
 ];
 
-const particles = Array.from({ length: 18 }, (_, index) => ({
+const particles = Array.from({ length: 10 }, (_, index) => ({
   id: index,
   x: `${8 + ((index * 23) % 86)}%`,
   y: `${12 + ((index * 37) % 76)}%`,
@@ -78,7 +78,6 @@ const Index = () => {
   const frameRef = useRef<number | null>(null);
 
   const primaryDestination = user ? (isOnboarded ? '/workouts' : '/onboarding') : '/auth?force=1';
-  const workoutDestination = user ? '/workouts' : '/auth?force=1';
   const heroTitle = t('hero.title');
   const heroTitleWords = heroTitle.trim().split(/\s+/);
   const heroTitleBreak = Math.max(1, heroTitleWords.length - 1);
@@ -121,49 +120,13 @@ const Index = () => {
             ))}
           </div>
 
-          <div className="home-hologram home-hologram-left" aria-hidden="true">
-            <span /><span /><span />
-          </div>
-          <motion.div
-            className="home-float-object home-float-dumbbell"
-            initial={{ opacity: 0, x: -30, rotate: -10 }}
-            animate={{ opacity: 1, x: 0, rotate: -5 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            aria-hidden="true"
-          >
-            <Dumbbell />
-            <span>STRENGTH</span>
-          </motion.div>
-          <motion.div
-            className="home-float-object home-float-chip"
-            initial={{ opacity: 0, x: 30, rotate: 10 }}
-            animate={{ opacity: 1, x: 0, rotate: 4 }}
-            transition={{ delay: 0.85, duration: 0.8 }}
-            aria-hidden="true"
-          >
-            <Cpu />
-            <span>AI ACTIVE</span>
-          </motion.div>
-          <motion.div
-            className="home-heartline"
-            initial={{ opacity: 0, scaleX: 0.4 }}
-            animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ delay: 1, duration: 0.9 }}
-            aria-hidden="true"
-          >
-            <HeartPulse />
-            <svg viewBox="0 0 180 42" role="presentation">
-              <polyline points="0,23 34,23 43,9 54,35 66,17 76,23 106,23 116,12 126,30 136,23 180,23" />
-            </svg>
-            <strong>128</strong><small>BPM</small>
-          </motion.div>
-
-          <div className="home-hero-content">
-            <motion.div
+          <div className="home-hero-shell">
+            <div className="home-hero-content">
+              <motion.div
               initial="hidden"
               animate="visible"
-              variants={{ visible: { transition: { staggerChildren: 0.12, delayChildren: 0.12 } } }}
-            >
+              variants={{ visible: { transition: { staggerChildren: 0.09, delayChildren: 0.08 } } }}
+              >
               <motion.div variants={reveal} transition={{ duration: 0.65 }} className="home-eyebrow">
                 <ScanLine /> AI TRAINING, BUILT AROUND YOU
               </motion.div>
@@ -181,10 +144,35 @@ const Index = () => {
                 <Link to={primaryDestination} className={cn(buttonVariants({ variant: 'hero', size: 'xl' }), 'home-cta home-cta-primary')}>
                   <span>{t('hero.cta')}</span><ArrowRight />
                 </Link>
-                <Link to={workoutDestination} className={cn(buttonVariants({ variant: 'glass', size: 'xl' }), 'home-cta home-cta-secondary')}>
-                  <Dumbbell /><span>{t('hero.secondary')}</span>
-                </Link>
+                <a href="#ai-coaching" className={cn(buttonVariants({ variant: 'glass', size: 'xl' }), 'home-cta home-cta-secondary')}>
+                  <Sparkles /><span>{t('hero.secondary')}</span>
+                </a>
               </motion.div>
+              </motion.div>
+            </div>
+
+            <motion.div
+              className="home-ai-visual"
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ delay: 0.45, duration: 0.9, ease: 'easeOut' }}
+              aria-label="FitCoach AI live intelligence preview"
+            >
+              <div className="home-ai-rings" aria-hidden="true"><i /><i /><i /></div>
+              <div className="home-ai-core">
+                <div className="home-ai-core-glow" />
+                <BrainCircuit />
+                <span>FITCOACH AI</span>
+                <strong>ONLINE</strong>
+              </div>
+              <div className="home-ai-card home-ai-card-score">
+                <span>FORM SCORE</span><strong>96<small>%</small></strong>
+                <i><b /></i>
+              </div>
+              <div className="home-ai-card home-ai-card-plan">
+                <Sparkles /><div><span>NEXT SET</span><strong>12 REPS</strong></div>
+              </div>
+              <div className="home-ai-orbit-dot" aria-hidden="true" />
             </motion.div>
           </div>
 
@@ -204,8 +192,8 @@ const Index = () => {
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.25 }}
-                  transition={{ delay: index * 0.1, duration: 0.55 }}
-                  whileHover={{ y: -8, rotateX: 2, rotateY: index === 1 ? 0 : index === 0 ? -2 : 2 }}
+                  transition={{ delay: index * 0.08, duration: 0.5 }}
+                  whileHover={{ y: -5, rotateX: 0.8, rotateY: index === 1 ? 0 : index === 0 ? -0.8 : 0.8 }}
                 >
                   <div className="home-feature-icon"><feature.icon /></div>
                   <span className="home-feature-index">0{index + 1}</span>
@@ -230,7 +218,7 @@ const Index = () => {
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.5 }}
-                  transition={{ delay: index * 0.12, duration: 0.45 }}
+                  transition={{ delay: index * 0.09, duration: 0.42 }}
                 >
                   <div className="home-workflow-node"><item.icon /></div>
                   <span>{item.step}</span>
@@ -261,15 +249,15 @@ const Index = () => {
               initial={{ opacity: 0, y: 30, rotateX: 5 }}
               whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
               viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.7 }}
+              transition={{ duration: 0.6 }}
             >
               <div className="home-dashboard-header">
                 <div><span>FITCOACH / TODAY</span><strong>Performance overview</strong></div>
                 <span className="home-live-status"><i />LIVE SYNC</span>
               </div>
               <div className="home-dashboard-grid">
-                <DashboardMetric icon={Flame} label="Calories" value="684" unit="kcal" accent="cyan" />
-                <DashboardMetric icon={HeartPulse} label="Heart Rate" value="128" unit="bpm" accent="pink" pulse />
+                <DashboardMetric icon={Flame} label="Calories" value={684} unit="kcal" accent="cyan" />
+                <DashboardMetric icon={HeartPulse} label="Heart Rate" value={128} unit="bpm" accent="pink" pulse />
                 <div className="home-dash-panel home-progress-panel">
                   <div className="home-dash-label"><Activity /> Workout progress <strong>78%</strong></div>
                   <div className="home-progress-track"><motion.span initial={{ width: 0 }} whileInView={{ width: '78%' }} viewport={{ once: true }} transition={{ duration: 1.1, delay: 0.2 }} /></div>
@@ -279,7 +267,14 @@ const Index = () => {
                   <div className="home-dash-label"><CalendarCheck /> Weekly goal <strong>4 / 5</strong></div>
                   <div className="home-week-bars">
                     {[82, 68, 94, 52, 78, 28, 18].map((height, index) => (
-                      <span key={index} className={index < 5 ? 'is-active' : ''}><i style={{ height: `${height}%` }} /></span>
+                      <span key={index} className={index < 5 ? 'is-active' : ''}>
+                        <motion.i
+                          initial={{ height: 0 }}
+                          whileInView={{ height: `${height}%` }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.75, delay: 0.08 * index, ease: 'easeOut' }}
+                        />
+                      </span>
                     ))}
                   </div>
                   <div className="home-week-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
@@ -325,7 +320,7 @@ function SectionHeading({ eyebrow, title, copy, align = 'center' }: { eyebrow: s
 function DashboardMetric({ icon: Icon, label, value, unit, accent, pulse = false }: {
   icon: typeof Flame;
   label: string;
-  value: string;
+  value: number;
   unit: string;
   accent: 'cyan' | 'pink';
   pulse?: boolean;
@@ -333,10 +328,38 @@ function DashboardMetric({ icon: Icon, label, value, unit, accent, pulse = false
   return (
     <div className={`home-dash-panel home-metric-panel home-accent-${accent}`}>
       <div className="home-dash-label"><Icon /> {label}</div>
-      <strong>{value}<small>{unit}</small></strong>
+      <strong><AnimatedNumber value={value} /><small>{unit}</small></strong>
       {pulse && <div className="home-mini-heartline"><i /><i /><i /><i /><i /><i /></div>}
     </div>
   );
+}
+
+function AnimatedNumber({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    let frame = 0;
+    let started = false;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || started) return;
+      started = true;
+      const began = performance.now();
+      const tick = (now: number) => {
+        const progress = Math.min((now - began) / 1100, 1);
+        setDisplay(Math.round(value * (1 - Math.pow(1 - progress, 3))));
+        if (progress < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+      observer.disconnect();
+    }, { threshold: 0.5 });
+    observer.observe(node);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [value]);
+
+  return <span ref={ref}>{display}</span>;
 }
 
 export default Index;

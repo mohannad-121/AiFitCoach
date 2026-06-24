@@ -91,6 +91,14 @@ export function bilingualLabel(english: string, arabic: string, language: 'en' |
   return language === 'ar' ? `${ar} / ${en}` : `${en} / ${ar}`;
 }
 
+export function localizedLabel(english: string, arabic: string, language: 'en' | 'ar'): string {
+  const en = repairMojibake(english || '');
+  const ar = repairMojibake(arabic || '');
+
+  if (language === 'ar') return ar || en;
+  return en || ar;
+}
+
 export function stabilizeBidiNumbers(value: string): string {
   if (!value) return value;
   if (!ARABIC_CHAR_DETECTION_PATTERN.test(value) || !BIDI_LTR_RUN_PATTERN.test(value)) {
