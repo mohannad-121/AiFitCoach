@@ -281,6 +281,10 @@ function formatLogDate(date: Date): string {
 }
 
 const dayOrder = [6, 0, 1, 2, 3, 4, 5]; // Sat, Sun, Mon, Tue, Wed, Thu, Fri
+const MOOD_CHIPS = ['High Energy', 'Normal', 'Tired', 'Sore', 'Stressed'] as const;
+const MOOD_CHIPS_AR = ['طاقة عالية', 'عادي', 'متعب', 'مشدود', 'متوتر'] as const;
+const NUTRITION_CHIPS = ['Clean', 'Balanced', 'High Protein', 'Not Good'] as const;
+const NUTRITION_CHIPS_AR = ['نظيف', 'متوازن', 'بروتين عالي', 'مو جيد'] as const;
 
 export function SchedulePage() {
   const { language } = useLanguage();
@@ -303,6 +307,7 @@ export function SchedulePage() {
   const [highlightItemName, setHighlightItemName] = useState('');
   const [coachPinToast, setCoachPinToast] = useState<{ exerciseName: string; authorName: string } | null>(null);
   const targetItemRef = useRef<HTMLDivElement | null>(null);
+  const todayPlanRef = useRef<HTMLElement | null>(null);
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
@@ -769,6 +774,61 @@ export function SchedulePage() {
   const selectedItemsTotal = (dayExercises?.length || 0) + (dayMeals?.length || 0);
   const selectedItemsRemaining = dailyProgress ? Math.max(0, dailyProgress.total - dailyProgress.completed) : 0;
   const nextItemName = viewTab === 'workout' ? missingExercisesToday[0] : missingMealsToday[0];
+  const selectedDateBadge = selectedDate.toLocaleDateString(language === 'ar' ? 'ar' : 'en', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+  const completedWeekDays = weekDates.filter((date) => hasDailyActivity(date)).length;
+  const weekProgressPercent = Math.round((completedWeekDays / weekDates.length) * 100);
+  const hasScheduledItems = selectedItemsTotal > 0;
+  const isDayComplete = hasScheduledItems && selectedItemsRemaining === 0;
+  const needsAttention = hasScheduledItems && selectedItemsRemaining > 0;
+  const statusTone = !hasScheduledItems ? 'empty' : isDayComplete ? 'completed' : needsAttention ? 'planned' : 'empty';
+  const selectedDayStatus = !hasScheduledItems
+    ? (language === 'ar' ? 'لا يوجد شيء مجدول' : 'Nothing Scheduled')
+    : isDayComplete
+      ? (language === 'ar' ? 'مكتمل' : 'Completed')
+      : needsAttention
+        ? (language === 'ar' ? 'مجدول' : 'Scheduled')
+        : (language === 'ar' ? 'بحاجة متابعة' : 'Needs Attention');
+  const nextStepMessage = !hasScheduledItems
+    ? (language === 'ar'
+        ? 'اسأل المدرب الذكي ليبني لك جلسة مناسبة لهذا اليوم.'
+        : 'Ask your AI Coach to generate a tailored session for this day.')
+    : isDayComplete
+      ? (language === 'ar'
+          ? 'سجّل طاقتك وتغذيتك الآن حتى يحسن الذكاء الاصطناعي خطتك التالية.'
+          : 'Log your energy and nutrition now so the AI can sharpen your next plan.')
+      : nextItemName
+        ? (language === 'ar'
+            ? `ابدأ بالعنصر التالي: ${nextItemName}`
+            : `Start with your next item: ${nextItemName}`)
+        : (language === 'ar'
+            ? 'راجع العناصر المتبقية وأكمل الأقرب لك الآن.'
+            : 'Review the remaining items and complete the easiest next one now.');
+  const insightText = !hasScheduledItems
+    ? (language === 'ar'
+        ? 'لا يوجد تمرين أو وجبات مجدولة لهذا اليوم. اطلب من المدرب الذكي خطة قصيرة تناسب هدفك وتقدمك.'
+        : 'You do not have anything scheduled for this day. Ask the AI Coach for a short plan that fits your goal and progress.')
+    : isDayComplete
+      ? (language === 'ar'
+          ? 'شغل ممتاز. أضف ملاحظاتك اليومية حتى يستخدمها الذكاء الاصطناعي لتحسين توصياتك القادمة.'
+          : 'Great job. Add your daily notes so the AI can improve your next recommendation.')
+      : needsAttention
+        ? (language === 'ar'
+            ? 'ما زال عندك عناصر ناقصة. أنجز أول عنصر متبقٍ أو اطلب من المدرب جلسة أخف إذا كان اليوم مزدحم.'
+            : 'You still have unfinished items. Complete the first remaining task or ask the AI Coach for a lighter adjusted session.')
+        : (language === 'ar'
+            ? 'اليوم واضح. حافظ على هذا الإيقاع وأكمل العناصر حسب الترتيب.'
+            : 'The day is well structured. Keep the flow going and complete items in order.');
+  const summaryStatus = !hasScheduledItems
+    ? (language === 'ar' ? 'لا يوجد شيء مجدول' : 'Nothing Scheduled')
+    : isDayComplete
+      ? (language === 'ar' ? 'مكتمل' : 'Completed')
+      : selectedItemsRemaining > 0
+        ? (language === 'ar' ? 'بحاجة متابعة' : 'Needs Attention')
+        : (language === 'ar' ? 'تمرين مجدول' : 'Workout Planned');
   const overviewCards = [
     {
       key: 'plan',
@@ -983,8 +1043,12 @@ export function SchedulePage() {
       <Navbar />
       <main className="schedule-container container mx-auto px-4 pt-24 max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="schedule-header mb-6 space-y-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+          <div className="schedule-header-top flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="schedule-header-copy">
+              <div className="schedule-kicker mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-100/90">
+                <Activity className="h-4 w-4" />
+                <span>{language === 'ar' ? 'التحكم الذكي بالجدول' : 'AI SCHEDULE CONTROL'}</span>
+              </div>
               <h1 className="font-display text-4xl md:text-5xl text-foreground mb-2">
                 {language === 'ar' ? 'الجدول اليومي' : 'DAILY SCHEDULE'}
               </h1>
@@ -995,7 +1059,13 @@ export function SchedulePage() {
               </p>
             </div>
 
-            <div className="schedule-mode-switcher flex bg-card/80 rounded-xl p-1 gap-1 border border-border/50 self-start lg:self-auto">
+            <div className="schedule-header-actions self-start lg:self-auto">
+              <div className="schedule-date-badge">
+                <span>{language === 'ar' ? 'ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«' : 'Live Date'}</span>
+                <strong>{selectedDateBadge}</strong>
+              </div>
+
+              <div className="schedule-mode-switcher flex bg-card/80 rounded-xl p-1 gap-1 border border-border/50 self-start lg:self-auto">
             <button onClick={() => setViewTab('workout')}
               className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
                 viewTab === 'workout' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
@@ -1011,6 +1081,7 @@ export function SchedulePage() {
               {language === 'ar' ? 'التغذية' : 'Nutrition'}
             </button>
           </div>
+            </div>
           </div>
           <div className="schedule-focus-bar">
             <div className="schedule-focus-plan">
@@ -1025,6 +1096,30 @@ export function SchedulePage() {
             <div className="schedule-focus-next">
               <span>{selectedItemsRemaining > 0 ? (language === 'ar' ? 'التالي' : 'Up next') : (language === 'ar' ? 'الحالة' : 'Status')}</span>
               <strong>{nextItemName || (selectedItemsTotal > 0 ? (language === 'ar' ? 'اكتمل يومك' : 'Day complete') : (language === 'ar' ? 'يوم راحة' : 'Rest day'))}</strong>
+            </div>
+          </div>
+
+          <div className="schedule-command-grid">
+            <div className="schedule-command-card">
+              <span>{language === 'ar' ? 'Ø§Ù„Ø­Ø§Ù„Ø©' : 'Status'}</span>
+              <strong>{selectedDayStatus}</strong>
+              <p>{nextStepMessage}</p>
+            </div>
+            <div className="schedule-command-card">
+              <span>{language === 'ar' ? 'ØªÙ‚Ø¯Ù… Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹' : 'Week progress'}</span>
+              <strong>{completedWeekDays}/7</strong>
+              <p>{language === 'ar' ? `Ø§ÙƒØªÙ…Ù„ ${weekProgressPercent}% Ù…Ù† Ø¥ÙŠÙ‚Ø§Ø¹ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹` : `${weekProgressPercent}% of your weekly rhythm completed`}</p>
+            </div>
+            <div className="schedule-command-card">
+              <span>{language === 'ar' ? 'ØªØ§Ø±ÙŠØ® Ø§Ù„ÙŠÙˆÙ…' : 'Selected date'}</span>
+              <strong>{selectedDateBadge}</strong>
+              <button
+                type="button"
+                className="schedule-command-link"
+                onClick={() => todayPlanRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                {language === 'ar' ? 'Ø§ÙØªØ­ Ù…Ø³Ø§Ø­Ø© Ø§Ù„ÙŠÙˆÙ…' : 'Open day workspace'}
+              </button>
             </div>
           </div>
         </motion.div>
@@ -1157,7 +1252,7 @@ export function SchedulePage() {
               </div>
             )}
 
-            <div className="schedule-plan-panel glass-card rounded-2xl p-6">
+            <div ref={todayPlanRef} className="schedule-plan-panel glass-card rounded-2xl p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-5">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
@@ -1429,7 +1524,7 @@ export function SchedulePage() {
             </div>
           </motion.div>
         ) : (
-          <div className="glass-card rounded-2xl p-10 text-center mb-8">
+          <div className="schedule-empty-state glass-card rounded-2xl p-10 text-center mb-8">
             {viewTab === 'workout' ? (
               <Dumbbell className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             ) : (
@@ -1448,7 +1543,7 @@ export function SchedulePage() {
           </section>
 
           <aside className="schedule-side space-y-6">
-            <div className="schedule-next-panel glass-card rounded-2xl p-6">
+            <div className={`schedule-next-panel glass-card rounded-2xl p-6 schedule-status-${statusTone}`}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
                   {language === 'ar' ? 'ملخص اليوم' : 'Day summary'}
@@ -1488,6 +1583,28 @@ export function SchedulePage() {
               </div>
             </div>
 
+            <div className="schedule-insight-panel glass-card rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {language === 'ar' ? 'Ø¨ØµÙŠØ±Ø© Ø§Ù„Ù…Ø¯Ø±Ø¨ Ø§Ù„Ø°ÙƒÙŠ' : 'AI Coach Insight'}
+                </h3>
+                <span className="schedule-insight-badge">{language === 'ar' ? 'Ù…Ø¨Ø§Ø´Ø±' : 'Live'}</span>
+              </div>
+
+              <p className="schedule-insight-copy">{insightText}</p>
+
+              <div className="schedule-insight-grid">
+                <div>
+                  <span>{language === 'ar' ? 'Ø§Ù„Ø®Ø·Ø· Ø§Ù„Ø¬Ø§Ù‡Ø²Ø©' : 'Plans loaded'}</span>
+                  <strong>{planCollection.length}</strong>
+                </div>
+                <div>
+                  <span>{language === 'ar' ? 'Ø§Ù„Ù†ÙˆØ¹ Ø§Ù„Ù†Ø´Ø·' : 'Active mode'}</span>
+                  <strong>{language === 'ar' ? (viewTab === 'workout' ? 'Ø§Ù„ØªÙ…Ø§Ø±ÙŠÙ†' : 'Ø§Ù„ØªØºØ°ÙŠØ©') : (viewTab === 'workout' ? 'Workout' : 'Nutrition')}</strong>
+                </div>
+              </div>
+            </div>
+
             <div className="schedule-log-panel glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
@@ -1514,6 +1631,23 @@ export function SchedulePage() {
                   <label className="block text-xs font-medium text-muted-foreground mb-2">
                     {language === 'ar' ? 'شو أكلت اليوم؟' : 'How was your nutrition today?'}
                   </label>
+                  <div className="schedule-chip-row">
+                    {(language === 'ar' ? NUTRITION_CHIPS_AR : NUTRITION_CHIPS).map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        className={`schedule-chip ${logDraft.nutrition_notes.includes(chip) ? 'is-active' : ''}`}
+                        onClick={() => setLogDraft(prev => ({
+                          ...prev,
+                          nutrition_notes: prev.nutrition_notes.includes(chip)
+                            ? prev.nutrition_notes
+                            : `${prev.nutrition_notes ? `${prev.nutrition_notes.trim()} · ` : ''}${chip}`
+                        }))}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
                   <Textarea
                     value={logDraft.nutrition_notes}
                     onChange={(e) => setLogDraft(prev => ({ ...prev, nutrition_notes: e.target.value }))}
@@ -1527,6 +1661,18 @@ export function SchedulePage() {
                   <label className="block text-xs font-medium text-muted-foreground mb-2">
                     {language === 'ar' ? 'مزاجك/طاقتك اليوم' : 'Mood / Energy'}
                   </label>
+                  <div className="schedule-chip-row">
+                    {(language === 'ar' ? MOOD_CHIPS_AR : MOOD_CHIPS).map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        className={`schedule-chip ${logDraft.mood === chip ? 'is-active' : ''}`}
+                        onClick={() => setLogDraft(prev => ({ ...prev, mood: chip }))}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
                   <Input
                     value={logDraft.mood}
                     onChange={(e) => setLogDraft(prev => ({ ...prev, mood: e.target.value }))}

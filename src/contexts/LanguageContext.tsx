@@ -20,10 +20,10 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.schedule': 'Schedule',
 
     // Hero
-    'hero.title': 'TRANSFORM YOUR BODY',
-    'hero.subtitle': 'Personalized workouts powered by AI. Get custom training plans, nutrition advice, and real-time coaching.',
-    'hero.cta': 'Start Your Journey',
-    'hero.secondary': 'Explore Workouts',
+    'hero.title': 'YOUR AI FITNESS COACH, REIMAGINED.',
+    'hero.subtitle': 'Personalized training, nutrition intelligence, live progress, and AI coaching — built around your body, goals, and lifestyle.',
+    'hero.cta': 'Start Coaching',
+    'hero.secondary': 'Explore Features',
 
     // Onboarding
     'onboarding.welcome': "Let's Get Started",
@@ -106,10 +106,10 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.schedule': 'الجدول',
 
     // Hero
-    'hero.title': 'غيّر جسمك',
-    'hero.subtitle': 'تمارين مخصصة بالذكاء الاصطناعي. احصل على خطط تدريب شخصية ونصائح غذائية وتدريب مباشر.',
-    'hero.cta': 'ابدأ رحلتك',
-    'hero.secondary': 'استكشف التمارين',
+    'hero.title': 'مدرب لياقتك بالذكاء الاصطناعي، بتجربة جديدة.',
+    'hero.subtitle': 'تدريب شخصي، وذكاء غذائي، وتقدم مباشر، وتوجيه بالذكاء الاصطناعي — مصمم لجسمك وأهدافك وأسلوب حياتك.',
+    'hero.cta': 'ابدأ التدريب',
+    'hero.secondary': 'استكشف المزايا',
 
     // Onboarding
     'onboarding.welcome': 'هيا نبدأ',

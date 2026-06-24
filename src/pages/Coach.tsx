@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage, Copy, Check } from 'lucide-react';
+import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage, Copy, Check, Lock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { PlanApprovalUI } from '@/components/ai/PlanApprovalUI';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { exercises } from '@/data/exercises';
+import { authHeaders } from '@/lib/subscription';
+import { UsageWidget } from '@/components/subscription/UsageWidget';
+import { UpgradeModal } from '@/components/subscription/UpgradeModal';
+import { useSubscription } from '@/hooks/useSubscription';
+import { isPlanGenerationRequest } from '@/lib/planGeneration';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -769,9 +774,11 @@ const FitbitSummaryCard = ({ data }: { data: FitbitSummaryCardData }) => (
 );
 
 export function CoachPage() {
+  const [upgradeReason, setUpgradeReason] = useState('');
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const { profile, updateProfile } = useUser();
+  const { subscription, loading: subscriptionLoading, refresh: refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -804,6 +811,23 @@ export function CoachPage() {
   const [selectedAttachments, setSelectedAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState('');
   const [copiedMessageKey, setCopiedMessageKey] = useState<string | null>(null);
+  const isUnlimited = Boolean(subscription?.isUnlimited);
+  const usage = subscription?.usage;
+  const messagesLeft = usage?.chatMessagesLimit == null ? Infinity : Math.max(0, usage.chatMessagesLimit - usage.chatMessagesUsed);
+  const uploadsLeft = usage?.uploadsLimit == null ? Infinity : Math.max(0, usage.uploadsLimit - usage.uploadsUsed);
+  const plansLeft = usage?.generatedPlansLimit == null ? Infinity : Math.max(0, usage.generatedPlansLimit - usage.generatedPlansUsed);
+  const isChatLimitReached = Boolean(subscription && !isUnlimited && messagesLeft <= 0);
+  const isUploadLimitReached = Boolean(subscription && !isUnlimited && uploadsLeft <= 0);
+  const isPlanLimitReached = Boolean(subscription && !isUnlimited && plansLeft <= 0);
+
+  const showLimit = useCallback((kind: 'chat' | 'upload' | 'plan') => {
+    if (isUnlimited) return;
+    setUpgradeReason({
+      chat: 'You used all chat messages included in your current plan.',
+      upload: 'You used all file uploads included in your current plan.',
+      plan: 'You used all personalized plan generations included in your current plan.',
+    }[kind]);
+  }, [isUnlimited]);
 
   const markdownComponents = useMemo(
     () => ({
@@ -832,6 +856,7 @@ export function CoachPage() {
   const voiceModeRef = useRef(false);
   const assistantAudioRef = useRef<HTMLAudioElement | null>(null);
   const processedCoachPromptRef = useRef<string | null>(null);
+  const approvingPlanIdsRef = useRef<Set<string>>(new Set());
   const coachNavigationState = (location.state as CoachNavigationState | null) || null;
 
   const focusInput = useCallback(() => {
@@ -884,20 +909,36 @@ export function CoachPage() {
   }, []);
 
   const openAttachmentPicker = useCallback(() => {
+    if (subscriptionLoading || !subscription) return;
+    if (isUploadLimitReached) {
+      showLimit('upload');
+      return;
+    }
     setAttachmentError('');
     attachmentInputRef.current?.click();
-  }, []);
+  }, [isUploadLimitReached, showLimit, subscription, subscriptionLoading]);
 
   const handleAttachmentSelection = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     event.target.value = '';
     if (!files.length) return;
+    if (subscriptionLoading || !subscription) return;
+    if (isUploadLimitReached) {
+      setAttachmentError('Upload limit reached. Upgrade your plan to upload more files.');
+      showLimit('upload');
+      return;
+    }
 
     setSelectedAttachments((prev) => {
       const next = [...prev];
       const localErrors: string[] = [];
 
       for (const file of files) {
+        if (!isUnlimited && next.length >= uploadsLeft) {
+          localErrors.push('Upload limit reached. Upgrade your plan to upload more files.');
+          showLimit('upload');
+          break;
+        }
         if (next.length >= MAX_CHAT_ATTACHMENTS) {
           localErrors.push(
             language === 'ar'
@@ -944,7 +985,25 @@ export function CoachPage() {
       setAttachmentError(localErrors.join(' '));
       return next;
     });
-  }, [language]);
+  }, [isUnlimited, isUploadLimitReached, language, showLimit, subscription, subscriptionLoading, uploadsLeft]);
+
+  const handleAttachmentDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    if (subscriptionLoading || !subscription) return;
+    if (isUploadLimitReached) {
+      setAttachmentError('Upload limit reached. Upgrade your plan to upload more files.');
+      showLimit('upload');
+      return;
+    }
+    const files = Array.from(event.dataTransfer.files || []);
+    if (!files.length) return;
+    const transfer = new DataTransfer();
+    files.forEach((file) => transfer.items.add(file));
+    if (attachmentInputRef.current) {
+      attachmentInputRef.current.files = transfer.files;
+      attachmentInputRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }, [isUploadLimitReached, showLimit, subscription, subscriptionLoading]);
 
   const buildWebsiteContext = useCallback(async (): Promise<Record<string, unknown>> => {
     const exerciseMuscles = Array.from(new Set(exercises.map((exercise) => exercise.muscle))).sort();
@@ -1148,15 +1207,23 @@ export function CoachPage() {
     conversationId: currentId || user?.id || null,
     websiteContext,
     onResponse: handleVoiceBackendResponse,
+    onLimitReached: async () => {
+      showLimit('chat');
+      await refreshSubscription();
+    },
   });
   const isBusy = isLoading || isVoiceProcessing;
 
   const startListeningIfPossible = useCallback(() => {
     if (!isSupported) return;
+    if (subscriptionLoading || !subscription || isChatLimitReached) {
+      if (isChatLimitReached) showLimit('chat');
+      return;
+    }
     if (isLoading || isVoiceProcessing || isListening || isAssistantSpeaking) return;
     clearError();
     startListening();
-  }, [isSupported, isLoading, isVoiceProcessing, isListening, isAssistantSpeaking, clearError, startListening]);
+  }, [isSupported, subscriptionLoading, subscription, isChatLimitReached, showLimit, isLoading, isVoiceProcessing, isListening, isAssistantSpeaking, clearError, startListening]);
 
   const endVoiceModeTurn = useCallback(() => {
     if (!voiceModeRef.current) {
@@ -1495,6 +1562,8 @@ export function CoachPage() {
           goToSchedule();
         }
       }
+
+      await refreshSubscription();
 
       if (reply && (voiceModeRef.current || autoSpeak)) {
         playBackendAudio(responsePayload.audio_path);
@@ -2351,6 +2420,20 @@ export function CoachPage() {
   const sendMessageWithText = async (text: string, attachmentsOverride?: PendingAttachment[]) => {
     const attachments = attachmentsOverride ?? selectedAttachments;
     if ((!text.trim() && attachments.length === 0) || isBusy || !user) return;
+    if (subscriptionLoading || !subscription) return;
+    if (isPlanLimitReached && isPlanGenerationRequest(text)) {
+      showLimit('plan');
+      return;
+    }
+    if (isChatLimitReached) {
+      showLimit('chat');
+      return;
+    }
+    if (attachments.length > 0 && (isUploadLimitReached || (!isUnlimited && attachments.length > uploadsLeft))) {
+      setAttachmentError('Upload limit reached. Upgrade your plan to upload more files.');
+      showLimit('upload');
+      return;
+    }
 
     const activeConversationId = await ensureActiveConversation();
     if (!activeConversationId) return;
@@ -2367,29 +2450,6 @@ export function CoachPage() {
     setCurrentMessages(newMessages);
     setInput('');
     setIsLoading(true);
-
-    if (activeConversationId) {
-      if (supabase && supabase.from) {
-        try {
-          await supabase.from('chat_messages').insert({
-            conversation_id: activeConversationId,
-            user_id: user.id,
-            role: 'user',
-            content: storedUserContent,
-          });
-          
-          const conv = conversations.find(c => c.id === activeConversationId);
-          if (conv && !conv.title) {
-            const titleSeed = text.trim() || attachments.map((item) => item.file.name).join(', ');
-            const title = titleSeed.slice(0, 50) + (titleSeed.length > 50 ? '...' : '');
-            await supabase.from('chat_conversations').update({ title }).eq('id', activeConversationId);
-            setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, title } : c));
-          }
-        } catch (error) {
-          console.warn('Failed to save message to Supabase:', error);
-        }
-      }
-    }
 
     setConversations(prev => {
       const updated = prev.map(c =>
@@ -2446,6 +2506,7 @@ export function CoachPage() {
 
       const payload = {
         message: text.trim(),
+        request_id: `message-${userMessage.timestamp}`,
         user_id: user.id,
         conversation_id: activeConversationId,
         language: language === 'ar' ? 'ar' : 'en',
@@ -2458,6 +2519,7 @@ export function CoachPage() {
 
       const fallbackPayload = {
         message: text.trim(),
+        request_id: `message-${userMessage.timestamp}`,
         user_id: user.id,
         conversation_id: activeConversationId,
         language: language === 'ar' ? 'ar' : 'en',
@@ -2481,6 +2543,7 @@ export function CoachPage() {
         ? await (async () => {
             const formData = new FormData();
             formData.append('message', text.trim());
+            formData.append('request_id', `message-${userMessage.timestamp}`);
             formData.append('user_id', user.id);
             formData.append('conversation_id', activeConversationId);
             formData.append('language', language === 'ar' ? 'ar' : 'en');
@@ -2494,6 +2557,7 @@ export function CoachPage() {
             });
             return fetch(`${AI_BACKEND_URL}/chat-with-attachments`, {
               method: 'POST',
+              headers: await authHeaders(),
               body: formData,
               signal: controller.signal,
             });
@@ -2501,17 +2565,17 @@ export function CoachPage() {
         : useCompactPublicPayload
           ? await fetch(`${AI_BACKEND_URL}/chat`, {
               method: 'POST',
-              headers: {
+              headers: await authHeaders({
                 'Content-Type': 'application/json; charset=UTF-8',
-              },
+              }),
               body: JSON.stringify(fallbackPayload),
               signal: controller.signal,
             })
         : await fetch(`${AI_BACKEND_URL}/chat`, {
             method: 'POST',
-            headers: {
+            headers: await authHeaders({
               'Content-Type': 'application/json; charset=UTF-8',
-            },
+            }),
             body: JSON.stringify(payload),
             signal: controller.signal,
           });
@@ -2519,9 +2583,9 @@ export function CoachPage() {
       if (!attachments.length && apiResponse.status >= 500 && useCompactPublicPayload) {
         apiResponse = await fetch(`${AI_BACKEND_URL}/chat`, {
           method: 'POST',
-          headers: {
+          headers: await authHeaders({
             'Content-Type': 'application/json; charset=UTF-8',
-          },
+          }),
           body: JSON.stringify(fallbackPayload),
           signal: controller.signal,
         });
@@ -2532,14 +2596,45 @@ export function CoachPage() {
       }
 
       if (!apiResponse.ok) {
-        throw new Error(`Backend error: ${apiResponse.status}`);
+        const failure = await apiResponse.json().catch(() => ({}));
+        const code = failure.code || failure.detail?.code;
+        const message = failure.message || failure.detail?.message || (typeof failure.detail === 'string' ? failure.detail : `Backend error: ${apiResponse.status}`);
+        if (code === 'CHAT_LIMIT_REACHED' || code === 'UPLOAD_LIMIT_REACHED' || code === 'PLAN_LIMIT_REACHED') {
+          setCurrentMessages(currentMessages);
+          setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: currentMessages } : c));
+          setInput(text);
+          showLimit(code === 'UPLOAD_LIMIT_REACHED' ? 'upload' : code === 'PLAN_LIMIT_REACHED' ? 'plan' : 'chat');
+          await refreshSubscription();
+          throw Object.assign(new Error(message), { limitReached: true });
+        }
+        throw new Error(message);
       }
 
       const data = await apiResponse.json();
+      if (supabase && supabase.from) {
+        try {
+          await supabase.from('chat_messages').insert({
+            conversation_id: activeConversationId,
+            user_id: user.id,
+            role: 'user',
+            content: storedUserContent,
+          });
+          const conv = conversations.find(c => c.id === activeConversationId);
+          if (conv && !conv.title) {
+            const titleSeed = text.trim() || attachments.map((item) => item.file.name).join(', ');
+            const title = titleSeed.slice(0, 50) + (titleSeed.length > 50 ? '...' : '');
+            await supabase.from('chat_conversations').update({ title }).eq('id', activeConversationId);
+            setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, title } : c));
+          }
+        } catch (error) {
+          console.warn('Failed to save accepted message to Supabase:', error);
+        }
+      }
       if (attachments.length > 0) {
         clearPendingAttachments();
         setAttachmentError('');
       }
+      await refreshSubscription();
 
       // prefer the textual reply from backend
       const assistantTextRaw = data?.reply || formatExercisesMessage(data?.exercises || []);
@@ -2605,6 +2700,7 @@ export function CoachPage() {
     } catch (error: any) {
       console.error('Error:', error);
       setIsTypingReply(false);
+      if (error?.limitReached) return;
       const timeoutMessage = error?.name === 'AbortError'
         ? (attachments.length > 0
           ? (language === 'ar'
@@ -2700,9 +2796,12 @@ export function CoachPage() {
 
   const handleApprovePlan = async (planId: string) => {
     if (!user) return;
+    if (approvingPlanIdsRef.current.has(planId)) return;
+    approvingPlanIdsRef.current.add(planId);
+    try {
     const response = await fetch(`${AI_BACKEND_URL}/plans/${planId}/approve`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         user_id: user.id,
         conversation_id: currentId || user.id,
@@ -2710,7 +2809,15 @@ export function CoachPage() {
     });
 
     if (!response.ok) {
-      throw new Error(`Approve failed: ${response.status}`);
+      const failure = await response.json().catch(() => ({}));
+      const code = failure.code || failure.detail?.code;
+      const message = failure.message || failure.detail?.message || failure.detail || `Approve failed: ${response.status}`;
+      if (code === 'PLAN_LIMIT_REACHED') {
+        showLimit('plan');
+        await refreshSubscription();
+        return;
+      }
+      throw new Error(message);
     }
 
     const data = await response.json();
@@ -2719,6 +2826,7 @@ export function CoachPage() {
     } catch (error) {
       console.error('Failed saving approved plan to Supabase', error);
     }
+    await refreshSubscription();
     setPendingPlan(null);
     setPendingPlanOptions(null);
 
@@ -2729,6 +2837,9 @@ export function CoachPage() {
       await appendAssistantMessage(successText);
     } finally {
       goToSchedule();
+    }
+    } finally {
+      approvingPlanIdsRef.current.delete(planId);
     }
   };
 
@@ -2784,6 +2895,10 @@ export function CoachPage() {
     if (e.shiftKey) return;
 
     e.preventDefault();
+    if (isChatLimitReached) {
+      showLimit('chat');
+      return;
+    }
     sendMessage();
   };
 
@@ -2903,6 +3018,7 @@ export function CoachPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_45%,_rgba(1,3,10,0.75)_100%)]" />
       </div>
       <Navbar />
+      <UpgradeModal open={Boolean(upgradeReason)} onOpenChange={(open) => !open && setUpgradeReason('')} reason={upgradeReason} />
 
       <div className="relative z-10 flex flex-1 pt-16 pb-20 md:pb-0">
         <aside className="hidden md:flex w-80 shrink-0 flex-col border-r border-white/10 bg-[rgba(10,12,24,0.72)] backdrop-blur-2xl">
@@ -2919,6 +3035,7 @@ export function CoachPage() {
               <Plus className="w-4 h-4" />
               {t('coach.newChat')}
             </Button>
+            <div className="mt-3"><UsageWidget value={subscription} /></div>
           </div>
           <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
             {loadingConvs && (
@@ -3514,12 +3631,19 @@ export function CoachPage() {
                     ))}
                   </div>
                 )}
-                <div className="glass-card rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(20,23,40,0.92),rgba(10,12,24,0.94))] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
+                <div className="glass-card rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(20,23,40,0.92),rgba(10,12,24,0.94))] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.38)]" onDragOver={(event) => event.preventDefault()} onDrop={handleAttachmentDrop}>
+                  {(isChatLimitReached || isUploadLimitReached || isPlanLimitReached) && (
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300/20 bg-gradient-to-r from-violet-500/10 to-amber-400/10 px-4 py-3 shadow-[0_0_30px_rgba(245,158,11,.08)]">
+                      <div className="flex items-start gap-2 text-xs text-amber-100"><Lock className="mt-0.5 h-4 w-4 shrink-0"/><div>{isChatLimitReached && <p>Chat limit reached. Upgrade to continue talking with your AI Coach.</p>}{isUploadLimitReached && <p>Upload limit reached. Upgrade to add more files.</p>}{isPlanLimitReached && <p>Plan generation limit reached. Upgrade to create more plans.</p>}</div></div>
+                      <Button size="sm" variant="outline" onClick={() => showLimit(isChatLimitReached ? 'chat' : isUploadLimitReached ? 'upload' : 'plan')}>Upgrade</Button>
+                    </div>
+                  )}
                   <input
                     ref={attachmentInputRef}
                     type="file"
                     accept=".pdf,image/*"
                     multiple
+                    disabled={subscriptionLoading || !subscription || isUploadLimitReached || isBusy}
                     className="hidden"
                     onChange={handleAttachmentSelection}
                   />
@@ -3598,7 +3722,7 @@ export function CoachPage() {
                     </span>
                   </div>
                   <div className="flex items-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isBusy} className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]">
+                    <Button title={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={subscriptionLoading || !subscription || isBusy || isUploadLimitReached} className={`h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] ${isUploadLimitReached || subscriptionLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
                       <Paperclip className="w-4 h-4" />
                     </Button>
                     {isSupported && (
@@ -3606,7 +3730,7 @@ export function CoachPage() {
                         variant={isListening ? 'destructive' : 'ghost'}
                         size="icon"
                         onClick={isListening ? stopListening : startListeningIfPossible}
-                        disabled={isBusy || isAssistantSpeaking}
+                        disabled={subscriptionLoading || !subscription || isBusy || isAssistantSpeaking || isChatLimitReached}
                         className={`h-11 w-11 shrink-0 rounded-2xl border ${isListening ? 'animate-pulse border-destructive/30 bg-destructive/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'}`}
                       >
                         {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -3618,16 +3742,19 @@ export function CoachPage() {
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder={
-                        language === 'ar'
+                        isChatLimitReached
+                          ? 'Chat message limit reached. Upgrade your plan to continue.'
+                          : language === 'ar'
                           ? 'اسأل مدربك الذكي عن التمارين أو الوجبات أو التعافي أو جدولك...'
                           : 'Ask your AI Coach about workouts, meals, recovery, or your schedule...'
                       }
                       className="min-h-[56px] max-h-40 resize-y rounded-2xl border-white/10 bg-black/20 px-4 py-3 focus-visible:ring-1"
-                      disabled={isBusy}
+                      disabled={subscriptionLoading || !subscription || isBusy}
+                      readOnly={isChatLimitReached}
                       rows={2}
                     />
-                    <Button variant="hero" size="icon" onClick={sendMessage} disabled={isBusy || (!input.trim() && selectedAttachments.length === 0)} className="h-12 w-12 shrink-0 rounded-2xl shadow-[0_18px_38px_rgba(168,85,247,0.28)]">
-                      <Send className="w-4 h-4" />
+                    <Button title={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} variant="hero" size="icon" onClick={sendMessage} disabled={subscriptionLoading || !subscription || isChatLimitReached || isBusy || (!input.trim() && selectedAttachments.length === 0)} className={`h-12 w-12 shrink-0 rounded-2xl shadow-[0_18px_38px_rgba(168,85,247,0.28)] ${isChatLimitReached || subscriptionLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
+                      {isChatLimitReached ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>

@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
@@ -38,6 +38,9 @@ from dataset_paths import resolve_dataset_root, resolve_derived_root
 from fitbit_integration import FitbitIntegration, FitbitReconnectRequiredError
 from rag_context import RagContextBuilder
 from supabase_context import SupabaseContextRepository
+from billing_routes import router as billing_router
+from subscription_service import UsageLimitError, authenticated_user, check_usage, consume_usage
+from plan_intent import classify_user_intent, infer_generated_plan_type
 from voice.stt import WhisperSTT
 from voice.tts import LocalTTS, TTSError
 from voice.voice_pipeline import VoicePipeline, VoicePipelineError, VoicePipelineResult
@@ -72,6 +75,15 @@ STATIC_DIR = BACKEND_DIR / "static"
 STATIC_AUDIO_DIR = STATIC_DIR / "audio"
 STATIC_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.include_router(billing_router)
+
+
+@app.exception_handler(UsageLimitError)
+async def usage_limit_error_handler(_: Request, exc: UsageLimitError) -> JSONResponse:
+    content = {"code": exc.code, "message": exc.message}
+    if exc.intent:
+        content["intent"] = exc.intent
+    return JSONResponse(status_code=429, content=content)
 
 # Initialize Multi-Dataset Training Pipeline
 training_pipeline = None
@@ -144,6 +156,7 @@ async def initialize_training_pipeline():
 
 class ChatRequest(BaseModel):
     message: str
+    request_id: Optional[str] = None
     user_id: Optional[str] = None
     conversation_id: Optional[str] = None
     language: Optional[str] = "en"
@@ -154,6 +167,7 @@ class ChatRequest(BaseModel):
     plan_snapshot: Optional[Dict[str, Any]] = None
     website_context: Optional[Dict[str, Any]] = None
     attachment_context: Optional[Dict[str, Any]] = None
+    detected_intent: Optional[str] = None
 
 
 def _repair_mojibake(text: str) -> str:
@@ -491,6 +505,7 @@ def _resolve_response_dataset_dir() -> Path:
 ROUTER = DomainRouter(threshold=0.42, enable_semantic=False)
 MODERATION = ModerationLayer()
 LLM = LLMClient()
+PLAN_INTENT_LLM = LLMClient()
 ATTACHMENT_PROCESSOR = AttachmentProcessor(LLM)
 AI_ENGINE = AIEngine(Path(__file__).resolve().parent / "exercises.json")
 CATEGORY_DATA = DataCatalog(resolve_dataset_root(), resolve_derived_root())
@@ -2122,6 +2137,50 @@ def _is_generic_plan_request(user_input: str) -> bool:
     if _is_workout_plan_request(user_input) or _is_nutrition_plan_request(user_input):
         return False
     return True
+
+
+def is_plan_generation_request(user_input: str) -> bool:
+    """Deterministic bilingual guard for requests that can return a complete plan."""
+    normalized = normalize_text(_repair_mojibake(user_input or ""))
+    if not normalized:
+        return False
+    educational_prefixes = {
+        "what is", "what are", "what should", "explain", "how does", "how do i",
+        "how many", "why is", "tell me about", "is this", "is it",
+        "ما هو", "ما هي", "ماذا", "اشرح", "فسر", "كيف", "كم", "هل",
+    }
+    if any(normalized.startswith(prefix) for prefix in educational_prefixes):
+        return False
+    if _contains_any(normalized, PLAN_STATUS_KEYWORDS):
+        return False
+    short_actions = {normalize_text(item) for item in (APPROVE_KEYWORDS | REJECT_KEYWORDS)}
+    if normalized in short_actions:
+        return False
+    direct_phrases = {
+        "workout plan", "training plan", "exercise plan", "fitness plan", "nutrition plan",
+        "diet plan", "meal plan", "weekly plan", "weekly schedule", "exercise program",
+        "fitness program", "7 day plan", "خطة تمارين", "خطة تدريب", "خطة غذائية",
+        "جدول تمارين", "جدول غذائي", "برنامج تمارين", "برنامج تدريبي",
+    }
+    if _contains_phrase(normalized, direct_phrases):
+        return True
+    build_markers = {
+        "give me", "generate", "make me", "create", "build", "design", "prepare",
+        "write me", "i need", "i want", "اعطيني", "أعطيني", "بدي", "اريد", "أريد",
+        "اعمللي", "اعملي", "انشئ", "أنشئ", "جهزلي", "سويلي",
+    }
+    plan_nouns = {"plan", "program", "programme", "schedule", "routine", "خطة", "خطه", "جدول", "برنامج"}
+    plan_domains = {
+        "workout", "training", "exercise", "exercises", "fitness", "nutrition", "diet",
+        "meal", "meals", "muscle gain", "weight loss", "تمرين", "تمارين", "تدريب",
+        "غذاء", "غذائي", "غذائية", "تغذية", "وجبات", "زيادة عضل", "خسارة وزن", "انقاص وزن",
+    }
+    time_markers = {"week", "weekly", "7 day", "month", "daily", "أسبوع", "اسبوع", "شهري", "يومي"}
+    has_build = _contains_any(normalized, build_markers)
+    has_plan_noun = _contains_any(normalized, plan_nouns)
+    has_domain = _contains_any(normalized, plan_domains)
+    has_duration = _contains_any(normalized, time_markers)
+    return (has_plan_noun and (has_build or has_domain)) or (has_build and has_domain and has_duration)
 
 
 def _is_goal_comparison_query(user_input: str) -> bool:
@@ -6253,6 +6312,7 @@ def _build_pending_plan_response(
     plan_override: Optional[dict[str, Any]] = None,
     reply_override: Optional[str] = None,
 ) -> ChatResponse:
+    check_usage(user_id, "generated_plan")
     inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(profile, tracking_summary)
     plan_profile = dict(profile)
     plan_profile["goal"] = inferred_goal
@@ -6267,18 +6327,10 @@ def _build_pending_plan_response(
     plan = _sanitize_plan_payload(plan_type, plan, language)
     plan_id = str(plan.get("id") or f"{plan_type}_{uuid.uuid4().hex[:10]}")
     plan["id"] = plan_id
-    PENDING_PLANS[plan_id] = {
-        "user_id": user_id,
-        "conversation_id": conversation_id,
-        "plan_type": plan_type,
-        "plan": plan,
-        "approved": False,
-        "created_at": datetime.utcnow().isoformat(),
-    }
-    state["last_pending_plan_id"] = plan_id
-    state["pending_plan_options"] = None
-    state["pending_plan_type"] = None
-
+    plan_generation_id = f"generation:{plan_id}"
+    plan["is_generated_plan"] = True
+    plan["plan_credit_charged"] = True
+    plan["plan_generation_id"] = plan_generation_id
     reply = reply_override or _format_plan_preview(plan_type, plan, language)
     if inferred_by_ml and reply_override is None:
         goal_label = _profile_goal_label(inferred_goal, language)
@@ -6295,13 +6347,27 @@ def _build_pending_plan_response(
         )
         reply = f"{intro}\n\n{reply}"
 
+    consume_usage(user_id, "generated_plan", plan_generation_id)
+    PENDING_PLANS[plan_id] = {
+        "user_id": user_id,
+        "conversation_id": conversation_id,
+        "plan_type": plan_type,
+        "plan": plan,
+        "approved": False,
+        "plan_credit_charged": True,
+        "plan_generation_id": plan_generation_id,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    state["last_pending_plan_id"] = plan_id
+    state["pending_plan_options"] = None
+    state["pending_plan_type"] = None
     memory.add_assistant_message(reply)
     return ChatResponse(
         reply=reply,
         conversation_id=conversation_id,
         language=language,
         action="ask_plan",
-        data={"plan_id": plan_id, "plan_type": plan_type, "plan": plan},
+        data={"plan_id": plan_id, "plan_type": plan_type, "plan": plan, "is_generated_plan": True, "plan_credit_charged": True, "plan_generation_id": plan_generation_id, "detected_intent": "PLAN_GENERATION"},
     )
 
 
@@ -6567,6 +6633,7 @@ def _build_single_recommended_plan_response(
     state: dict[str, Any],
     memory: MemorySystem,
 ) -> Optional[ChatResponse]:
+    check_usage(user_id, "generated_plan")
     prepared_profile = _prepare_dataset_backed_plan_profile(profile, tracking_summary)
     inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(prepared_profile, tracking_summary)
     plan_profile = dict(prepared_profile)
@@ -9158,6 +9225,7 @@ def _general_llm_reply(
     recent_messages: Optional[list[dict[str, Any]]] = None,
     website_context: Optional[dict[str, Any]] = None,
     attachment_context: Optional[dict[str, Any]] = None,
+    generated_plan_credits_available: bool = True,
 ) -> str:
     language_instructions = {
         "en": "Reply in polished English. Use 0-2 relevant emojis naturally.",
@@ -9257,6 +9325,8 @@ def _general_llm_reply(
         "When user asks what the app knows about them, inspect the provided profile, tracking summary, plan snapshot, and user_saved_notes before answering.\n"
         "If a requested profile field or note is blank or missing, say it is not recorded yet instead of guessing.\n"
         "Do not generate full workout plans, nutrition plans, or claim a plan was added to Schedule inside normal chat replies. The app handles plan creation, approval, and schedule saving outside the model.\n"
+        f"generatedPlanCreditsAvailable: {str(generated_plan_credits_available).lower()}\n"
+        "If generatedPlanCreditsAvailable is false, never output a complete workout, nutrition, meal, diet, training, weekly, schedule, or personalized plan. State briefly that upgrading is required. Translation and explanation of existing text remain allowed.\n"
         "Keep responses concise but useful, usually 1 short direct answer plus 3-6 strong bullets when appropriate.\n"
         "End with one clear next action, question, or recommendation when that improves the answer.\n"
         "Prefer a direct answer over long setup text.\n"
@@ -9661,15 +9731,69 @@ async def chat_lite(
 
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
-    user_id = _normalize_user_id(req.user_id)
+async def chat(req: ChatRequest, subscription_user: dict[str, Any] = Depends(authenticated_user)) -> ChatResponse:
+    # Public callers can never mark usage as already reserved. Only the internal
+    # attachment flow may do that after its own atomic preflight checks.
+    return await _chat_impl(req, subscription_user, usage_reserved=False)
+
+
+async def _chat_impl(
+    req: ChatRequest,
+    subscription_user: dict[str, Any],
+    *,
+    usage_reserved: bool,
+    prechecked_subscription_row: Optional[dict[str, Any]] = None,
+) -> ChatResponse:
+    user_id = subscription_user["id"]
+    if req.user_id and str(req.user_id) != user_id:
+        raise HTTPException(status_code=403, detail="User identity does not match the authenticated session.")
     conversation_id = _normalize_conversation_id(req.conversation_id, user_id)
+    preflight_state = _get_user_state(user_id)
+    normalized_request = normalize_text(_repair_mojibake(req.message or ""))
+    question_prefixes = (
+        "what ", "how ", "why ", "is ", "are ", "can ", "explain ", "tell me ",
+        "ما ", "ماذا ", "كيف ", "لماذا ", "هل ", "اشرح ",
+    )
+    looks_like_new_question = "?" in (req.message or "") or normalized_request.startswith(question_prefixes)
+    continuing_plan = bool(
+        preflight_state.get("pending_plan_type")
+        and preflight_state.get("pending_field")
+        and not looks_like_new_question
+        and len(normalized_request.split()) <= 12
+    )
+    plan_generation_requested = is_plan_generation_request(req.message) or continuing_plan
+    detected_intent = str(req.detected_intent or "").upper()
+    subscription_row: dict[str, Any] = dict(prechecked_subscription_row or {})
+    generated_plan_credits_available = True
+    if not usage_reserved:
+        subscription_row = check_usage(user_id, "chat_message")
+        is_admin = bool(subscription_row.get("is_admin"))
+        classification = await asyncio.to_thread(classify_user_intent, req.message, PLAN_INTENT_LLM)
+        detected_intent = str(classification.get("intent") or "OTHER")
+        if not is_admin:
+            plan_generation_requested = detected_intent == "PLAN_GENERATION" or continuing_plan
+            if plan_generation_requested:
+                try:
+                    check_usage(user_id, "generated_plan")
+                except UsageLimitError as exc:
+                    raise UsageLimitError(exc.kind, intent="PLAN_GENERATION") from exc
+        else:
+            plan_generation_requested = detected_intent == "PLAN_GENERATION" or plan_generation_requested
+        consume_usage(user_id, "chat_message", f"chat:{req.request_id or uuid.uuid4()}")
+    elif detected_intent == "PLAN_GENERATION":
+        plan_generation_requested = True
+
+    if not bool(subscription_row.get("is_admin")):
+        generated_plan_credits_available = (
+            int(subscription_row.get("generated_plans_used", 0))
+            < int(subscription_row.get("generated_plans_limit", 0))
+        )
     requested_language = _detect_language(req.language or "en", req.message, req.user_profile if isinstance(req.user_profile, dict) else {})
     urgent_reply = _urgent_heart_rate_reply(req.message, requested_language, conversation_id)
     if urgent_reply is not None:
         return urgent_reply
 
-    state = _get_user_state(user_id)
+    state = preflight_state
     database_context = _load_database_context(user_id, conversation_id)
     database_profile = database_context.get("profile") if isinstance(database_context.get("profile"), dict) else {}
     if database_profile:
@@ -9970,28 +10094,36 @@ async def chat(req: ChatRequest) -> ChatResponse:
             )
 
         if selected_idx is not None:
+            check_usage(user_id, "generated_plan")
             selected_plan = deepcopy(pending_options[selected_idx])
             plan_id = selected_plan["id"]
+            plan_generation_id = f"generation:{plan_id}"
+            selected_plan["is_generated_plan"] = True
+            selected_plan["plan_credit_charged"] = True
+            selected_plan["plan_generation_id"] = plan_generation_id
+            reply = _format_plan_preview(pending_options_type, selected_plan, language)
+            consume_usage(user_id, "generated_plan", plan_generation_id)
             PENDING_PLANS[plan_id] = {
                 "user_id": user_id,
                 "conversation_id": conversation_id,
                 "plan_type": pending_options_type,
                 "plan": selected_plan,
                 "approved": False,
+                "plan_credit_charged": True,
+                "plan_generation_id": plan_generation_id,
                 "created_at": datetime.utcnow().isoformat(),
             }
             state["last_pending_plan_id"] = plan_id
             state["pending_plan_options"] = None
             state["pending_plan_type"] = None
 
-            reply = _format_plan_preview(pending_options_type, selected_plan, language)
             memory.add_assistant_message(reply)
             return ChatResponse(
                 reply=reply,
                 conversation_id=conversation_id,
                 language=language,
                 action="ask_plan",
-                data={"plan_id": plan_id, "plan_type": pending_options_type, "plan": selected_plan},
+                data={"plan_id": plan_id, "plan_type": pending_options_type, "plan": selected_plan, "is_generated_plan": True, "plan_credit_charged": True, "plan_generation_id": plan_generation_id, "detected_intent": "PLAN_GENERATION"},
             )
 
         if _contains_any(routing_input, PLAN_REFRESH_KEYWORDS):
@@ -10129,6 +10261,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
             recent_messages=recent_messages,
             memory=memory,
         )
+        if requested_plan_type not in {"workout", "nutrition"} and detected_intent == "PLAN_GENERATION":
+            requested_plan_type = infer_generated_plan_type(routing_input)
+            plan_intent_meta = {"source": "universal_intent_classifier", "confidence": 1.0}
     if requested_plan_type in {"workout", "nutrition"}:
         inferred_goal, inferred_confidence, inferred_by_ml = _infer_goal_for_plan(profile, tracking_summary)
         plan_profile = dict(profile)
@@ -10268,6 +10403,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
                     recent_messages=recent_messages,
                     website_context=req.website_context,
                     attachment_context=active_attachment_context,
+                    generated_plan_credits_available=generated_plan_credits_available,
                 )
                 if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
                     llm_reply = _ollama_unavailable_reply(language)
@@ -10298,6 +10434,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             recent_messages=recent_messages,
             website_context=req.website_context,
             attachment_context=active_attachment_context,
+            generated_plan_credits_available=generated_plan_credits_available,
         )
         if llm_reply.startswith("Ollama error:") or llm_reply.startswith("Ollama is not reachable"):
             llm_reply = _ollama_unavailable_reply(language)
@@ -10403,6 +10540,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             state=state,
             recent_messages=recent_messages,
             attachment_context=active_attachment_context,
+            generated_plan_credits_available=generated_plan_credits_available,
         )
         state["pending_diagnostic"] = None
         state["pending_diagnostic_conversation_id"] = None
@@ -10649,6 +10787,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         state=state,
         recent_messages=recent_messages,
         attachment_context=active_attachment_context,
+        generated_plan_credits_available=generated_plan_credits_available,
     )
     if llm_reply.startswith("Ollama error:"):
         llm_reply = _lang_reply(
@@ -10753,6 +10892,7 @@ def _attachment_direct_reply(attachment_context: dict[str, Any], language: str) 
 @app.post("/chat-with-attachments", response_model=ChatResponse)
 async def chat_with_attachments(
     message: str = Form(""),
+    request_id: Optional[str] = Form(None),
     user_id: Optional[str] = Form(None),
     conversation_id: Optional[str] = Form(None),
     language: str = Form("en"),
@@ -10762,12 +10902,31 @@ async def chat_with_attachments(
     plan_snapshot: Optional[str] = Form(None),
     website_context: Optional[str] = Form(None),
     attachments: list[UploadFile] = File(...),
+    subscription_user: dict[str, Any] = Depends(authenticated_user),
 ) -> ChatResponse:
     if not attachments:
         raise HTTPException(status_code=400, detail="At least one attachment is required.")
 
+    authenticated_id = subscription_user["id"]
+    if user_id and str(user_id) != authenticated_id:
+        raise HTTPException(status_code=403, detail="User identity does not match the authenticated session.")
+    user_id = authenticated_id
+    subscription_row = check_usage(user_id, "chat_message")
+    detected_intent = "OTHER"
+    classification = await asyncio.to_thread(classify_user_intent, message, PLAN_INTENT_LLM)
+    detected_intent = str(classification.get("intent") or "OTHER")
+    if not bool(subscription_row.get("is_admin")):
+        if detected_intent == "PLAN_GENERATION":
+            try:
+                check_usage(user_id, "generated_plan")
+            except UsageLimitError as exc:
+                raise UsageLimitError(exc.kind, intent="PLAN_GENERATION") from exc
+    counted_attachments = [item for item in attachments if (item.content_type or "").lower().startswith("image/") or (item.content_type or "").lower() == "application/pdf"]
+    check_usage(user_id, "upload", len(counted_attachments))
+    consume_usage(user_id, "chat_message", f"chat:{request_id or uuid.uuid4()}")
     file_payloads: list[dict[str, Any]] = []
     for attachment in attachments:
+        content_type = (attachment.content_type or "").lower()
         file_payloads.append(
             {
                 "filename": attachment.filename or "attachment",
@@ -10778,6 +10937,8 @@ async def chat_with_attachments(
 
     try:
         attachment_context = ATTACHMENT_PROCESSOR.process_files(file_payloads, language, message)
+        for attachment in counted_attachments:
+            consume_usage(user_id, "upload", f"upload:{request_id or conversation_id or 'new'}:{attachment.filename}:{attachment.size}")
     except AttachmentProcessingError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
@@ -10824,6 +10985,7 @@ async def chat_with_attachments(
 
     req = ChatRequest(
         message=effective_message,
+        request_id=request_id,
         user_id=uid,
         conversation_id=conv_id,
         language=language,
@@ -10833,8 +10995,14 @@ async def chat_with_attachments(
         plan_snapshot=parsed_plan_snapshot,
         website_context=parsed_website_context,
         attachment_context=attachment_context,
+        detected_intent=detected_intent,
     )
-    return await chat(req)
+    return await _chat_impl(
+        req,
+        subscription_user,
+        usage_reserved=True,
+        prechecked_subscription_row=subscription_row,
+    )
 
 
 @app.post("/voice-chat", response_model=VoiceChatResponse)
@@ -10844,8 +11012,12 @@ async def voice_chat(
     user_id: Optional[str] = Form(None),
     conversation_id: Optional[str] = Form(None),
     website_context: Optional[str] = Form(None),
+    subscription_user: dict[str, Any] = Depends(authenticated_user),
 ) -> VoiceChatResponse:
-    uid = _normalize_user_id(user_id)
+    uid = subscription_user["id"]
+    if user_id and str(user_id) != uid:
+        raise HTTPException(status_code=403, detail="User identity does not match the authenticated session.")
+    check_usage(uid, "chat_message")
     conv_id = _normalize_conversation_id(conversation_id, uid)
     lang = "ar" if (language or "").lower().startswith("ar") else "en"
     parsed_website_context: Optional[dict[str, Any]] = None
@@ -10882,7 +11054,7 @@ async def voice_chat(
                 language=voice_language,
                 website_context=parsed_website_context,
             )
-            voice_chat_payload = await chat(chat_req)
+            voice_chat_payload = await chat(chat_req, subscription_user)
             return voice_chat_payload.reply, voice_chat_payload.conversation_id
 
         result: VoicePipelineResult = await VOICE_PIPELINE.run(
@@ -10942,12 +11114,13 @@ async def tts_speak(request: TextToSpeechRequest) -> TextToSpeechResponse:
 
 
 @app.post("/plans/{plan_id}/approve")
-def approve_plan(plan_id: str, req: PlanActionRequest | None = None) -> dict[str, Any]:
+def approve_plan(plan_id: str, req: PlanActionRequest | None = None, subscription_user: dict[str, Any] = Depends(authenticated_user)) -> dict[str, Any]:
     record = PENDING_PLANS.get(plan_id)
     if not record:
         raise HTTPException(status_code=404, detail="Plan not found")
 
-    if req and req.user_id and record["user_id"] != req.user_id:
+    user_id = subscription_user["id"]
+    if record["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Not allowed to approve this plan")
 
     record["approved"] = True

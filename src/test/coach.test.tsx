@@ -53,6 +53,18 @@ vi.mock('@/hooks/useVoiceChat', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useSubscription', () => ({
+  useSubscription: () => ({
+    subscription: {
+      plan: 'free', status: 'active', currentPeriodStart: null, currentPeriodEnd: null, isUnlimited: false,
+      usage: { uploadsUsed: 0, uploadsLimit: 2, chatMessagesUsed: 0, chatMessagesLimit: 30, generatedPlansUsed: 0, generatedPlansLimit: 1 },
+    },
+    loading: false,
+    error: '',
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock('@/components/layout/Navbar', () => ({
   Navbar: () => <div data-testid="navbar" />,
 }));
@@ -66,6 +78,7 @@ const makeQuery = () => {
   query.select = () => query;
   query.eq = () => query;
   query.order = () => query;
+  query.limit = () => query;
   query.maybeSingle = () => Promise.resolve({ data: null });
   query.insert = () => query;
   query.update = () => query;
@@ -91,6 +104,6 @@ describe('CoachPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByPlaceholderText('Type your message...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask your AI Coach about workouts, meals, recovery, or your schedule...')).toBeInTheDocument();
   });
 });
