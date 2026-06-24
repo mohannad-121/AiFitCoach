@@ -848,7 +848,7 @@ export function CoachPage() {
 
 
   const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const selectedAttachmentsRef = useRef<PendingAttachment[]>([]);
@@ -1378,9 +1378,17 @@ export function CoachPage() {
     window.setTimeout(() => startListeningIfPossible(), 120);
   }, [startListeningIfPossible, stopAllSpeech, stopListening]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const scrollContainer = messagesScrollRef.current;
+    if (!scrollContainer) return;
+    window.requestAnimationFrame(() => {
+      if (typeof scrollContainer.scrollTo === 'function') {
+        scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior });
+      } else {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    });
+  }, []);
 
   const goToSchedule = useCallback(() => {
     navigate('/schedule?focusToday=1');
@@ -1431,8 +1439,19 @@ export function CoachPage() {
   }, [showRagDebug, currentMessages, loadRagDebug, user]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [currentMessages]);
+    scrollToBottom(isTypingReply ? 'auto' : 'smooth');
+  }, [currentMessages, isTypingReply, scrollToBottom]);
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     currentMessagesRef.current = currentMessages;
@@ -2389,9 +2408,18 @@ export function CoachPage() {
       }
 
       setIsTypingReply(true);
-      const charsPerTick =
-        fullText.length > 1400 ? 20 : fullText.length > 900 ? 14 : fullText.length > 500 ? 9 : 5;
-      const tickMs = 18;
+      const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion || document.visibilityState === 'hidden') {
+        const completeMessage: ChatMessage = { role: 'assistant', content: fullText, timestamp };
+        setCurrentMessages([...baseMessages, completeMessage]);
+        return [...baseMessages, completeMessage];
+      }
+
+      // Keep the pleasant streamed-text feel without rebuilding the entire
+      // Markdown conversation dozens or hundreds of times for a long answer.
+      const frameCount = Math.min(18, Math.max(4, Math.ceil(fullText.length / 140)));
+      const charsPerTick = Math.max(1, Math.ceil(fullText.length / frameCount));
+      const tickMs = 28;
       let cursor = 0;
 
       await new Promise<void>((resolve) => {
@@ -3010,7 +3038,7 @@ export function CoachPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#060816] text-foreground">
+    <div className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#060816] text-foreground">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(129,92,255,0.18),_transparent_32%),radial-gradient(circle_at_85%_18%,_rgba(34,211,238,0.12),_transparent_24%),radial-gradient(circle_at_50%_100%,_rgba(236,72,153,0.1),_transparent_34%)]" />
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:54px_54px]" />
@@ -3020,7 +3048,7 @@ export function CoachPage() {
       <Navbar />
       <UpgradeModal open={Boolean(upgradeReason)} onOpenChange={(open) => !open && setUpgradeReason('')} reason={upgradeReason} />
 
-      <div className="relative z-10 flex flex-1 pt-16 pb-20 md:pb-0">
+      <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden pt-16 pb-16 md:pb-0">
         <aside className="hidden md:flex w-80 shrink-0 flex-col border-r border-white/10 bg-[rgba(10,12,24,0.72)] backdrop-blur-2xl">
           <div className="border-b border-white/10 p-5">
             <div className="mb-4">
@@ -3140,10 +3168,10 @@ export function CoachPage() {
           )}
         </AnimatePresence>
 
-        <main className="mx-auto flex w-full max-w-[1680px] flex-1 px-3 py-4 sm:px-4 lg:px-6">
-          <div className="grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <section className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.92),rgba(8,10,22,0.94))] shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-              <div className="sticky top-16 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(14,16,30,0.96),rgba(14,16,30,0.78))] px-4 py-4 backdrop-blur-2xl sm:px-5 lg:px-6">
+        <main className="mx-auto flex min-h-0 w-full max-w-[1680px] flex-1 overflow-hidden px-3 py-3 sm:px-4 lg:px-6">
+          <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.92),rgba(8,10,22,0.94))] shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+              <div className="relative z-20 shrink-0 border-b border-white/10 bg-[linear-gradient(180deg,rgba(14,16,30,0.96),rgba(14,16,30,0.78))] px-4 py-4 backdrop-blur-xl sm:px-5 lg:px-6">
                 <div className="absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-3">
@@ -3274,7 +3302,7 @@ export function CoachPage() {
                 )}
               </AnimatePresence>
 
-              <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-5 sm:px-5 lg:px-6">
+              <div ref={messagesScrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto scroll-smooth scrollbar-thin [scrollbar-gutter:stable] px-4 py-5 sm:px-5 lg:px-6">
                 {currentMessages.length === 0 && !isLoading && !isVoiceProcessing && (
                   <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.32)]">
                     <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
@@ -3323,7 +3351,12 @@ export function CoachPage() {
                       const copyText = buildMessageCopyText(message, language);
                       const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
                       return (
-                        <motion.div key={`${currentId}-${index}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`group flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                        <motion.div
+                          key={`${currentId}-${index}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`group flex gap-4 [content-visibility:auto] [contain-intrinsic-size:auto_180px] ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+                        >
                           <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
                             message.role === 'user'
                               ? 'border-fuchsia-300/20 bg-gradient-to-br from-fuchsia-500/85 to-violet-500/85 text-white'
@@ -3421,7 +3454,7 @@ export function CoachPage() {
                     </div>
                   </motion.div>
                 )}
-                <div ref={messagesEndRef} />
+                <div aria-hidden="true" className="h-px" />
               </div>
 
               {showRagDebug && (
@@ -3616,7 +3649,7 @@ export function CoachPage() {
                 )}
               </AnimatePresence>
 
-              <div className="sticky bottom-0 z-20 border-t border-white/10 bg-[linear-gradient(180deg,rgba(7,9,18,0),rgba(7,9,18,0.92)_20%,rgba(7,9,18,0.98))] px-4 pb-4 pt-4 sm:px-5 lg:px-6">
+              <div className="relative z-20 shrink-0 border-t border-white/10 bg-[linear-gradient(180deg,rgba(7,9,18,0),rgba(7,9,18,0.92)_20%,rgba(7,9,18,0.98))] px-4 pb-3 pt-3 sm:px-5 lg:px-6">
                 {currentMessages.length <= 1 && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {quickPrompts.slice(0, 4).map((prompt) => (
@@ -3761,8 +3794,8 @@ export function CoachPage() {
               </div>
             </section>
 
-            <aside className="hidden xl:flex">
-              <div className="sticky top-20 flex h-fit w-full flex-col gap-4 rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.9),rgba(8,10,22,0.92))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
+            <aside className="hidden min-h-0 overflow-y-auto overscroll-contain xl:flex">
+              <div className="flex h-fit w-full flex-col gap-4 rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.9),rgba(8,10,22,0.92))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
                     {isArabic ? 'حالة المدرب' : 'Coach Status'}
