@@ -1061,7 +1061,7 @@ export function SchedulePage() {
 
             <div className="schedule-header-actions self-start lg:self-auto">
               <div className="schedule-date-badge">
-                <span>{language === 'ar' ? 'ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«' : 'Live Date'}</span>
+                <span>{language === 'ar' ? 'تم التحديث' : 'Live Date'}</span>
                 <strong>{selectedDateBadge}</strong>
               </div>
 
@@ -1101,24 +1101,24 @@ export function SchedulePage() {
 
           <div className="schedule-command-grid">
             <div className="schedule-command-card">
-              <span>{language === 'ar' ? 'Ø§Ù„Ø­Ø§Ù„Ø©' : 'Status'}</span>
+              <span>{language === 'ar' ? 'الحالة' : 'Status'}</span>
               <strong>{selectedDayStatus}</strong>
               <p>{nextStepMessage}</p>
             </div>
             <div className="schedule-command-card">
-              <span>{language === 'ar' ? 'ØªÙ‚Ø¯Ù… Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹' : 'Week progress'}</span>
+              <span>{language === 'ar' ? 'تقدم الأسبوع' : 'Week progress'}</span>
               <strong>{completedWeekDays}/7</strong>
-              <p>{language === 'ar' ? `Ø§ÙƒØªÙ…Ù„ ${weekProgressPercent}% Ù…Ù† Ø¥ÙŠÙ‚Ø§Ø¹ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹` : `${weekProgressPercent}% of your weekly rhythm completed`}</p>
+              <p>{language === 'ar' ? `اكتمل ${weekProgressPercent}% من إيقاع الأسبوع` : `${weekProgressPercent}% of your weekly rhythm completed`}</p>
             </div>
             <div className="schedule-command-card">
-              <span>{language === 'ar' ? 'ØªØ§Ø±ÙŠØ® Ø§Ù„ÙŠÙˆÙ…' : 'Selected date'}</span>
+              <span>{language === 'ar' ? 'تاريخ اليوم' : 'Selected date'}</span>
               <strong>{selectedDateBadge}</strong>
               <button
                 type="button"
                 className="schedule-command-link"
                 onClick={() => todayPlanRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               >
-                {language === 'ar' ? 'Ø§ÙØªØ­ Ù…Ø³Ø§Ø­Ø© Ø§Ù„ÙŠÙˆÙ…' : 'Open day workspace'}
+                {language === 'ar' ? 'افتح مساحة اليوم' : 'Open day workspace'}
               </button>
             </div>
           </div>
@@ -1586,21 +1586,21 @@ export function SchedulePage() {
             <div className="schedule-insight-panel glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {language === 'ar' ? 'Ø¨ØµÙŠØ±Ø© Ø§Ù„Ù…Ø¯Ø±Ø¨ Ø§Ù„Ø°ÙƒÙŠ' : 'AI Coach Insight'}
+                  {language === 'ar' ? 'بصيرة المدرب الذكي' : 'AI Coach Insight'}
                 </h3>
-                <span className="schedule-insight-badge">{language === 'ar' ? 'Ù…Ø¨Ø§Ø´Ø±' : 'Live'}</span>
+                <span className="schedule-insight-badge">{language === 'ar' ? 'مباشر' : 'Live'}</span>
               </div>
 
               <p className="schedule-insight-copy">{insightText}</p>
 
               <div className="schedule-insight-grid">
                 <div>
-                  <span>{language === 'ar' ? 'Ø§Ù„Ø®Ø·Ø· Ø§Ù„Ø¬Ø§Ù‡Ø²Ø©' : 'Plans loaded'}</span>
+                  <span>{language === 'ar' ? 'الخطط الجاهزة' : 'Plans loaded'}</span>
                   <strong>{planCollection.length}</strong>
                 </div>
                 <div>
-                  <span>{language === 'ar' ? 'Ø§Ù„Ù†ÙˆØ¹ Ø§Ù„Ù†Ø´Ø·' : 'Active mode'}</span>
-                  <strong>{language === 'ar' ? (viewTab === 'workout' ? 'Ø§Ù„ØªÙ…Ø§Ø±ÙŠÙ†' : 'Ø§Ù„ØªØºØ°ÙŠØ©') : (viewTab === 'workout' ? 'Workout' : 'Nutrition')}</strong>
+                  <span>{language === 'ar' ? 'النوع النشط' : 'Active mode'}</span>
+                  <strong>{language === 'ar' ? (viewTab === 'workout' ? 'التمارين' : 'التغذية') : (viewTab === 'workout' ? 'Workout' : 'Nutrition')}</strong>
                 </div>
               </div>
             </div>
@@ -1740,5 +1740,4 @@ export function SchedulePage() {
     </div>
   );
 }
-
 

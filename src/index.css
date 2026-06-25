@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap");
@@ -166,9 +166,50 @@
     background: hsl(var(--background));
   }
 
-  /* RTL Support for Arabic */
-  [dir="rtl"] {
-    font-family: 'Noto Sans Arabic', 'Poppins', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  html[lang="en"] body {
+    font-family: 'Poppins', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  }
+
+  html[lang="ar"] body {
+    direction: rtl;
+    font-family: 'Noto Sans Arabic', 'Cairo', 'Tajawal', 'Poppins', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  }
+
+  html[dir="rtl"] {
+    text-align: right;
+  }
+
+  html[dir="rtl"] .font-display {
+    letter-spacing: 0;
+  }
+
+  html[dir="rtl"] input,
+  html[dir="rtl"] textarea,
+  html[dir="rtl"] [contenteditable="true"] {
+    direction: auto;
+    text-align: start;
+    unicode-bidi: plaintext;
+  }
+
+  html[dir="rtl"] input::placeholder,
+  html[dir="rtl"] textarea::placeholder {
+    text-align: start;
+  }
+
+  html[dir="rtl"] [dir="auto"],
+  html[dir="rtl"] .chat-message-content,
+  html[dir="rtl"] .prose,
+  html[dir="rtl"] p,
+  html[dir="rtl"] li {
+    unicode-bidi: plaintext;
+  }
+
+  html[dir="rtl"] .chat-bubble-user {
+    border-radius: 1.4rem 1.4rem 1.4rem 0.4rem;
+  }
+
+  html[dir="rtl"] .chat-bubble-ai {
+    border-radius: 1.4rem 1.4rem 0.4rem 1.4rem;
   }
 }
 
