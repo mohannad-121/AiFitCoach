@@ -181,7 +181,7 @@ def _reply_has_markdown_structure(text: str) -> bool:
 
 
 def _mojibake_score(text: str) -> int:
-    suspicious_tokens = ("Ã", "Â", "Ø", "Ù", "â", "ð", "�")
+    suspicious_tokens = ("\u00c3", "\u00c2", "\u00d8", "\u00d9", "\u00e2", "\u00f0", "\ufffd")
     return sum(text.count(token) for token in suspicious_tokens)
 
 
@@ -311,11 +311,11 @@ def _normalize_assistant_reply(text: str) -> str:
     for old, new in {
         "\u202f": " ",
         "\xa0": " ",
-        "â¯": " ",
-        "Â·": "·",
-        "â€“": "-",
-        "â€”": "-",
-        "â€‘": "-",
+        "\u00e2\u00af": " ",
+        "\u00c2\u00b7": "·",
+        "\u00e2\u20ac\u201c": "-",
+        "\u00e2\u20ac\u201d": "-",
+        "\u00e2\u20ac\u2018": "-",
     }.items():
         clean = clean.replace(old, new)
 
@@ -981,14 +981,14 @@ GREETING_KEYWORDS = {
     "hi",
     "hello",
     "hey",
-    "Ù…Ø±Ø­Ø¨Ø§",
-    "Ø§Ù‡Ù„Ø§",
-    "Ù‡Ù„Ø§",
-    "Ø§Ù„Ø³Ù„Ø§Ù… Ø¹Ù„ÙŠÙƒÙ…",
+    "مرحبا",
+    "اهلا",
+    "هلا",
+    "السلام عليكم",
 }
 
-NAME_KEYWORDS = {"name", "Ø§Ø³Ù…Ùƒ", "Ø´Ùˆ Ø§Ø³Ù…Ùƒ", "Ù…ÙŠÙ† Ø§Ù†Øª"}
-HOW_ARE_YOU_KEYWORDS = {"how are you", "ÙƒÙŠÙÙƒ", "Ø´Ù„ÙˆÙ†Ùƒ", "ÙƒÙŠÙ Ø­Ø§Ù„Ùƒ"}
+NAME_KEYWORDS = {"name", "اسمك", "شو اسمك", "مين انت"}
+HOW_ARE_YOU_KEYWORDS = {"how are you", "كيفك", "شلونك", "كيف حالك"}
 WORKOUT_PLAN_KEYWORDS = {
     "workout plan",
     "training plan",
@@ -1001,9 +1001,9 @@ WORKOUT_PLAN_KEYWORDS = {
     "خطة تدريب",
     "برنامج تدريب",
     "جدول تدريب",
-    "Ø®Ø·Ø© ØªÙ…Ø§Ø±ÙŠÙ†",
-    "Ø¨Ø±Ù†Ø§Ù…Ø¬ ØªÙ…Ø§Ø±ÙŠÙ†",
-    "Ø¬Ø¯ÙˆÙ„ ØªÙ…Ø§Ø±ÙŠÙ†",
+    "خطة تمارين",
+    "برنامج تمارين",
+    "جدول تمارين",
 }
 NUTRITION_PLAN_KEYWORDS = {
     "nutrition plan",
@@ -1022,9 +1022,9 @@ NUTRITION_PLAN_KEYWORDS = {
     "جدول غذائي",
     "نظام غذائي",
     "نظام أكل",
-    "Ø®Ø·Ø© ØºØ°Ø§Ø¦ÙŠØ©",
-    "Ø®Ø·Ø© ØªØºØ°ÙŠØ©",
-    "Ø¬Ø¯ÙˆÙ„ ÙˆØ¬Ø¨Ø§Øª",
+    "خطة غذائية",
+    "خطة تغذية",
+    "جدول وجبات",
 }
 NUTRITION_KB_KEYWORDS = {
     "nutrition",
@@ -1060,7 +1060,7 @@ NUTRITION_KB_KEYWORDS = {
     "خطة غذائية",
     "دايت",
 }
-PROGRESS_KEYWORDS = {"progress", "tracking", "adherence", "Ø§Ù„Ø§Ù„ØªØ²Ø§Ù…", "Ø§Ù„ØªÙ‚Ø¯Ù…", "Ø§Ù†Ø¬Ø§Ø²"}
+PROGRESS_KEYWORDS = {"progress", "tracking", "adherence", "الالتزام", "التقدم", "انجاز"}
 PERFORMANCE_ANALYSIS_KEYWORDS = {
     "performance",
     "weekly performance",
@@ -1114,7 +1114,7 @@ PERFORMANCE_ANALYSIS_KEYWORDS = {
     "شلون كان ادائي",
     "شلون كان أدائي",
 }
-APPROVE_KEYWORDS = {"approve", "yes", "وافق", "اعتمد", "موافق", "ÙˆØ§ÙÙ‚", "Ø§Ø¹ØªÙ…Ø¯", "Ù…ÙˆØ§ÙÙ‚"}
+APPROVE_KEYWORDS = {"approve", "yes", "وافق", "اعتمد", "موافق", "وافق", "اعتمد", "موافق"}
 REJECT_KEYWORDS = {
     "reject",
     "no",
@@ -1134,13 +1134,13 @@ REJECT_KEYWORDS = {
     "بدل الخطة",
     "ما بدي",
     "مش بدي",
-    "Ù…Ø´",
-    "Ø±ÙØ¶",
-    "Ù„Ø§",
-    "ØºÙŠØ± Ø§Ù„Ø®Ø·Ø©",
-    "Ø¨Ø¯Ù„ Ø§Ù„Ø®Ø·Ø©",
+    "مش",
+    "رفض",
+    "لا",
+    "غير الخطة",
+    "بدل الخطة",
 }
-JORDANIAN_HINTS = {"Ø´Ùˆ", "Ø¨Ø¯Ùƒ", "Ù‡Ù„Ø§", "Ù„Ø³Ø§", "Ù…Ø´", "ÙƒØªÙŠØ±", "Ù…Ù†ÙŠØ­", "ØªÙ…Ø§Ù…"}
+JORDANIAN_HINTS = {"شو", "بدك", "هلا", "لسا", "مش", "كتير", "منيح", "تمام"}
 
 
 PLAN_CHOICE_KEYWORDS = {
@@ -1154,7 +1154,7 @@ PLAN_CHOICE_KEYWORDS = {
     "fifth",
     
 }
-PLAN_REFRESH_KEYWORDS = {"more options", "another options", "Ø®ÙŠØ§Ø±Ø§Øª Ø§ÙƒØ«Ø±", "Ø®ÙŠØ§Ø±Ø§Øª Ø£Ø®Ø±Ù‰", "ØºÙŠØ±Ù‡Ù…"}
+PLAN_REFRESH_KEYWORDS = {"more options", "another options", "خيارات اكثر", "خيارات أخرى", "غيرهم"}
 PLAN_OPTION_HELP_KEYWORDS = {
     "best",
     "recommend",
@@ -1205,7 +1205,7 @@ PLAN_OPTION_RECOMMEND_KEYWORDS = {
     "اي خيار انسب",
     "أي خيار أنسب",
 }
-APPROVE_KEYWORDS = APPROVE_KEYWORDS | {"accept", "okay", "ok", "ماشي", "تمام", "Ù…Ø§Ø´ÙŠ"}
+APPROVE_KEYWORDS = APPROVE_KEYWORDS | {"accept", "okay", "ok", "ماشي", "تمام", "ماشي"}
 REJECT_KEYWORDS = REJECT_KEYWORDS | {"decline", "cancel", "stop", "cancel it", "delete it", "remove it"}
 WORKOUT_PLAN_KEYWORDS = WORKOUT_PLAN_KEYWORDS | {"workout", "training", "routine", "\u062a\u0645\u0627\u0631\u064a\u0646", "\u0628\u0631\u0646\u0627\u0645\u062c"}
 NUTRITION_PLAN_KEYWORDS = NUTRITION_PLAN_KEYWORDS | {"nutrition", "diet", "meal", "\u062a\u063a\u0630\u064a\u0629", "\u0648\u062c\u0628\u0627\u062a"}
@@ -4677,8 +4677,8 @@ def _plan_status_reply(language: str, plan_snapshot: Optional[dict[str, Any]]) -
         return _lang_reply(
             language,
             "I do not have your latest plan status yet. Open your Schedule page and I can sync after your next message.",
-            "Ù„Ø§ Ø£Ù…Ù„Ùƒ Ø¢Ø®Ø± Ø­Ø§Ù„Ø© Ù„Ø®Ø·Ø·Ùƒ Ø¨Ø¹Ø¯. Ø§ÙØªØ­ ØµÙØ­Ø© Ø§Ù„Ø¬Ø¯ÙˆÙ„ ÙˆØ³Ø£Ø²Ø§Ù…Ù†Ù‡Ø§ Ø¨Ø¹Ø¯ Ø±Ø³Ø§Ù„ØªÙƒ Ø§Ù„ØªØ§Ù„ÙŠØ©.",
-            "Ù„Ø³Ø§ Ù…Ø§ Ø¹Ù†Ø¯ÙŠ Ø¢Ø®Ø± Ø­Ø§Ù„Ø© Ù„Ù„Ø®Ø·Ø·. Ø§ÙØªØ­ ØµÙØ­Ø© Ø§Ù„Ø¬Ø¯ÙˆÙ„ ÙˆØ¨Ø±Ø¬Ø¹ Ø¨Ø²Ø§Ù…Ù†Ù‡Ø§ Ù…Ø¹Ùƒ Ø¨Ø¹Ø¯ Ø±Ø³Ø§Ù„ØªÙƒ Ø§Ù„Ø¬Ø§ÙŠØ©.",
+            "لا أملك آخر حالة لخططك بعد. افتح صفحة الجدول وسأزامنها بعد رسالتك التالية.",
+            "لسا ما عندي آخر حالة للخطط. افتح صفحة الجدول وبرجع بزامنها معك بعد رسالتك الجاية.",
         )
 
     workout_count = int(plan_snapshot.get("active_workout_plans", 0) or 0)
@@ -4686,8 +4686,8 @@ def _plan_status_reply(language: str, plan_snapshot: Optional[dict[str, Any]]) -
     return _lang_reply(
         language,
         f"You currently have {workout_count} active workout plan(s) and {nutrition_count} active nutrition plan(s).",
-        f"Ù„Ø¯ÙŠÙƒ Ø­Ø§Ù„ÙŠÙ‹Ø§ {workout_count} Ø®Ø·Ø© ØªÙ…Ø§Ø±ÙŠÙ† Ù†Ø´Ø·Ø© Ùˆ{nutrition_count} Ø®Ø·Ø© ØªØºØ°ÙŠØ© Ù†Ø´Ø·Ø©.",
-        f"Ø­Ø§Ù„ÙŠÙ‹Ø§ Ø¹Ù†Ø¯Ùƒ {workout_count} Ø®Ø·Ø© ØªÙ…Ø§Ø±ÙŠÙ† ÙØ¹Ø§Ù„Ø© Ùˆ{nutrition_count} Ø®Ø·Ø© ØªØºØ°ÙŠØ© ÙØ¹Ø§Ù„Ø©.",
+        f"لديك حاليًا {workout_count} خطة تمارين نشطة و{nutrition_count} خطة تغذية نشطة.",
+        f"حاليًا عندك {workout_count} خطة تمارين فعالة و{nutrition_count} خطة تغذية فعالة.",
     )
 
 
@@ -6372,7 +6372,7 @@ def _build_pending_plan_response(
 
 
 def _looks_like_bad_arabic(text: str) -> bool:
-    return bool(text) and any(marker in text for marker in ("Ø", "Ù", "Ã", "Ð"))
+    return bool(text) and any(marker in text for marker in ("\u00d8", "\u00d9", "\u00c3", "\u00d0"))
 
 
 def _clean_plan_label(text: Any, fallback: str) -> str:

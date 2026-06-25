@@ -121,7 +121,7 @@ export function WorkoutsPage() {
     ? Math.min(99, 88 + Math.min(exercises.length, 6) + (goalFilter ? 2 : 0) + (locationFilter ? 2 : 0) + (genderFilter ? 1 : 0))
     : 0;
   const exercisesFoundDisplay = language === 'ar'
-    ? `${exercises.length} ${repairMojibake('ØªÙ…Ø§Ø±ÙŠÙ† Ù…ØªØ·Ø§Ø¨Ù‚Ø©')}`
+    ? `${exercises.length} ${repairMojibake('تمارين متطابقة')}`
     : `${exercises.length} exercises found`;
   const exercisesFoundLabel = language === 'ar'
     ? `${exercises.length} تمارين متطابقة`

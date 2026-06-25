@@ -11,7 +11,7 @@ ARABIC_DIACRITICS_RE = re.compile(r"[\u064B-\u065F\u0670\u06D6-\u06ED]")
 NON_WORD_RE = re.compile(r"[^a-z0-9\u0600-\u06FF\s]+")
 WHITESPACE_RE = re.compile(r"\s+")
 REPEATED_CHAR_RE = re.compile(r"(.)\1{2,}")
-MOJIBAKE_MARKERS = ("Ø", "Ù", "Ã", "Â", "Ð", "â", "ï»¿")
+MOJIBAKE_MARKERS = ("\u00d8", "\u00d9", "\u00c3", "\u00c2", "\u00d0", "\u00e2", "\ufeff")
 
 LEET_MAP = str.maketrans(
     {

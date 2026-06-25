@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { useUser } from '@/contexts/UserContext';
 import { AI_BACKEND_URL } from '@/lib/backendUrl';
-import { repairMojibake } from '@/lib/text';
+import { getTextDirection, repairMojibake } from '@/lib/text';
 import { cn } from '@/lib/utils';
 
 export interface LiveSessionContext {
@@ -144,18 +144,23 @@ export function LiveCoachChat({ getSessionContext, language }: LiveCoachChatProp
       <ScrollArea className="h-80">
         <div className="space-y-4 p-4">
           {messages.map((message) => (
-            <div key={message.id} className={cn('flex gap-3', message.role === 'user' && 'justify-end')}>
-              {message.role === 'assistant' && <Bot className="mt-1 h-4 w-4 shrink-0 text-cyan-300" />}
-              <div className={cn(
-                'max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-[0_14px_34px_rgba(0,0,0,0.18)]',
-                message.role === 'user'
-                  ? 'border border-white/10 bg-gradient-to-br from-fuchsia-500/90 via-violet-500/88 to-cyan-400/70 text-white'
-                  : 'border border-white/8 bg-white/[0.05] text-foreground'
-              )} dir={isArabic ? 'rtl' : 'ltr'}>
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-              </div>
-              {message.role === 'user' && <User className="mt-1 h-4 w-4 shrink-0 text-fuchsia-100/80" />}
-            </div>
+            (() => {
+              const messageDir = getTextDirection(message.content);
+              return (
+                <div key={message.id} className={cn('flex gap-3', message.role === 'user' && 'justify-end')}>
+                  {message.role === 'assistant' && <Bot className="mt-1 h-4 w-4 shrink-0 text-cyan-300" />}
+                  <div className={cn(
+                    'max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-[0_14px_34px_rgba(0,0,0,0.18)]',
+                    message.role === 'user'
+                      ? 'border border-white/10 bg-gradient-to-br from-fuchsia-500/90 via-violet-500/88 to-cyan-400/70 text-white'
+                      : 'border border-white/8 bg-white/[0.05] text-foreground'
+                  )} dir={messageDir}>
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
+                  {message.role === 'user' && <User className="mt-1 h-4 w-4 shrink-0 text-fuchsia-100/80" />}
+                </div>
+              );
+            })()
           ))}
           {loading && (
             <div className="flex items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3 text-sm text-muted-foreground">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AI_BACKEND_URL, isPublicAppOrigin } from '@/lib/backendUrl';
-import { repairMojibake, stabilizeBidiNumbers } from '@/lib/text';
+import { getTextDirection, repairMojibake, stabilizeBidiNumbers } from '@/lib/text';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useUser } from '@/contexts/UserContext';
@@ -352,7 +352,7 @@ const countDateStreak = (dates: Set<string>, fromDate = new Date()) => {
 
 const cleanNote = (value?: string | null) => (value || '').replace(/\s+/g, ' ').trim();
 
-const looksLikeBadArabic = (value: string) => /[ØÙÃÐ]/.test(value);
+const looksLikeBadArabic = (value: string) => /[\u00d8\u00d9\u00c3\u00d0]/.test(value);
 
 const sanitizePlanLabel = (value: unknown, fallback: string) => {
   const cleaned = repairMojibake(String(value ?? '')).replace(/_/g, ' ').trim();
@@ -3347,6 +3347,7 @@ export function CoachPage() {
                       const isCopied = copiedMessageKey === messageKey;
                       const displayMessageText = getDisplayMessageContent(message.content, language);
                       const visibleMessageText = displayMessageText.trim();
+                      const messageDir = getTextDirection(displayMessageText);
                       const fitbitSummaryCard = message.role === 'assistant' ? parseFitbitSummaryCard(displayMessageText) : null;
                       const copyText = buildMessageCopyText(message, language);
                       const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
@@ -3382,17 +3383,17 @@ export function CoachPage() {
                                   <span className="tracking-[0.16em] text-white/45 normal-case">{formatMessageTime(message.timestamp)}</span>
                                 </div>
                               <div
-                                dir={isArabic ? 'rtl' : 'ltr'}
+                                dir={messageDir}
                                 className={`px-5 py-4.5 shadow-[0_20px_60px_rgba(0,0,0,0.18)] ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}
                               >
                                 {message.role === 'assistant' && fitbitSummaryCard ? (
                                   <FitbitSummaryCard data={fitbitSummaryCard} />
                                 ) : message.role === 'assistant' ? (
-                                  <div className={`chat-message-content prose prose-sm prose-invert max-w-none ${language === 'ar' ? 'chat-message-content-ar' : ''}`}>
+                                  <div className={`chat-message-content prose prose-sm prose-invert max-w-none ${messageDir === 'rtl' ? 'chat-message-content-ar' : ''}`}>
                                     <ReactMarkdown components={markdownComponents}>{displayMessageText}</ReactMarkdown>
                                   </div>
                                 ) : (
-                                  <p className="chat-message-content whitespace-pre-wrap">{renderEmojiAwareChildren(displayMessageText, `user-${messageKey}`)}</p>
+                                  <p className={`chat-message-content whitespace-pre-wrap ${messageDir === 'rtl' ? 'chat-message-content-ar' : ''}`}>{renderEmojiAwareChildren(displayMessageText, `user-${messageKey}`)}</p>
                                 )}
                               </div>
                               </>

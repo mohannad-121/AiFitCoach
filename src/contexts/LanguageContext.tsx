@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { repairMojibake } from '@/lib/text';
 
 type Language = 'en' | 'ar';
@@ -189,17 +189,21 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>('en');
+  const dir = language === 'ar' ? 'rtl' : 'ltr';
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = dir;
+  }, [dir, language]);
 
   const t = (key: string): string => {
     const value = translations[language][key] || key;
     return repairMojibake(value);
   };
 
-  const dir = language === 'ar' ? 'rtl' : 'ltr';
-
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, dir }}>
-      <div dir={dir}>{children}</div>
+      <div dir={dir} data-language={language}>{children}</div>
     </LanguageContext.Provider>
   );
 }
