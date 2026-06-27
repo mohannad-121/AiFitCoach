@@ -7,8 +7,6 @@ from typing import Any
 
 import numpy as np
 
-from preprocess import build_goal_features_from_payload, build_success_features_from_payload
-
 
 DEFAULT_GOAL_MODEL = Path(__file__).resolve().parent / "model_goal.pkl"
 DEFAULT_SUCCESS_MODEL = Path(__file__).resolve().parent / "model_success.pkl"
@@ -45,6 +43,8 @@ def _probability_map(classes: list[Any], probs: np.ndarray) -> dict[str, float]:
 
 
 def predict_goal(features_payload: dict[str, Any], model_path: str | None = None) -> dict[str, Any]:
+    from preprocess import build_goal_features_from_payload
+
     artifact = load_goal_model(model_path)
     model = artifact["model"]
     frame = build_goal_features_from_payload(features_payload)
@@ -63,6 +63,8 @@ def predict_goal(features_payload: dict[str, Any], model_path: str | None = None
 
 
 def predict_success(features_payload: dict[str, Any], model_path: str | None = None) -> dict[str, Any]:
+    from preprocess import build_success_features_from_payload
+
     artifact = load_success_model(model_path)
     model = artifact["model"]
     frame = build_success_features_from_payload(features_payload)

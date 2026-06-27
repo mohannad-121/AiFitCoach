@@ -3,13 +3,15 @@ services:
     name: fit-coach-ai-backend
     env: python
     rootDir: ai_backend
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
     healthCheckPath: /health
     envVars:
       - key: PORT
         value: "8000"
+      - key: PYTHON_VERSION
+        value: 3.11.11
       - key: API_HOST
         value: 0.0.0.0
       - key: API_PORT
@@ -51,13 +53,13 @@ services:
       - key: FRONTEND_URL
         value: https://fit-coach-ai-frontend.onrender.com
       - key: BACKEND_URL
-        value: https://fit-coach-ai-backend.onrender.com
+        value: https://fit-coach-ai-backend-ms4i.onrender.com
       - key: FITBIT_CLIENT_ID
         sync: false
       - key: FITBIT_CLIENT_SECRET
         sync: false
       - key: FITBIT_REDIRECT_URI
-        value: https://fit-coach-ai-backend.onrender.com/integrations/fitbit/callback
+        value: https://fit-coach-ai-backend-ms4i.onrender.com/integrations/fitbit/callback
       - key: FITBIT_FRONTEND_REDIRECT_URI
         value: https://fit-coach-ai-frontend.onrender.com/profile
       - key: FITBIT_SCOPES
@@ -78,7 +80,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_AI_BACKEND_URL
-        value: https://fit-coach-ai-backend.onrender.com
+        value: https://fit-coach-ai-backend-ms4i.onrender.com
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY

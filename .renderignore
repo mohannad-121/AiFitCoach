@@ -1,0 +1,14 @@
+.git
+.tools
+.vscode
+dist
+node_modules
+public/videos
+ai_backend/datasets
+ai_backend/data/derived
+ai_backend/models
+ai_backend/model_*.pkl
+ai_backend/voice/bin
+ai_backend/voice/models
+ai_backend/static/audio
+ai_backend/**/*.log
