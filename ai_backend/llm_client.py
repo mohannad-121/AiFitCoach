@@ -259,6 +259,7 @@ class LLMClient:
                     "model": OLLAMA_MODEL,
                     "messages": request_messages,
                     "stream": False,
+                    "think": False,
                     "options": {
                         "temperature": self.temperature if temperature is None else temperature,
                         "num_ctx": self._ollama_num_ctx(max_tokens),
@@ -308,6 +309,7 @@ class LLMClient:
             "model": OLLAMA_MODEL,
             "messages": messages,
             "stream": True,
+            "think": False,
             "options": {
                 "temperature": self.temperature if temperature is None else temperature,
                 "num_ctx": self._ollama_num_ctx(max_tokens),
@@ -383,6 +385,7 @@ class LLMClient:
                 }
             ],
             "stream": False,
+            "think": False,
             "options": {
                 "temperature": 0.2,
                 "num_ctx": self._ollama_num_ctx(max_tokens),

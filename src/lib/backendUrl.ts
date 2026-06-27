@@ -15,6 +15,23 @@ function isPublicOrigin(currentOrigin: string): boolean {
   }
 }
 
+function inferRenderBackendUrl(currentOrigin: string): string | null {
+  try {
+    const url = new URL(currentOrigin);
+    if (!url.hostname.endsWith('.onrender.com')) {
+      return null;
+    }
+
+    const backendHost = url.hostname
+      .replace('-frontend.', '-backend.')
+      .replace('frontend.', 'backend.');
+
+    return backendHost === url.hostname ? null : `${url.protocol}//${backendHost}`;
+  } catch {
+    return null;
+  }
+}
+
 export function isPublicAppOrigin(): boolean {
   if (typeof window === 'undefined' || !window.location?.origin) {
     return false;
@@ -45,6 +62,10 @@ export function getBackendBaseUrl(): string {
   }
 
   if (typeof window !== 'undefined' && window.location?.origin) {
+    const inferredRenderBackend = inferRenderBackendUrl(window.location.origin);
+    if (inferredRenderBackend) {
+      return inferredRenderBackend;
+    }
     return window.location.origin.replace(/\/$/, '');
   }
 

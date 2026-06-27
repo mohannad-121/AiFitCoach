@@ -9718,16 +9718,32 @@ async def chat_lite(
     user_profile: Optional[str] = Query(None),
     recent_messages: Optional[str] = Query(None),
 ) -> ChatResponse:
-    return await chat(
-        ChatRequest(
-            message=message,
-            user_id=user_id,
-            conversation_id=conversation_id,
-            language=language,
-            user_profile=_json_query_param(user_profile, None),
-            recent_messages=_json_query_param(recent_messages, []),
-        )
+    uid = _normalize_user_id(user_id)
+    if uid == "anonymous":
+        uid = "00000000-0000-0000-0000-000000000000"
+    conv_id = _normalize_conversation_id(conversation_id, uid)
+    lang = "ar" if (language or "").lower().startswith("ar") else "en"
+    user_input = _repair_mojibake((message or "").strip())
+    if not user_input:
+        raise HTTPException(status_code=400, detail="message is required")
+
+    memory = _get_memory_session(uid, conv_id)
+    memory.add_user_message(user_input)
+    reply = _general_llm_reply(
+        user_message=user_input,
+        language=lang,
+        profile=_json_query_param(user_profile, {}) or {},
+        user_id=uid,
+        tracking_summary={},
+        memory=memory,
+        state=_get_user_state(uid),
+        recent_messages=_json_query_param(recent_messages, []),
+        website_context=None,
+        generated_plan_credits_available=True,
     )
+    filtered_reply, _ = MODERATION.filter_content(reply, language=lang)
+    memory.add_assistant_message(filtered_reply)
+    return ChatResponse(reply=filtered_reply, conversation_id=conv_id, language=lang)
 
 
 @app.post("/chat", response_model=ChatResponse)

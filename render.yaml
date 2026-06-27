@@ -65,7 +65,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_AI_BACKEND_URL
-        sync: false
+        value: https://fit-coach-ai-backend.onrender.com
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
