@@ -9404,6 +9404,11 @@ def health() -> dict[str, Any]:
     }
 
 
+@app.get("/")
+def root() -> dict[str, Any]:
+    return health()
+
+
 @app.post("/ai/personalized-plan")
 async def get_personalized_plan(user_profile: Dict[str, Any]) -> Dict[str, Any]:
     """
