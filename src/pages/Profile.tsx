@@ -618,7 +618,7 @@ export function ProfilePage() {
                   {language === 'ar' ? 'ملف اللياقة الذكي' : 'AI FITNESS PROFILE'}
                 </p>
                 <h1 className="font-display text-4xl text-white md:text-5xl">
-                  {greeting}, {profile.name || (language === 'ar' ? 'مستخدم' : 'Athlete')}
+                  <span className="text-blue-400">{greeting}</span>, {profile.name || (language === 'ar' ? 'مستخدم' : 'Athlete')}
                 </h1>
                 <p className="mt-3 text-lg text-white/68">{profile.name || 'User'}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
