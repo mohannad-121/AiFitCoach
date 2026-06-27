@@ -43,6 +43,23 @@ class LLMClient:
         self.has_openai_key = bool(OPENAI_API_KEY) and (OpenAI is not None)
         self._openai_client = OpenAI(api_key=OPENAI_API_KEY) if self.has_openai_key else None
 
+    @staticmethod
+    def _openai_user_error(exc: Exception) -> str:
+        status_code = getattr(exc, "status_code", None)
+        error_code = getattr(exc, "code", None)
+        message = str(getattr(exc, "message", "") or exc)
+        lowered = message.lower()
+
+        if status_code == 401:
+            return "OpenAI authentication failed. Check OPENAI_API_KEY in Render."
+        if status_code == 429 or error_code == "insufficient_quota" or "insufficient_quota" in lowered or "quota" in lowered:
+            return "OpenAI quota or billing limit was reached. Check your OpenAI billing/credits."
+        if status_code in {400, 404} and ("model" in lowered or error_code in {"model_not_found", "invalid_model"}):
+            return "OpenAI model is unavailable for this key. Set LLM_MODEL=gpt-4o-mini in Render."
+        if "connection" in lowered or "timeout" in lowered or "timed out" in lowered:
+            return "OpenAI request timed out. Please try again."
+        return "I hit a temporary AI error. Please try again."
+
     @property
     def active_provider(self) -> str:
         if self.provider in {"openai", "ollama"}:
@@ -160,8 +177,19 @@ class LLMClient:
 
             return accumulated_text.strip()
         except Exception as exc:
-            log_error("LLM_OPENAI_COMPLETION_ERROR", None, exc, {"messages": len(messages)})
-            return "I hit a temporary AI error. Please try again."
+            log_error(
+                "LLM_OPENAI_COMPLETION_ERROR",
+                None,
+                exc,
+                {
+                    "messages": len(messages),
+                    "model": self.model,
+                    "status_code": getattr(exc, "status_code", None),
+                    "code": getattr(exc, "code", None),
+                    "type": type(exc).__name__,
+                },
+            )
+            return self._openai_user_error(exc)
 
     def _chat_openai_stream(
         self,
@@ -192,8 +220,19 @@ class LLMClient:
                 if delta:
                     yield delta
         except Exception as exc:
-            log_error("LLM_OPENAI_STREAM_ERROR", None, exc, {"messages": len(messages)})
-            yield "I hit a temporary AI streaming error. Please try again."
+            log_error(
+                "LLM_OPENAI_STREAM_ERROR",
+                None,
+                exc,
+                {
+                    "messages": len(messages),
+                    "model": self.model,
+                    "status_code": getattr(exc, "status_code", None),
+                    "code": getattr(exc, "code", None),
+                    "type": type(exc).__name__,
+                },
+            )
+            yield self._openai_user_error(exc)
 
     def _analyze_image_openai(
         self,

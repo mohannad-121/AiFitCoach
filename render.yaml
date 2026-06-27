@@ -20,6 +20,10 @@ services:
         value: smart
       - key: LLM_PROVIDER
         value: auto
+      - key: LLM_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_VISION_MODEL
+        value: gpt-4o-mini
       - key: TRAINING_PIPELINE_ENABLED
         value: "0"
       - key: LOW_MEMORY_MODE
