@@ -48,8 +48,20 @@ services:
       - key: PAYPAL_PRO_PLAN_ID
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: https://fit-coach-ai-frontend.onrender.com
       - key: BACKEND_URL
+        value: https://fit-coach-ai-backend.onrender.com
+      - key: FITBIT_CLIENT_ID
+        sync: false
+      - key: FITBIT_CLIENT_SECRET
+        sync: false
+      - key: FITBIT_REDIRECT_URI
+        value: https://fit-coach-ai-backend.onrender.com/integrations/fitbit/callback
+      - key: FITBIT_FRONTEND_REDIRECT_URI
+        value: https://fit-coach-ai-frontend.onrender.com/profile
+      - key: FITBIT_SCOPES
+        value: activity heartrate nutrition profile sleep weight
+      - key: FITBIT_STATE_SECRET
         sync: false
 
   - type: web

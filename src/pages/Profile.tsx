@@ -249,7 +249,7 @@ export function ProfilePage() {
       .maybeSingle()
       .then(({ data }) => {
         if (data && data.onboarding_completed) {
-          updateProfile({
+          const profileUpdates = {
             name: data.name,
             age: data.age,
             gender: data.gender as 'male' | 'female',
@@ -265,9 +265,10 @@ export function ProfilePage() {
             dietaryPreferences: (data as any).dietary_preferences || '',
             chronicConditions: (data as any).chronic_conditions || '',
             allergies: (data as any).allergies || '',
-            avatarUrl: (data as any).avatar_url || profile?.avatarUrl || '',
             onboardingCompleted: data.onboarding_completed,
-          });
+          };
+          const remoteAvatarUrl = String((data as any).avatar_url || '').trim();
+          updateProfile(remoteAvatarUrl ? { ...profileUpdates, avatarUrl: remoteAvatarUrl } : profileUpdates);
         }
       });
   }, [user]);
@@ -319,10 +320,11 @@ export function ProfilePage() {
     updateProfile({ avatarUrl });
     if (user && supabase && supabase.from) {
       try {
-        await supabase.from('profiles').update({
+        const { error } = await supabase.from('profiles').update({
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
         }).eq('user_id', user.id);
+        if (error) throw error;
       } catch (error) {
         console.warn('Failed updating profile avatar:', error);
       }

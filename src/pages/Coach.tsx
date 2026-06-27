@@ -778,7 +778,7 @@ export function CoachPage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const { profile, updateProfile } = useUser();
-  const { subscription, loading: subscriptionLoading, refresh: refreshSubscription } = useSubscription();
+  const { subscription, loading: subscriptionLoading, error: subscriptionError, refresh: refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -819,6 +819,7 @@ export function CoachPage() {
   const isChatLimitReached = Boolean(subscription && !isUnlimited && messagesLeft <= 0);
   const isUploadLimitReached = Boolean(subscription && !isUnlimited && uploadsLeft <= 0);
   const isPlanLimitReached = Boolean(subscription && !isUnlimited && plansLeft <= 0);
+  const isSubscriptionGateLoading = subscriptionLoading && !subscription && !subscriptionError;
 
   const showLimit = useCallback((kind: 'chat' | 'upload' | 'plan') => {
     if (isUnlimited) return;
@@ -2448,7 +2449,7 @@ export function CoachPage() {
   const sendMessageWithText = async (text: string, attachmentsOverride?: PendingAttachment[]) => {
     const attachments = attachmentsOverride ?? selectedAttachments;
     if ((!text.trim() && attachments.length === 0) || isBusy || !user) return;
-    if (subscriptionLoading || !subscription) return;
+    if (isSubscriptionGateLoading) return;
     if (isPlanLimitReached && isPlanGenerationRequest(text)) {
       showLimit('plan');
       return;
@@ -3756,7 +3757,7 @@ export function CoachPage() {
                     </span>
                   </div>
                   <div className="flex items-end gap-2">
-                    <Button title={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={subscriptionLoading || !subscription || isBusy || isUploadLimitReached} className={`h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] ${isUploadLimitReached || subscriptionLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
+                    <Button title={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isSubscriptionGateLoading || isBusy || isUploadLimitReached} className={`h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] ${isUploadLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
                       <Paperclip className="w-4 h-4" />
                     </Button>
                     {isSupported && (
@@ -3764,7 +3765,7 @@ export function CoachPage() {
                         variant={isListening ? 'destructive' : 'ghost'}
                         size="icon"
                         onClick={isListening ? stopListening : startListeningIfPossible}
-                        disabled={subscriptionLoading || !subscription || isBusy || isAssistantSpeaking || isChatLimitReached}
+                        disabled={isSubscriptionGateLoading || isBusy || isAssistantSpeaking || isChatLimitReached}
                         className={`h-11 w-11 shrink-0 rounded-2xl border ${isListening ? 'animate-pulse border-destructive/30 bg-destructive/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'}`}
                       >
                         {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -3783,11 +3784,11 @@ export function CoachPage() {
                           : 'Ask your AI Coach about workouts, meals, recovery, or your schedule...'
                       }
                       className="min-h-[56px] max-h-40 resize-y rounded-2xl border-white/10 bg-black/20 px-4 py-3 focus-visible:ring-1"
-                      disabled={subscriptionLoading || !subscription || isBusy}
+                      disabled={isBusy}
                       readOnly={isChatLimitReached}
                       rows={2}
                     />
-                    <Button title={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} variant="hero" size="icon" onClick={sendMessage} disabled={subscriptionLoading || !subscription || isChatLimitReached || isBusy || (!input.trim() && selectedAttachments.length === 0)} className={`h-12 w-12 shrink-0 rounded-2xl shadow-[0_18px_38px_rgba(168,85,247,0.28)] ${isChatLimitReached || subscriptionLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
+                    <Button title={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} variant="hero" size="icon" onClick={sendMessage} disabled={isSubscriptionGateLoading || isChatLimitReached || isBusy || (!input.trim() && selectedAttachments.length === 0)} className={`h-12 w-12 shrink-0 rounded-2xl shadow-[0_18px_38px_rgba(168,85,247,0.28)] ${isChatLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
                       {isChatLimitReached ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </div>
