@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye, Search, Play, Pause, RotateCcw, Dumbbell } from 'lucide-react';
-import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
+import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye, Search, Play, Pause, RotateCcw, Dumbbell, Volume2, VolumeX } from 'lucide-react';
+import { DrawingUtils, FilesetResolver, PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import { getExerciseTrackingConfig, normalizeExerciseName, type ExerciseTracking
 type CameraState = 'idle' | 'starting' | 'live' | 'error';
 type CameraIssue = 'permission-denied' | 'no-camera' | 'unsupported' | 'unknown' | null;
 type DifficultyLevel = 'normal' | 'advanced';
+type CueSeverity = 'good' | 'caution' | 'correction' | 'camera-setup';
 
 interface LiveCoachRouteState {
   exerciseId?: string;
@@ -31,6 +32,24 @@ interface LiveExercise {
   nameAr: string;
   difficulty: DifficultyLevel;
   tracking: ExerciseTrackingConfig;
+}
+
+interface PoseQuality {
+  visibleLandmarks: number;
+  averageVisibility: number;
+  centered: boolean;
+  stableFrames: number;
+  stable: boolean;
+  usable: boolean;
+  issue: string | null;
+}
+
+interface CoachingCue {
+  key: string;
+  severity: CueSeverity;
+  en: string;
+  ar: string;
+  speak: boolean;
 }
 
 const advancedExerciseTerms = [
@@ -51,6 +70,11 @@ const advancedExerciseTerms = [
 
 const POSE_WASM_PATH = '/mediapipe/wasm';
 const POSE_MODEL_PATH = '/models/pose_landmarker_lite.task';
+const SMOOTHING_ALPHA = 0.62;
+const MIN_VISIBLE_LANDMARKS = 18;
+const MIN_AVERAGE_VISIBILITY = 0.48;
+const CALIBRATION_STABLE_FRAMES = 8;
+const VOICE_COOLDOWN_MS = 8000;
 
 function classifyExerciseDifficulty(exercise: Exercise): DifficultyLevel {
   const searchable = `${exercise.id} ${exercise.name}`.toLowerCase();
@@ -93,6 +117,218 @@ function formatElapsed(totalSeconds: number) {
   return `${minutes}:${seconds}`;
 }
 
+function emptyPoseQuality(): PoseQuality {
+  return {
+    visibleLandmarks: 0,
+    averageVisibility: 0,
+    centered: false,
+    stableFrames: 0,
+    stable: false,
+    usable: false,
+    issue: 'step_into_frame',
+  };
+}
+
+function smoothLandmarks(previous: NormalizedLandmark[] | null, current: NormalizedLandmark[]) {
+  if (!previous || previous.length !== current.length) return current.map((point) => ({ ...point }));
+  return current.map((point, index) => ({
+    ...point,
+    x: previous[index].x + (point.x - previous[index].x) * SMOOTHING_ALPHA,
+    y: previous[index].y + (point.y - previous[index].y) * SMOOTHING_ALPHA,
+    z: previous[index].z + (point.z - previous[index].z) * SMOOTHING_ALPHA,
+    visibility: point.visibility ?? previous[index].visibility,
+  }));
+}
+
+function getPoseBounds(landmarks: NormalizedLandmark[]) {
+  const visible = landmarks.filter((point) => (point.visibility ?? 0) >= 0.35);
+  const points = visible.length >= 8 ? visible : landmarks;
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+}
+
+function assessLandmarkQuality(landmarks: NormalizedLandmark[] | null, previousStableFrames: number): PoseQuality {
+  if (!landmarks?.length) return emptyPoseQuality();
+
+  const visibleLandmarks = landmarks.filter((point) => (point.visibility ?? 0) >= 0.45).length;
+  const averageVisibility = landmarks.reduce((sum, point) => sum + (point.visibility ?? 0), 0) / landmarks.length;
+  const bounds = getPoseBounds(landmarks);
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const centered = centerX > 0.2 && centerX < 0.8 && centerY > 0.16 && centerY < 0.86;
+  const fullBodyLikelyVisible = bounds.minY > -0.08 && bounds.maxY < 1.08 && bounds.minX > -0.08 && bounds.maxX < 1.08;
+  const enoughLandmarks = visibleLandmarks >= MIN_VISIBLE_LANDMARKS;
+  const enoughVisibility = averageVisibility >= MIN_AVERAGE_VISIBILITY;
+  const frameQualityOk = enoughLandmarks && enoughVisibility && centered && fullBodyLikelyVisible;
+  const stableFrames = frameQualityOk ? Math.min(previousStableFrames + 1, CALIBRATION_STABLE_FRAMES) : 0;
+  const stable = stableFrames >= CALIBRATION_STABLE_FRAMES;
+  let issue: string | null = null;
+
+  if (!enoughLandmarks || !fullBodyLikelyVisible) issue = 'full_body_required';
+  else if (!centered) issue = 'keep_body_in_frame';
+  else if (!enoughVisibility) issue = 'improve_lighting';
+  else if (!stable) issue = 'hold_still';
+
+  return {
+    visibleLandmarks,
+    averageVisibility: Math.round(averageVisibility * 100),
+    centered,
+    stableFrames,
+    stable,
+    usable: frameQualityOk && stable,
+    issue,
+  };
+}
+
+function makeVideoConstraints(nextFacingMode: 'user' | 'environment', nextDeviceId: string, includeFrameRate = true): MediaTrackConstraints {
+  const base: MediaTrackConstraints = nextDeviceId !== 'default'
+    ? { deviceId: { exact: nextDeviceId } }
+    : { facingMode: { ideal: nextFacingMode } };
+  return {
+    ...base,
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    ...(includeFrameRate ? { frameRate: { ideal: 30, max: 30 } } : {}),
+  };
+}
+
+const cueCopy: Record<string, { en: string; ar: string }> = {
+  basic_tracking: {
+    en: 'Pose tracking is active. Keep your full body visible and move with control.',
+    ar: 'التتبع شغال. خلي جسمك كامل واضح وتحرك بهدوء.',
+  },
+  low_pose_confidence: {
+    en: 'Improve lighting and keep the working joints visible.',
+    ar: 'زيد الإضاءة شوي وخلي المفاصل واضحة.',
+  },
+  unsupported_exercise: {
+    en: 'I can see your body, but this exercise has visibility tracking only.',
+    ar: 'شايف جسمك، بس هالتمرين تتبعه عام بدون تصحيح تفصيلي.',
+  },
+  pose_model_unavailable: {
+    en: 'Pose analysis could not load. Refresh the page and try again.',
+    ar: 'تحليل الحركة ما اشتغل. حدث الصفحة وجرب مرة ثانية.',
+  },
+  pose_detection_unavailable: {
+    en: 'Pose tracking stopped. Restart the camera session.',
+    ar: 'تتبع الحركة وقف. شغل الكاميرا من جديد.',
+  },
+  step_into_frame: {
+    en: 'Step into the frame.',
+    ar: 'ادخل قدام الكاميرا.',
+  },
+  full_body_required: {
+    en: 'Step back until your full body is visible.',
+    ar: 'ارجع شوي لورا عشان جسمك يبين كامل.',
+  },
+  keep_body_in_frame: {
+    en: 'Keep your body inside the frame.',
+    ar: 'خليك داخل إطار الكاميرا.',
+  },
+  improve_lighting: {
+    en: 'Improve lighting.',
+    ar: 'زيد الإضاءة شوي.',
+  },
+  hold_still: {
+    en: 'Hold steady for a moment so I can calibrate.',
+    ar: 'اثبت لحظة عشان أظبط التتبع.',
+  },
+  face_camera: {
+    en: 'Face the camera.',
+    ar: 'واجه الكاميرا.',
+  },
+  form_good: {
+    en: 'Good form. Keep going.',
+    ar: 'أداؤك ممتاز، كمل.',
+  },
+  raise_hips: {
+    en: 'Raise your hips slightly.',
+    ar: 'ارفع الحوض شوي.',
+  },
+  lower_hips: {
+    en: 'Lower your hips slightly.',
+    ar: 'نزل الحوض شوي.',
+  },
+  open_elbows: {
+    en: 'Open your elbow angle.',
+    ar: 'افتح زاوية الكوع شوي.',
+  },
+  chest_up: {
+    en: 'Lift your chest.',
+    ar: 'ارفع صدرك.',
+  },
+  lower_squat: {
+    en: 'Bend your knees and lower.',
+    ar: 'اثني ركبتك وانزل شوي.',
+  },
+  squat_too_deep: {
+    en: 'Rise slightly.',
+    ar: 'اطلع شوي لفوق.',
+  },
+  lower_lunge: {
+    en: 'Lower into the lunge.',
+    ar: 'انزل أكثر باللانج.',
+  },
+  shorten_lunge: {
+    en: 'Shorten your stance slightly.',
+    ar: 'قرب رجليك شوي.',
+  },
+  bend_back_knee: {
+    en: 'Bend your back knee.',
+    ar: 'اثني الركبة الخلفية.',
+  },
+};
+
+function cueFromKey(key: string, severity: CueSeverity, speak = true): CoachingCue {
+  const copy = cueCopy[key] ?? cueCopy.step_into_frame;
+  return { key, severity, en: copy.en, ar: copy.ar, speak };
+}
+
+function severityFromFeedback(feedback: PoseFeedback): CueSeverity {
+  if (feedback.status === 'waiting_for_body') return 'camera-setup';
+  if (feedback.level === 'good') return 'good';
+  if (feedback.level === 'adjust') return 'correction';
+  return 'caution';
+}
+
+function createCoachingCue(
+  feedback: PoseFeedback,
+  poseQuality: PoseQuality,
+  trackingSupport: ExerciseTrackingConfig['support'] | undefined,
+  modelState: 'loading' | 'ready' | 'error',
+  liveReady: boolean
+): CoachingCue {
+  if (modelState === 'error') return cueFromKey(feedback.message, 'camera-setup');
+  if (!liveReady || modelState === 'loading') {
+    return {
+      key: 'camera_idle',
+      severity: 'camera-setup',
+      en: 'Start the camera and stand where your full body is visible.',
+      ar: 'شغل الكاميرا ووقف بمكان يبين جسمك كامل.',
+      speak: false,
+    };
+  }
+  if (!poseQuality.usable && poseQuality.issue) return cueFromKey(poseQuality.issue, 'camera-setup');
+  if (trackingSupport === 'basic') return cueFromKey('basic_tracking', 'caution', false);
+  if (trackingSupport === 'unsupported') return cueFromKey('unsupported_exercise', 'camera-setup', false);
+  return cueFromKey(feedback.message, severityFromFeedback(feedback));
+}
+
+function pickSpeechVoice(voices: SpeechSynthesisVoice[], language: string) {
+  if (language === 'ar') {
+    return voices.find((voice) => /^ar(-|_|$)/i.test(voice.lang))
+      ?? voices.find((voice) => /arabic|عربي/i.test(voice.name))
+      ?? null;
+  }
+  return voices.find((voice) => /^en(-|_|$)/i.test(voice.lang)) ?? null;
+}
+
 export function LiveCoachPage() {
   const { language } = useLanguage();
   const { profile } = useUser();
@@ -105,6 +341,9 @@ export function LiveCoachPage() {
   const animationRef = useRef<number | null>(null);
   const lastInferenceRef = useRef(0);
   const feedbackCandidateRef = useRef({ key: '', frames: 0 });
+  const smoothedLandmarksRef = useRef<NormalizedLandmark[] | null>(null);
+  const poseQualityRef = useRef<PoseQuality>(emptyPoseQuality());
+  const lastSpokenCueRef = useRef({ key: '', time: 0 });
   const progressRef = useRef({ analyzedSamples: 0, goodSamples: 0, corrections: {} as Record<string, number> });
   const liveExercises = useMemo(() => exerciseCatalog.map(toLiveExercise), []);
   const defaultExercise = liveExercises.find((item) => item.tracking.support === 'full') ?? liveExercises[0];
@@ -139,7 +378,9 @@ export function LiveCoachPage() {
   const [bodyDetected, setBodyDetected] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [modelState, setModelState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [poseQuality, setPoseQuality] = useState<PoseQuality>(() => emptyPoseQuality());
   const [poseFeedback, setPoseFeedback] = useState<PoseFeedback>(() => createPoseFeedback());
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
 
   const text = useCallback((en: string, ar: string) => (language === 'ar' ? ar : en), [language]);
   const isArabic = language === 'ar';
@@ -175,14 +416,20 @@ export function LiveCoachPage() {
     setElapsed(0);
     setIsPaused(false);
     setBodyDetected(false);
+    poseQualityRef.current = emptyPoseQuality();
+    setPoseQuality(poseQualityRef.current);
+    smoothedLandmarksRef.current = null;
     setPoseFeedback(createPoseFeedback());
   }, []);
 
   const resetSession = useCallback(() => {
     progressRef.current = { analyzedSamples: 0, goodSamples: 0, corrections: {} };
     feedbackCandidateRef.current = { key: '', frames: 0 };
+    smoothedLandmarksRef.current = null;
     setElapsed(0);
     setBodyDetected(false);
+    poseQualityRef.current = emptyPoseQuality();
+    setPoseQuality(poseQualityRef.current);
     setPoseFeedback(createPoseFeedback());
   }, []);
 
@@ -212,14 +459,25 @@ export function LiveCoachPage() {
     setCameraIssue(null);
     setIsPaused(false);
     setBodyDetected(false);
+    poseQualityRef.current = emptyPoseQuality();
+    setPoseQuality(poseQualityRef.current);
     setErrorMessage('');
     streamRef.current?.getTracks().forEach((track) => track.stop());
 
     try {
-      const video: MediaTrackConstraints = nextDeviceId !== 'default'
-        ? { deviceId: { exact: nextDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-        : { facingMode: { ideal: nextFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } };
-      const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: makeVideoConstraints(nextFacingMode, nextDeviceId, true),
+          audio: false,
+        });
+      } catch (constraintError) {
+        console.warn('Live Coach camera rejected 30fps preference; retrying without frame-rate constraint.', constraintError);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: makeVideoConstraints(nextFacingMode, nextDeviceId, false),
+          audio: false,
+        });
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -331,20 +589,27 @@ export function LiveCoachPage() {
             animationRef.current = null;
             return;
           }
-          const landmarks = result.landmarks[0];
-          setBodyDetected(Boolean(landmarks));
-          if (landmarks) {
+          const landmarks = result.landmarks[0] ?? null;
+          const smoothedLandmarks = landmarks ? smoothLandmarks(smoothedLandmarksRef.current, landmarks) : null;
+          smoothedLandmarksRef.current = smoothedLandmarks;
+          const quality = assessLandmarkQuality(smoothedLandmarks, poseQualityRef.current.stableFrames);
+          poseQualityRef.current = quality;
+          setPoseQuality(quality);
+          setBodyDetected(Boolean(smoothedLandmarks));
+          if (smoothedLandmarks) {
             const drawing = new DrawingUtils(context);
-            drawing.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#67e8f9', lineWidth: 3 });
-            drawing.drawLandmarks(landmarks, { color: '#ffffff', fillColor: '#22c55e', lineWidth: 1.4, radius: 3.4 });
+            drawing.drawConnectors(smoothedLandmarks, PoseLandmarker.POSE_CONNECTIONS, { color: quality.usable ? '#67e8f9' : '#93c5fd', lineWidth: 3 });
+            drawing.drawLandmarks(smoothedLandmarks, { color: '#ffffff', fillColor: quality.usable ? '#22c55e' : '#60a5fa', lineWidth: 1.4, radius: 3.4 });
           }
 
           const trackingSupport = selectedTracking?.support ?? 'unsupported';
-          const nextFeedback = landmarks && supportedPose
-            ? assessPose(supportedPose, landmarks)
-            : landmarks && trackingSupport === 'basic'
-              ? createPoseFeedback('basic_tracking', estimatePoseConfidence(landmarks), 'basic')
-              : createPoseFeedback(landmarks ? 'unsupported_exercise' : 'step_into_frame', landmarks ? estimatePoseConfidence(landmarks) : 0, 'basic');
+          const nextFeedback = smoothedLandmarks && !quality.usable
+            ? createPoseFeedback(quality.issue ?? 'step_into_frame', estimatePoseConfidence(smoothedLandmarks), 'basic')
+            : smoothedLandmarks && supportedPose
+              ? assessPose(supportedPose, smoothedLandmarks)
+              : smoothedLandmarks && trackingSupport === 'basic'
+                ? createPoseFeedback('basic_tracking', estimatePoseConfidence(smoothedLandmarks), 'basic')
+                : createPoseFeedback(smoothedLandmarks ? 'unsupported_exercise' : 'step_into_frame', smoothedLandmarks ? estimatePoseConfidence(smoothedLandmarks) : 0, 'basic');
           if (nextFeedback.score !== null) {
             const progress = progressRef.current;
             progress.analyzedSamples += 1;
@@ -419,7 +684,8 @@ export function LiveCoachPage() {
   const trackingReady = modelState === 'ready';
   const analysisActive = liveReady && trackingReady && !isPaused;
   const bodyNotDetected = liveReady && trackingReady && !bodyDetected;
-  const needsVisibilityAdjustment = ['full_body_required', 'step_into_frame', 'low_pose_confidence'].includes(poseFeedback.message);
+  const coachingCue = createCoachingCue(poseFeedback, poseQuality, selectedTracking?.support, modelState, liveReady);
+  const needsVisibilityAdjustment = ['full_body_required', 'step_into_frame', 'low_pose_confidence', 'keep_body_in_frame', 'improve_lighting', 'hold_still'].includes(poseFeedback.message);
   const confidenceLabel = poseFeedback.confidence > 0
     ? `${poseFeedback.confidence}%`
     : bodyDetected
@@ -445,6 +711,42 @@ export function LiveCoachPage() {
     { label: text('Camera stable', 'ثبات الكاميرا'), active: liveReady },
     { label: text('Exercise selected', 'تم اختيار التمرين'), active: Boolean(exercise) },
   ];
+
+  const setupGuidanceItems = [
+    { label: text('Full body visible', 'ظهور الجسم كامل'), active: bodyDetected && poseQuality.visibleLandmarks >= MIN_VISIBLE_LANDMARKS },
+    { label: text('Good lighting', 'إضاءة واضحة'), active: poseQuality.averageVisibility >= Math.round(MIN_AVERAGE_VISIBILITY * 100) },
+    { label: text('Body centered', 'جسمك بوسط الكاميرا'), active: poseQuality.centered },
+    { label: text('Stable detection', 'التتبع ثابت'), active: poseQuality.stable },
+    { label: text('Exercise selected', 'تم اختيار التمرين'), active: Boolean(exercise) },
+  ];
+
+  useEffect(() => {
+    if (!voiceEnabled || !coachingCue.speak || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const now = Date.now();
+    if (lastSpokenCueRef.current.key === coachingCue.key && now - lastSpokenCueRef.current.time < VOICE_COOLDOWN_MS) return;
+
+    const speak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const utterance = new SpeechSynthesisUtterance(isArabic ? coachingCue.ar : coachingCue.en);
+      const voice = pickSpeechVoice(voices, language);
+      if (voice) utterance.voice = voice;
+      utterance.lang = isArabic ? (voice?.lang || 'ar-JO') : (voice?.lang || 'en-US');
+      utterance.rate = 0.94;
+      utterance.volume = 0.9;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      lastSpokenCueRef.current = { key: coachingCue.key, time: now };
+    };
+
+    if (window.speechSynthesis.getVoices().length > 0) {
+      speak();
+      return;
+    }
+
+    const handleVoicesChanged = () => speak();
+    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged, { once: true });
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+  }, [coachingCue, isArabic, language, voiceEnabled]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#060816] pb-24 text-foreground md:pb-10">
@@ -523,7 +825,7 @@ export function LiveCoachPage() {
                 {text('Keep your full body visible inside the frame for better movement analysis.', 'حافظ على ظهور جسمك كاملًا داخل الإطار للحصول على تحليل أدق للحركة.')}
               </p>
               <div className="space-y-2">
-                {guidanceItems.map((item) => (
+                {setupGuidanceItems.map((item) => (
                   <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5 text-sm">
                     <span className="text-foreground/90">{item.label}</span>
                     <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]', item.active ? 'bg-emerald-400/12 text-emerald-200' : 'bg-white/6 text-muted-foreground')}>
@@ -594,6 +896,14 @@ export function LiveCoachPage() {
                   <span className="absolute -bottom-px -left-px h-10 w-10 border-b-2 border-l-2 border-fuchsia-300/80" />
                   <span className="absolute -bottom-px -right-px h-10 w-10 border-b-2 border-r-2 border-cyan-300/80" />
                 </div>
+                {cameraState === 'live' && (
+                  <CoachingCueOverlay
+                    cue={coachingCue}
+                    isArabic={isArabic}
+                    poseQuality={poseQuality}
+                    text={text}
+                  />
+                )}
 
                 {cameraState !== 'live' && (
                   <div className="absolute inset-0 z-[4] flex flex-col items-center justify-center gap-4 bg-zinc-950/95 px-6 text-center backdrop-blur-sm">
@@ -664,6 +974,10 @@ export function LiveCoachPage() {
                       <Button variant="secondary" onClick={resetSession} className="rounded-full border border-white/10 bg-white/[0.06] px-5"><RotateCcw className="mr-2 h-4 w-4" />{text('Reset', 'إعادة ضبط')}</Button>
                       <Button variant="destructive" onClick={stopCamera} className="rounded-full px-5 shadow-[0_16px_36px_rgba(239,68,68,0.22)]"><CameraOff className="mr-2 h-4 w-4" />{text('Stop Session', 'إيقاف الجلسة')}</Button>
                       <Button variant="secondary" onClick={switchCamera} className="rounded-full border border-white/10 bg-white/[0.06] px-5"><RefreshCw className="mr-2 h-4 w-4" />{text('Switch camera', 'تبديل الكاميرا')}</Button>
+                      <Button variant="secondary" onClick={() => setVoiceEnabled((value) => !value)} className="rounded-full border border-white/10 bg-white/[0.06] px-5">
+                        {voiceEnabled ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}
+                        {voiceEnabled ? text('Voice on', 'الصوت شغال') : text('Muted', 'الصوت مطفي')}
+                      </Button>
                     </>
                   ) : (
                     <Button onClick={() => startCamera()} disabled={cameraState === 'starting' || !canStartSession} className="rounded-full px-6"><Camera className="mr-2 h-4 w-4" />{text('Start camera', 'تشغيل الكاميرا')}</Button>
@@ -831,6 +1145,54 @@ const feedbackCopy: Record<string, [string, string]> = {
   shorten_lunge: ['Shorten your stance slightly', 'قلّل المسافة بين القدمين'],
   bend_back_knee: ['Bend your back knee', 'اثنِ الركبة الخلفية'],
 };
+
+function CoachingCueOverlay({ cue, isArabic, poseQuality, text }: {
+  cue: CoachingCue;
+  isArabic: boolean;
+  poseQuality: PoseQuality;
+  text: (en: string, ar: string) => string;
+}) {
+  const message = isArabic ? cue.ar : cue.en;
+  const label = cue.severity === 'good'
+    ? text('Good', 'تمام')
+    : cue.severity === 'correction'
+      ? text('Correct now', 'عدّل الآن')
+      : cue.severity === 'caution'
+        ? text('Watch it', 'انتبه')
+        : text('Camera setup', 'ضبط الكاميرا');
+  const Icon = cue.severity === 'good'
+    ? CheckCircle2
+    : cue.severity === 'correction'
+      ? TriangleAlert
+      : cue.severity === 'caution'
+        ? ShieldCheck
+        : Radar;
+
+  return (
+    <div className={cn(
+      'pointer-events-none absolute inset-x-4 top-4 z-[5] rounded-3xl border px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:inset-x-8 sm:top-6',
+      cue.severity === 'good' && 'border-emerald-300/35 bg-emerald-500/18 text-emerald-50',
+      cue.severity === 'caution' && 'border-yellow-300/35 bg-yellow-500/18 text-yellow-50',
+      cue.severity === 'correction' && 'border-red-300/40 bg-red-500/20 text-red-50',
+      cue.severity === 'camera-setup' && 'border-cyan-300/35 bg-cyan-500/18 text-cyan-50'
+    )}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-black/25">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] opacity-80">{label}</div>
+          <div className="mt-1 text-lg font-semibold leading-snug sm:text-2xl">{message}</div>
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-white/75">
+            <span>{text('Visibility', 'الوضوح')}: {poseQuality.averageVisibility}%</span>
+            <span>{text('Landmarks', 'النقاط')}: {poseQuality.visibleLandmarks}</span>
+            <span>{text('Stable', 'الثبات')}: {poseQuality.stableFrames}/{CALIBRATION_STABLE_FRAMES}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FeedbackPanel({ feedback, modelState, text }: {
   feedback: PoseFeedback;
