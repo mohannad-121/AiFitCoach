@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye, Search, Play, Pause, RotateCcw, Dumbbell, Volume2, VolumeX } from 'lucide-react';
+import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye, Search, Play, Pause, RotateCcw, Dumbbell, Volume2, VolumeX, Database, Download, Trash2 } from 'lucide-react';
 import { DrawingUtils, FilesetResolver, PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,10 @@ type CameraState = 'idle' | 'starting' | 'live' | 'error';
 type CameraIssue = 'permission-denied' | 'no-camera' | 'unsupported' | 'unknown' | null;
 type DifficultyLevel = 'normal' | 'advanced';
 type CueSeverity = 'good' | 'caution' | 'correction' | 'camera-setup';
+type CollectionExercise = 'squat' | 'push-up' | 'plank';
+type CollectionLabel = 'correct' | 'incorrect' | 'uncertain' | 'setup_bad';
+type CollectionCameraAngle = 'front' | 'side' | 'front_45' | 'unknown';
+type CollectionDifficulty = 'beginner' | 'normal' | 'advanced';
 
 interface LiveCoachRouteState {
   exerciseId?: string;
@@ -52,6 +56,46 @@ interface CoachingCue {
   speak: boolean;
 }
 
+interface DataCollectionSample {
+  sampleId: string;
+  sessionId: string;
+  participantId: string;
+  exercise: CollectionExercise;
+  label: CollectionLabel;
+  mistakeType: string;
+  cameraAngle: CollectionCameraAngle;
+  difficulty: CollectionDifficulty;
+  repPhase: PoseFeedback['repPhase'];
+  supportLevel: PoseFeedback['supportLevel'];
+  landmarks: Array<{
+    index: number;
+    name: string;
+    x: number;
+    y: number;
+    z: number;
+    visibility: number | null;
+  }>;
+  jointAngles: Record<string, number | null>;
+  confidence: {
+    pose: number;
+    averageVisibility: number;
+    visibleLandmarks: number;
+    centered: boolean;
+    stableFrames: number;
+    usable: boolean;
+    issue: string | null;
+  };
+  camera: {
+    width: number | null;
+    height: number | null;
+    fps: number | null;
+    facingMode: string | null;
+    deviceId: string | null;
+  };
+  timestamp: string;
+  appVersion: string;
+}
+
 const advancedExerciseTerms = [
   'barbell',
   'bench',
@@ -75,6 +119,64 @@ const MIN_VISIBLE_LANDMARKS = 18;
 const MIN_AVERAGE_VISIBILITY = 0.48;
 const CALIBRATION_STABLE_FRAMES = 8;
 const VOICE_COOLDOWN_MS = 8000;
+const COLLECTION_SAMPLE_INTERVAL_MS = 350;
+const DATA_COLLECTION_APP_VERSION = 'live-coach-collection-v1';
+const COLLECTION_EXERCISES: CollectionExercise[] = ['squat', 'push-up', 'plank'];
+const LANDMARK_NAMES = [
+  'nose',
+  'left_eye_inner',
+  'left_eye',
+  'left_eye_outer',
+  'right_eye_inner',
+  'right_eye',
+  'right_eye_outer',
+  'left_ear',
+  'right_ear',
+  'mouth_left',
+  'mouth_right',
+  'left_shoulder',
+  'right_shoulder',
+  'left_elbow',
+  'right_elbow',
+  'left_wrist',
+  'right_wrist',
+  'left_pinky',
+  'right_pinky',
+  'left_index',
+  'right_index',
+  'left_thumb',
+  'right_thumb',
+  'left_hip',
+  'right_hip',
+  'left_knee',
+  'right_knee',
+  'left_ankle',
+  'right_ankle',
+  'left_heel',
+  'right_heel',
+  'left_foot_index',
+  'right_foot_index',
+] as const;
+const COLLECTION_MISTAKES: Record<CollectionExercise, string[]> = {
+  squat: ['none', 'not_deep_enough', 'too_deep_unstable', 'chest_falling_forward', 'knees_caving_in', 'heels_lifting', 'uneven_weight_shift', 'setup_bad'],
+  'push-up': ['none', 'hips_sagging', 'hips_too_high', 'partial_range', 'elbows_flared', 'head_dropping', 'uneven_arm_load', 'setup_bad'],
+  plank: ['none', 'hips_sagging', 'hips_too_high', 'shoulders_not_stacked', 'knees_bent', 'head_dropping', 'unstable_hold', 'setup_bad'],
+};
+
+const COLLECTION_INDEX = {
+  leftShoulder: 11,
+  rightShoulder: 12,
+  leftElbow: 13,
+  rightElbow: 14,
+  leftWrist: 15,
+  rightWrist: 16,
+  leftHip: 23,
+  rightHip: 24,
+  leftKnee: 25,
+  rightKnee: 26,
+  leftAnkle: 27,
+  rightAnkle: 28,
+} as const;
 
 function classifyExerciseDifficulty(exercise: Exercise): DifficultyLevel {
   const searchable = `${exercise.id} ${exercise.name}`.toLowerCase();
@@ -115,6 +217,88 @@ function formatElapsed(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
   const seconds = (totalSeconds % 60).toString().padStart(2, '0');
   return `${minutes}:${seconds}`;
+}
+
+function createLocalId(prefix: string) {
+  const random = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}_${random}`;
+}
+
+function getLocalParticipantId() {
+  const key = 'aifitcoach_live_collection_participant';
+  if (typeof window === 'undefined') return createLocalId('anon');
+  const existing = window.localStorage.getItem(key);
+  if (existing) return existing;
+  const next = createLocalId('anon');
+  window.localStorage.setItem(key, next);
+  return next;
+}
+
+function roundMetric(value: number | undefined | null, digits = 4) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function poseAngle(a: NormalizedLandmark | undefined, b: NormalizedLandmark | undefined, c: NormalizedLandmark | undefined) {
+  if (!a || !b || !c) return null;
+  const ab = { x: a.x - b.x, y: a.y - b.y };
+  const cb = { x: c.x - b.x, y: c.y - b.y };
+  const denominator = Math.hypot(ab.x, ab.y) * Math.hypot(cb.x, cb.y);
+  if (!denominator) return null;
+  const cosine = Math.max(-1, Math.min(1, (ab.x * cb.x + ab.y * cb.y) / denominator));
+  return roundMetric(Math.acos(cosine) * 180 / Math.PI, 2);
+}
+
+function torsoTilt(shoulder: NormalizedLandmark | undefined, hip: NormalizedLandmark | undefined) {
+  if (!shoulder || !hip) return null;
+  const dx = Math.abs(shoulder.x - hip.x);
+  const dy = Math.abs(shoulder.y - hip.y);
+  if (!dy) return null;
+  return roundMetric(Math.atan2(dx, dy) * 180 / Math.PI, 2);
+}
+
+function extractCollectionJointAngles(landmarks: NormalizedLandmark[]) {
+  const point = (index: number) => landmarks[index];
+  return {
+    leftKnee: poseAngle(point(COLLECTION_INDEX.leftHip), point(COLLECTION_INDEX.leftKnee), point(COLLECTION_INDEX.leftAnkle)),
+    rightKnee: poseAngle(point(COLLECTION_INDEX.rightHip), point(COLLECTION_INDEX.rightKnee), point(COLLECTION_INDEX.rightAnkle)),
+    leftHip: poseAngle(point(COLLECTION_INDEX.leftShoulder), point(COLLECTION_INDEX.leftHip), point(COLLECTION_INDEX.leftKnee)),
+    rightHip: poseAngle(point(COLLECTION_INDEX.rightShoulder), point(COLLECTION_INDEX.rightHip), point(COLLECTION_INDEX.rightKnee)),
+    leftElbow: poseAngle(point(COLLECTION_INDEX.leftShoulder), point(COLLECTION_INDEX.leftElbow), point(COLLECTION_INDEX.leftWrist)),
+    rightElbow: poseAngle(point(COLLECTION_INDEX.rightShoulder), point(COLLECTION_INDEX.rightElbow), point(COLLECTION_INDEX.rightWrist)),
+    leftBodyLine: poseAngle(point(COLLECTION_INDEX.leftShoulder), point(COLLECTION_INDEX.leftHip), point(COLLECTION_INDEX.leftAnkle)),
+    rightBodyLine: poseAngle(point(COLLECTION_INDEX.rightShoulder), point(COLLECTION_INDEX.rightHip), point(COLLECTION_INDEX.rightAnkle)),
+    leftTorsoTilt: torsoTilt(point(COLLECTION_INDEX.leftShoulder), point(COLLECTION_INDEX.leftHip)),
+    rightTorsoTilt: torsoTilt(point(COLLECTION_INDEX.rightShoulder), point(COLLECTION_INDEX.rightHip)),
+  };
+}
+
+function serializeCollectionLandmarks(landmarks: NormalizedLandmark[]) {
+  return landmarks.map((point, index) => ({
+    index,
+    name: LANDMARK_NAMES[index] ?? `landmark_${index}`,
+    x: roundMetric(point.x) ?? 0,
+    y: roundMetric(point.y) ?? 0,
+    z: roundMetric(point.z) ?? 0,
+    visibility: roundMetric(point.visibility ?? null),
+  }));
+}
+
+function exportJsonl(samples: DataCollectionSample[], filename: string) {
+  if (typeof window === 'undefined' || samples.length === 0) return;
+  const content = samples.map((sample) => JSON.stringify(sample)).join('\n');
+  const blob = new Blob([`${content}\n`], { type: 'application/x-ndjson;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 function emptyPoseQuality(): PoseQuality {
@@ -198,96 +382,99 @@ function makeVideoConstraints(nextFacingMode: 'user' | 'environment', nextDevice
   };
 }
 
-const cueCopy: Record<string, { en: string; ar: string }> = {
+const cueCopy: Record<string, { en: string; ar: string | string[] }> = {
   basic_tracking: {
     en: 'Pose tracking is active. Keep your full body visible and move with control.',
-    ar: 'التتبع شغال. خلي جسمك كامل واضح وتحرك بهدوء.',
+    ar: ['التتبع شغال، خليك واضح بالكاميرا', 'حركة منيحة، خليك مبين كامل'],
   },
   low_pose_confidence: {
     en: 'Improve lighting and keep the working joints visible.',
-    ar: 'زيد الإضاءة شوي وخلي المفاصل واضحة.',
+    ar: ['الإضاءة ضعيفة شوي، جرب مكان أوضح', 'خلي جسمك أوضح، الإضاءة بدها تزيد'],
   },
   unsupported_exercise: {
     en: 'I can see your body, but this exercise has visibility tracking only.',
-    ar: 'شايف جسمك، بس هالتمرين تتبعه عام بدون تصحيح تفصيلي.',
+    ar: ['شايفك، بس هالتمرين تتبعه عام بس', 'واضح بالكاميرا، بس بدون تصحيح تفصيلي'],
   },
   pose_model_unavailable: {
     en: 'Pose analysis could not load. Refresh the page and try again.',
-    ar: 'تحليل الحركة ما اشتغل. حدث الصفحة وجرب مرة ثانية.',
+    ar: 'تحليل الحركة ما اشتغل، حدث الصفحة وجرب',
   },
   pose_detection_unavailable: {
     en: 'Pose tracking stopped. Restart the camera session.',
-    ar: 'تتبع الحركة وقف. شغل الكاميرا من جديد.',
+    ar: 'التتبع وقف، شغل الكاميرا من جديد',
   },
   step_into_frame: {
     en: 'Step into the frame.',
-    ar: 'ادخل قدام الكاميرا.',
+    ar: ['تعال شوي قدام الكاميرا', 'خليك قدام الكاميرا'],
   },
   full_body_required: {
     en: 'Step back until your full body is visible.',
-    ar: 'ارجع شوي لورا عشان جسمك يبين كامل.',
+    ar: ['ارجع شوي لورا، خلي جسمك يبين كامل', 'بعد شوي عن الكاميرا عشان جسمك يطلع كامل'],
   },
   keep_body_in_frame: {
     en: 'Keep your body inside the frame.',
-    ar: 'خليك داخل إطار الكاميرا.',
+    ar: ['خليك بنص الكاميرا', 'خلي جسمك كله داخل الصورة'],
   },
   improve_lighting: {
     en: 'Improve lighting.',
-    ar: 'زيد الإضاءة شوي.',
+    ar: ['الإضاءة ضعيفة شوي، جرب مكان أوضح', 'زيد الإضاءة شوي'],
   },
   hold_still: {
     en: 'Hold steady for a moment so I can calibrate.',
-    ar: 'اثبت لحظة عشان أظبط التتبع.',
+    ar: ['اثبت لحظة، بدي أظبط التتبع', 'ضل ثابت شوي'],
   },
   face_camera: {
     en: 'Face the camera.',
-    ar: 'واجه الكاميرا.',
+    ar: ['واجه الكاميرا', 'لف جسمك شوي عالكاميرا'],
   },
   form_good: {
     en: 'Good form. Keep going.',
-    ar: 'أداؤك ممتاز، كمل.',
+    ar: ['ممتاز، ضلك ثابت', 'حركة منيحة، كمل', 'تمام، كمل هيك'],
   },
   raise_hips: {
     en: 'Raise your hips slightly.',
-    ar: 'ارفع الحوض شوي.',
+    ar: ['ظهرك نازل شوي، ارفعه شوي', 'ارفع الورك شوي'],
   },
   lower_hips: {
     en: 'Lower your hips slightly.',
-    ar: 'نزل الحوض شوي.',
+    ar: ['الورك عالي شوي، نزله شوي', 'نزل الحوض شوي'],
   },
   open_elbows: {
     en: 'Open your elbow angle.',
-    ar: 'افتح زاوية الكوع شوي.',
+    ar: ['قرب إيديك شوي من وضعية التمرين', 'افتح كوعك شوي وخليك مسيطر'],
   },
   chest_up: {
     en: 'Lift your chest.',
-    ar: 'ارفع صدرك.',
+    ar: ['ارفع صدرك شوي', 'خلي صدرك لفوق'],
   },
   lower_squat: {
     en: 'Bend your knees and lower.',
-    ar: 'اثني ركبتك وانزل شوي.',
+    ar: ['انزل شوي كمان بالسكوات', 'اثني ركبتك وانزل شوي'],
   },
   squat_too_deep: {
     en: 'Rise slightly.',
-    ar: 'اطلع شوي لفوق.',
+    ar: ['اطلع شوي لفوق', 'خفف النزلة شوي'],
   },
   lower_lunge: {
     en: 'Lower into the lunge.',
-    ar: 'انزل أكثر باللانج.',
+    ar: 'انزل شوي كمان باللانج',
   },
   shorten_lunge: {
     en: 'Shorten your stance slightly.',
-    ar: 'قرب رجليك شوي.',
+    ar: 'قرب رجليك شوي',
   },
   bend_back_knee: {
     en: 'Bend your back knee.',
-    ar: 'اثني الركبة الخلفية.',
+    ar: 'اثني الركبة اللي ورا شوي',
   },
 };
 
 function cueFromKey(key: string, severity: CueSeverity, speak = true): CoachingCue {
   const copy = cueCopy[key] ?? cueCopy.step_into_frame;
-  return { key, severity, en: copy.en, ar: copy.ar, speak };
+  const ar = Array.isArray(copy.ar)
+    ? copy.ar[Math.floor(Date.now() / VOICE_COOLDOWN_MS) % copy.ar.length]
+    : copy.ar;
+  return { key, severity, en: copy.en, ar, speak };
 }
 
 function severityFromFeedback(feedback: PoseFeedback): CueSeverity {
@@ -322,7 +509,11 @@ function createCoachingCue(
 
 function pickSpeechVoice(voices: SpeechSynthesisVoice[], language: string) {
   if (language === 'ar') {
-    return voices.find((voice) => /^ar(-|_|$)/i.test(voice.lang))
+    const preferredArabic = ['ar-JO', 'ar_JO', 'ar-SA', 'ar_SA', 'ar-XA', 'ar_XA', 'ar'];
+    return preferredArabic
+      .map((lang) => voices.find((voice) => voice.lang.toLowerCase() === lang.toLowerCase()))
+      .find(Boolean)
+      ?? voices.find((voice) => /^ar(-|_|$)/i.test(voice.lang))
       ?? voices.find((voice) => /arabic|عربي/i.test(voice.name))
       ?? null;
   }
@@ -345,11 +536,16 @@ export function LiveCoachPage() {
   const poseQualityRef = useRef<PoseQuality>(emptyPoseQuality());
   const lastSpokenCueRef = useRef({ key: '', time: 0 });
   const progressRef = useRef({ analyzedSamples: 0, goodSamples: 0, corrections: {} as Record<string, number> });
+  const collectionSessionIdRef = useRef(createLocalId('session'));
+  const collectionParticipantIdRef = useRef('');
+  const collectionActiveRef = useRef(false);
+  const lastCollectionSampleRef = useRef(0);
   const liveExercises = useMemo(() => exerciseCatalog.map(toLiveExercise), []);
   const defaultExercise = liveExercises.find((item) => item.tracking.support === 'full') ?? liveExercises[0];
   const routeState = location.state as LiveCoachRouteState | null;
   const requestedExerciseId = searchParams.get('exerciseId') || searchParams.get('exercise') || routeState?.exerciseId || '';
   const requestedExerciseName = searchParams.get('exerciseName') || routeState?.exerciseName || '';
+  const collectionModeEnabled = searchParams.get('collect') === '1';
   const requestedExercise = useMemo(() => {
     const requestedId = requestedExerciseId.trim();
     if (requestedId) {
@@ -381,6 +577,12 @@ export function LiveCoachPage() {
   const [poseQuality, setPoseQuality] = useState<PoseQuality>(() => emptyPoseQuality());
   const [poseFeedback, setPoseFeedback] = useState<PoseFeedback>(() => createPoseFeedback());
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [collectionLabel, setCollectionLabel] = useState<CollectionLabel>('correct');
+  const [collectionMistakeType, setCollectionMistakeType] = useState('none');
+  const [collectionCameraAngle, setCollectionCameraAngle] = useState<CollectionCameraAngle>('unknown');
+  const [collectionDifficulty, setCollectionDifficulty] = useState<CollectionDifficulty>('normal');
+  const [collectionSamples, setCollectionSamples] = useState<DataCollectionSample[]>([]);
+  const [isCollecting, setIsCollecting] = useState(false);
 
   const text = useCallback((en: string, ar: string) => (language === 'ar' ? ar : en), [language]);
   const isArabic = language === 'ar';
@@ -394,6 +596,11 @@ export function LiveCoachPage() {
   const selectedTracking = selectedExercise?.tracking ?? null;
   const supportedPose = selectedTracking?.support === 'full' ? selectedTracking.pose : null;
   const canStartSession = selectedTracking?.support !== 'unsupported';
+  const collectionExercise = selectedTracking?.support === 'full' && selectedTracking.pose && COLLECTION_EXERCISES.includes(selectedTracking.pose as CollectionExercise)
+    ? selectedTracking.pose as CollectionExercise
+    : null;
+  const collectionMistakeOptions = collectionExercise ? COLLECTION_MISTAKES[collectionExercise] : ['none'];
+  const canCollectCurrentExercise = collectionModeEnabled && Boolean(collectionExercise);
   const filteredExercises = useMemo(() => {
     const query = exerciseQuery.trim().toLowerCase();
     return liveExercises
@@ -411,6 +618,8 @@ export function LiveCoachPage() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    collectionActiveRef.current = false;
+    setIsCollecting(false);
     setCameraState('idle');
     setCameraIssue(null);
     setElapsed(0);
@@ -437,6 +646,73 @@ export function LiveCoachPage() {
     const available = await navigator.mediaDevices.enumerateDevices();
     setDevices(available.filter((device) => device.kind === 'videoinput'));
   }, []);
+
+  const buildCollectionSample = useCallback((landmarks: NormalizedLandmark[], quality: PoseQuality, feedback: PoseFeedback): DataCollectionSample | null => {
+    if (!collectionModeEnabled || !collectionExercise) return null;
+    const video = videoRef.current;
+    const track = streamRef.current?.getVideoTracks()[0] ?? null;
+    const settings = track?.getSettings();
+    const effectiveLabel: CollectionLabel = quality.usable ? collectionLabel : 'setup_bad';
+
+    return {
+      sampleId: createLocalId('sample'),
+      sessionId: collectionSessionIdRef.current,
+      participantId: collectionParticipantIdRef.current || getLocalParticipantId(),
+      exercise: collectionExercise,
+      label: effectiveLabel,
+      mistakeType: effectiveLabel === 'setup_bad' ? 'setup_bad' : collectionMistakeType,
+      cameraAngle: collectionCameraAngle,
+      difficulty: collectionDifficulty,
+      repPhase: feedback.repPhase,
+      supportLevel: feedback.supportLevel,
+      landmarks: serializeCollectionLandmarks(landmarks),
+      jointAngles: extractCollectionJointAngles(landmarks),
+      confidence: {
+        pose: feedback.confidence,
+        averageVisibility: quality.averageVisibility,
+        visibleLandmarks: quality.visibleLandmarks,
+        centered: quality.centered,
+        stableFrames: quality.stableFrames,
+        usable: quality.usable,
+        issue: quality.issue,
+      },
+      camera: {
+        width: settings?.width ?? video?.videoWidth ?? null,
+        height: settings?.height ?? video?.videoHeight ?? null,
+        fps: settings?.frameRate ?? null,
+        facingMode: settings?.facingMode ?? facingMode,
+        deviceId: settings?.deviceId ?? (deviceId === 'default' ? null : deviceId),
+      },
+      timestamp: new Date().toISOString(),
+      appVersion: DATA_COLLECTION_APP_VERSION,
+    };
+  }, [collectionCameraAngle, collectionDifficulty, collectionExercise, collectionLabel, collectionMistakeType, collectionModeEnabled, deviceId, facingMode]);
+
+  const startDataCollection = useCallback(() => {
+    if (!canCollectCurrentExercise || cameraState !== 'live' || modelState !== 'ready') return;
+    collectionParticipantIdRef.current = getLocalParticipantId();
+    collectionSessionIdRef.current = createLocalId('session');
+    lastCollectionSampleRef.current = 0;
+    collectionActiveRef.current = true;
+    setIsCollecting(true);
+  }, [cameraState, canCollectCurrentExercise, modelState]);
+
+  const stopDataCollection = useCallback(() => {
+    collectionActiveRef.current = false;
+    setIsCollecting(false);
+  }, []);
+
+  const clearCollectionBatch = useCallback(() => {
+    stopDataCollection();
+    setCollectionSamples([]);
+    collectionSessionIdRef.current = createLocalId('session');
+    lastCollectionSampleRef.current = 0;
+  }, [stopDataCollection]);
+
+  const exportCollectionBatch = useCallback(() => {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    exportJsonl(collectionSamples, `aifitcoach-livecoach-${collectionExercise ?? 'exercise'}-${stamp}.jsonl`);
+  }, [collectionExercise, collectionSamples]);
 
   const startCamera = useCallback(async (nextFacingMode = facingMode, nextDeviceId = deviceId) => {
     if (!canStartSession) {
@@ -618,6 +894,11 @@ export function LiveCoachPage() {
               progress.corrections[nextFeedback.message] = (progress.corrections[nextFeedback.message] || 0) + 1;
             }
           }
+          if (collectionActiveRef.current && smoothedLandmarks && now - lastCollectionSampleRef.current >= COLLECTION_SAMPLE_INTERVAL_MS) {
+            lastCollectionSampleRef.current = now;
+            const sample = buildCollectionSample(smoothedLandmarks, quality, nextFeedback);
+            if (sample) setCollectionSamples((current) => [...current, sample]);
+          }
           const key = `${nextFeedback.level}:${nextFeedback.message}`;
           const candidate = feedbackCandidateRef.current;
           candidate.frames = candidate.key === key ? candidate.frames + 1 : 1;
@@ -634,11 +915,27 @@ export function LiveCoachPage() {
       animationRef.current = null;
       canvasRef.current?.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     };
-  }, [cameraState, isPaused, modelState, selectedTracking?.support, supportedPose]);
+  }, [buildCollectionSample, cameraState, isPaused, modelState, selectedTracking?.support, supportedPose]);
 
   useEffect(() => {
     resetSession();
-  }, [exercise, resetSession]);
+    stopDataCollection();
+  }, [exercise, resetSession, stopDataCollection]);
+
+  useEffect(() => {
+    if (!collectionModeEnabled) return;
+    collectionParticipantIdRef.current = getLocalParticipantId();
+  }, [collectionModeEnabled]);
+
+  useEffect(() => {
+    if (!collectionMistakeOptions.includes(collectionMistakeType)) {
+      setCollectionMistakeType(collectionMistakeOptions[0] ?? 'none');
+    }
+  }, [collectionMistakeOptions, collectionMistakeType]);
+
+  useEffect(() => {
+    if (!canCollectCurrentExercise && isCollecting) stopDataCollection();
+  }, [canCollectCurrentExercise, isCollecting, stopDataCollection]);
 
   const getSessionContext = useCallback((): LiveSessionContext => {
     const progress = progressRef.current;
@@ -704,6 +1001,14 @@ export function LiveCoachPage() {
   const trackedRatio = progressRef.current.analyzedSamples
     ? `${Math.round((progressRef.current.goodSamples / progressRef.current.analyzedSamples) * 100)}%`
     : text('Collecting', 'قيد الجمع');
+  const collectionReady = canCollectCurrentExercise && cameraState === 'live' && modelState === 'ready';
+  const collectionStatus = !collectionModeEnabled
+    ? text('Hidden', 'مخفي')
+    : !canCollectCurrentExercise
+      ? text('Select squat, push-up, or plank', 'اختر السكوات أو الضغط أو البلانك')
+      : isCollecting
+        ? text('Collecting locally', 'يتم الجمع محلياً')
+        : text('Ready to collect', 'جاهز للجمع');
 
   const guidanceItems = [
     { label: text('Full body visible', 'ظهور الجسم كاملًا'), active: !needsVisibilityAdjustment },
@@ -729,9 +1034,13 @@ export function LiveCoachPage() {
       const voices = window.speechSynthesis.getVoices();
       const utterance = new SpeechSynthesisUtterance(isArabic ? coachingCue.ar : coachingCue.en);
       const voice = pickSpeechVoice(voices, language);
+      if (isArabic && !voice) {
+        lastSpokenCueRef.current = { key: coachingCue.key, time: now };
+        return;
+      }
       if (voice) utterance.voice = voice;
       utterance.lang = isArabic ? (voice?.lang || 'ar-JO') : (voice?.lang || 'en-US');
-      utterance.rate = 0.94;
+      utterance.rate = isArabic ? 0.9 : 0.94;
       utterance.volume = 0.9;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
@@ -756,7 +1065,7 @@ export function LiveCoachPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_48%,_rgba(1,3,10,0.76)_100%)]" />
       </div>
       <Navbar />
-      <main className="relative z-10 mx-auto w-full max-w-[1500px] px-4 pt-20 sm:px-6 lg:px-8">
+      <main className="relative z-10 mx-auto w-full max-w-[1680px] px-4 pt-20 sm:px-6 lg:px-8">
         <section className="mb-6 rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(16,18,32,0.86),rgba(9,11,22,0.72))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-100/80">
@@ -780,7 +1089,7 @@ export function LiveCoachPage() {
           </p>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)_23rem] xl:items-start">
+        <div className="grid gap-6 xl:grid-cols-[16rem_minmax(0,1fr)_22rem] 2xl:grid-cols-[17rem_minmax(0,1fr)_23rem] xl:items-start">
           <aside className="space-y-4 xl:sticky xl:top-24">
             <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl" dir="ltr">
               <div className="flex flex-row items-center gap-4 text-left xl:flex-col xl:items-center xl:text-center">
@@ -877,7 +1186,7 @@ export function LiveCoachPage() {
                 </div>
               </div>
 
-              <div className="relative aspect-[3/4] w-full bg-black sm:aspect-video">
+              <div className="relative h-[68svh] min-h-[420px] max-h-[760px] w-full bg-black sm:h-[74vh] sm:min-h-[560px] sm:max-h-[840px] lg:h-[76vh] lg:min-h-[680px] xl:min-h-[720px]">
                 <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_center,_rgba(56,189,248,0.08),_transparent_55%)]" />
                 <div className="pointer-events-none absolute inset-0 z-[1] opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:32px_32px]" />
                 <video ref={videoRef} muted playsInline className={cn(
@@ -989,6 +1298,105 @@ export function LiveCoachPage() {
 
           <aside className="space-y-5">
             <FeedbackPanel feedback={poseFeedback} modelState={modelState} text={text} />
+            {collectionModeEnabled && (
+              <div className="rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(8,24,34,0.92),rgba(8,10,22,0.94))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4 text-cyan-300" />
+                      <h3 className="text-sm font-semibold text-white">{text('Data Collection', 'جمع البيانات')}</h3>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-cyan-50/70">
+                      {text('This mode exports pose landmarks and joint angles only. It does not save camera video.', 'هذا الوضع يصدّر نقاط الجسم وزوايا المفاصل فقط. لا يحفظ فيديو الكاميرا.')}
+                    </p>
+                  </div>
+                  <span className={cn(
+                    'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                    isCollecting ? 'bg-emerald-400/15 text-emerald-200' : 'bg-white/10 text-cyan-100'
+                  )}>
+                    {collectionSamples.length}
+                  </span>
+                </div>
+
+                <div className="mb-4 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{text('Status', 'الحالة')}</span>
+                    <span className={cn('text-right font-medium', collectionReady ? 'text-emerald-300' : 'text-amber-300')}>{collectionStatus}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span>{text('Exercise', 'التمرين')}</span>
+                    <span className="font-medium text-white">{collectionExercise ?? text('Unsupported for collection', 'غير مدعوم للجمع')}</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">{text('Label', 'التصنيف')}</Label>
+                    <Select value={collectionLabel} onValueChange={(value) => setCollectionLabel(value as CollectionLabel)} disabled={isCollecting}>
+                      <SelectTrigger className="mt-1 rounded-2xl border-white/10 bg-black/20"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(['correct', 'incorrect', 'uncertain', 'setup_bad'] as CollectionLabel[]).map((value) => (
+                          <SelectItem key={value} value={value}>{value}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">{text('Mistake Type', 'نوع الخطأ')}</Label>
+                    <Select value={collectionMistakeType} onValueChange={setCollectionMistakeType} disabled={isCollecting}>
+                      <SelectTrigger className="mt-1 rounded-2xl border-white/10 bg-black/20"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {collectionMistakeOptions.map((value) => (
+                          <SelectItem key={value} value={value}>{value}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">{text('Camera Angle', 'زاوية الكاميرا')}</Label>
+                      <Select value={collectionCameraAngle} onValueChange={(value) => setCollectionCameraAngle(value as CollectionCameraAngle)} disabled={isCollecting}>
+                        <SelectTrigger className="mt-1 rounded-2xl border-white/10 bg-black/20"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(['front', 'side', 'front_45', 'unknown'] as CollectionCameraAngle[]).map((value) => (
+                            <SelectItem key={value} value={value}>{value}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">{text('Difficulty', 'الصعوبة')}</Label>
+                      <Select value={collectionDifficulty} onValueChange={(value) => setCollectionDifficulty(value as CollectionDifficulty)} disabled={isCollecting}>
+                        <SelectTrigger className="mt-1 rounded-2xl border-white/10 bg-black/20"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(['beginner', 'normal', 'advanced'] as CollectionDifficulty[]).map((value) => (
+                            <SelectItem key={value} value={value}>{value}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {isCollecting ? (
+                    <Button type="button" variant="outline" className="rounded-2xl border-amber-300/30 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20" onClick={stopDataCollection}>
+                      <Pause className="mr-2 h-4 w-4" />{text('Stop', 'إيقاف')}
+                    </Button>
+                  ) : (
+                    <Button type="button" className="rounded-2xl" onClick={startDataCollection} disabled={!collectionReady}>
+                      <Play className="mr-2 h-4 w-4" />{text('Start', 'بدء')}
+                    </Button>
+                  )}
+                  <Button type="button" variant="outline" className="rounded-2xl border-white/10 bg-white/[0.04]" onClick={exportCollectionBatch} disabled={collectionSamples.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />{text('Export', 'تصدير')}
+                  </Button>
+                  <Button type="button" variant="outline" className="col-span-2 rounded-2xl border-white/10 bg-white/[0.04] text-muted-foreground hover:text-white" onClick={clearCollectionBatch} disabled={collectionSamples.length === 0 && !isCollecting}>
+                    <Trash2 className="mr-2 h-4 w-4" />{text('Clear batch', 'مسح الدفعة')}
+                  </Button>
+                </div>
+              </div>
+            )}
             <LiveCoachChat getSessionContext={getSessionContext} language={language} />
 
             <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
