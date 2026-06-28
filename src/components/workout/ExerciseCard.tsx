@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, Play, Sparkles, X } from 'lucide-react';
+import { Camera, ExternalLink, Play, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { type Exercise } from '@/data/exercises';
@@ -14,6 +14,7 @@ interface ExerciseCardProps {
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
   onCollapse?: () => void;
+  onTrainWithCamera?: (exercise: Exercise) => void;
 }
 
 const muscleLabelsEn: Record<string, string> = {
@@ -48,6 +49,7 @@ export function ExerciseCard({
   isExpanded = false,
   onToggleExpanded,
   onCollapse,
+  onTrainWithCamera,
 }: ExerciseCardProps) {
   const { language } = useLanguage();
   const resolvedVideoUrl = getExerciseVideoUrl(exercise, selectedGender);
@@ -157,12 +159,13 @@ export function ExerciseCard({
             {localizedLabel(repairMojibake(exercise.description), repairMojibake(exercise.descriptionAr), language)}
           </p>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div className="flex flex-wrap gap-2">
               <InfoBadge label={localizedLabel('Sets', 'المجموعات', language)} value={String(exercise.sets)} />
               <InfoBadge label={localizedLabel('Reps', 'التكرارات', language)} value={exercise.reps} />
             </div>
 
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             <Button
               type="button"
               onClick={() => {
@@ -172,14 +175,26 @@ export function ExerciseCard({
                 }
                 window.open(externalDemoUrl, '_blank', 'noopener,noreferrer');
               }}
-              className="group/button relative overflow-hidden rounded-full border border-white/10 bg-[linear-gradient(135deg,rgba(255,91,210,0.96),rgba(117,92,255,0.94))] px-5 text-white shadow-[0_14px_32px_rgba(124,88,255,0.28)]"
+              className="group/button relative w-full overflow-hidden rounded-full border border-white/10 bg-[linear-gradient(135deg,rgba(255,91,210,0.96),rgba(117,92,255,0.94))] px-5 text-white shadow-[0_14px_32px_rgba(124,88,255,0.28)] sm:w-auto"
             >
               <span className="absolute inset-y-0 left-[-45%] w-1/3 rotate-12 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] transition-transform duration-700 group-hover/button:translate-x-[340%]" />
-              <span className="relative flex items-center gap-2">
+              <span className="relative flex items-center justify-center gap-2">
                 <Play className="h-4 w-4" />
                 {watchLabel}
               </span>
             </Button>
+            {onTrainWithCamera && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onTrainWithCamera(exercise)}
+                className="w-full rounded-full border border-cyan-300/20 bg-cyan-400/10 px-5 text-cyan-100 hover:bg-cyan-400/15 hover:text-white sm:w-auto"
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                {localizedLabel('Train with camera', 'تدرب بالكاميرا', language)}
+              </Button>
+            )}
+            </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye } from 'lucide-react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye, Search, Play, Pause, RotateCcw, Dumbbell } from 'lucide-react';
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -7,18 +8,81 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import { assessPose, type PoseFeedback, type SupportedExercise } from '@/lib/poseFeedback';
+import { assessPose, estimatePoseConfidence, type PoseFeedback, type SupportedExercise } from '@/lib/poseFeedback';
 import { LiveCoachChat, type LiveSessionContext } from '@/components/live/LiveCoachChat';
 import { useUser } from '@/contexts/UserContext';
+import { exercises as exerciseCatalog, type Exercise } from '@/data/exercises';
+import { localizedLabel, repairMojibake } from '@/lib/text';
+import { getExerciseTrackingConfig, normalizeExerciseName, type ExerciseTrackingConfig } from '@/lib/exerciseTracking';
 
 type CameraState = 'idle' | 'starting' | 'live' | 'error';
+type CameraIssue = 'permission-denied' | 'no-camera' | 'unsupported' | 'unknown' | null;
+type DifficultyLevel = 'normal' | 'advanced';
 
-const exercises = [
-  { value: 'plank', en: 'Plank', ar: 'لوح الثبات' },
-  { value: 'squat', en: 'Squat', ar: 'القرفصاء' },
-  { value: 'push-up', en: 'Push-up', ar: 'تمرين الضغط' },
-  { value: 'lunge', en: 'Lunge', ar: 'الاندفاع' },
+interface LiveCoachRouteState {
+  exerciseId?: string;
+  exerciseName?: string;
+}
+
+interface LiveExercise {
+  source: Exercise;
+  id: string;
+  name: string;
+  nameAr: string;
+  difficulty: DifficultyLevel;
+  tracking: ExerciseTrackingConfig;
+}
+
+const advancedExerciseTerms = [
+  'barbell',
+  'bench',
+  'bulgarian',
+  'cable',
+  'chin-up',
+  'deadlift',
+  'decline',
+  'hip thrust',
+  'machine',
+  'nordic',
+  'pull-up',
+  'romanian',
+  'single-leg',
 ];
+
+function classifyExerciseDifficulty(exercise: Exercise): DifficultyLevel {
+  const searchable = `${exercise.id} ${exercise.name}`.toLowerCase();
+
+  // The exercise catalog does not expose a stable difficulty field yet.
+  // Be conservative: only clearly loaded, unilateral, machine, or advanced
+  // movement names are classified as advanced; everything else stays normal.
+  if (advancedExerciseTerms.some((term) => searchable.includes(term))) return 'advanced';
+  if (exercise.goal === 'bulking' && exercise.location === 'gym') return 'advanced';
+  return 'normal';
+}
+
+function toLiveExercise(exercise: Exercise): LiveExercise {
+  return {
+    source: exercise,
+    id: exercise.id,
+    name: repairMojibake(exercise.name),
+    nameAr: repairMojibake(exercise.nameAr || exercise.name),
+    difficulty: classifyExerciseDifficulty(exercise),
+    tracking: getExerciseTrackingConfig(exercise),
+  };
+}
+
+function createPoseFeedback(message = 'step_into_frame', confidence = 0, supportLevel: PoseFeedback['supportLevel'] = 'basic'): PoseFeedback {
+  return {
+    level: 'waiting',
+    message,
+    score: null,
+    status: message === 'basic_tracking' ? 'tracking_basic' : 'waiting_for_body',
+    confidence,
+    correction: message,
+    repPhase: null,
+    supportLevel,
+  };
+}
 
 function formatElapsed(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
@@ -29,6 +93,8 @@ function formatElapsed(totalSeconds: number) {
 export function LiveCoachPage() {
   const { language } = useLanguage();
   const { profile } = useUser();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -37,18 +103,63 @@ export function LiveCoachPage() {
   const lastInferenceRef = useRef(0);
   const feedbackCandidateRef = useRef({ key: '', frames: 0 });
   const progressRef = useRef({ analyzedSamples: 0, goodSamples: 0, corrections: {} as Record<string, number> });
+  const liveExercises = useMemo(() => exerciseCatalog.map(toLiveExercise), []);
+  const defaultExercise = liveExercises.find((item) => item.tracking.support === 'full') ?? liveExercises[0];
+  const routeState = location.state as LiveCoachRouteState | null;
+  const requestedExerciseId = searchParams.get('exerciseId') || searchParams.get('exercise') || routeState?.exerciseId || '';
+  const requestedExerciseName = searchParams.get('exerciseName') || routeState?.exerciseName || '';
+  const requestedExercise = useMemo(() => {
+    const requestedId = requestedExerciseId.trim();
+    if (requestedId) {
+      const byId = liveExercises.find((item) => item.id === requestedId);
+      if (byId) return byId;
+    }
+
+    const requestedName = normalizeExerciseName(requestedExerciseName);
+    if (!requestedName) return null;
+    return liveExercises.find((item) =>
+      normalizeExerciseName(item.name) === requestedName ||
+      normalizeExerciseName(item.nameAr) === requestedName
+    ) ?? null;
+  }, [liveExercises, requestedExerciseId, requestedExerciseName]);
+  const initialExercise = requestedExercise ?? defaultExercise;
   const [cameraState, setCameraState] = useState<CameraState>('idle');
+  const [cameraIssue, setCameraIssue] = useState<CameraIssue>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState('default');
-  const [exercise, setExercise] = useState('plank');
+  const [exercise, setExercise] = useState(initialExercise?.id ?? 'plank');
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(initialExercise?.difficulty ?? 'normal');
+  const [exerciseQuery, setExerciseQuery] = useState('');
   const [elapsed, setElapsed] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [bodyDetected, setBodyDetected] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [modelState, setModelState] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [poseFeedback, setPoseFeedback] = useState<PoseFeedback>({ level: 'waiting', message: 'step_into_frame', score: null });
+  const [poseFeedback, setPoseFeedback] = useState<PoseFeedback>(() => createPoseFeedback());
 
   const text = useCallback((en: string, ar: string) => (language === 'ar' ? ar : en), [language]);
   const isArabic = language === 'ar';
+  const selectedExercise = useMemo(
+    () => liveExercises.find((item) => item.id === exercise) ?? defaultExercise,
+    [defaultExercise, exercise, liveExercises]
+  );
+  const selectedExerciseLabel = selectedExercise
+    ? localizedLabel(selectedExercise.name, selectedExercise.nameAr, language)
+    : text('Exercise', 'التمرين');
+  const selectedTracking = selectedExercise?.tracking ?? null;
+  const supportedPose = selectedTracking?.support === 'full' ? selectedTracking.pose : null;
+  const canStartSession = selectedTracking?.support !== 'unsupported';
+  const filteredExercises = useMemo(() => {
+    const query = exerciseQuery.trim().toLowerCase();
+    return liveExercises
+      .filter((item) => item.difficulty === difficulty)
+      .filter((item) => {
+        if (!query) return true;
+        return `${item.name} ${item.nameAr} ${item.source.muscle}`.toLowerCase().includes(query);
+      })
+      .slice(0, 42);
+  }, [difficulty, exerciseQuery, liveExercises]);
 
   const stopCamera = useCallback(() => {
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
@@ -57,8 +168,19 @@ export function LiveCoachPage() {
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraState('idle');
+    setCameraIssue(null);
     setElapsed(0);
-    setPoseFeedback({ level: 'waiting', message: 'step_into_frame', score: null });
+    setIsPaused(false);
+    setBodyDetected(false);
+    setPoseFeedback(createPoseFeedback());
+  }, []);
+
+  const resetSession = useCallback(() => {
+    progressRef.current = { analyzedSamples: 0, goodSamples: 0, corrections: {} };
+    feedbackCandidateRef.current = { key: '', frames: 0 };
+    setElapsed(0);
+    setBodyDetected(false);
+    setPoseFeedback(createPoseFeedback());
   }, []);
 
   const refreshDevices = useCallback(async () => {
@@ -67,7 +189,15 @@ export function LiveCoachPage() {
   }, []);
 
   const startCamera = useCallback(async (nextFacingMode = facingMode, nextDeviceId = deviceId) => {
+    if (!canStartSession) {
+      setCameraIssue('unsupported');
+      setErrorMessage(selectedTracking?.reason ?? text('This exercise is not supported for camera tracking yet.', 'هذا التمرين غير مدعوم لتتبع الكاميرا حالياً.'));
+      setCameraState('error');
+      return;
+    }
+
     if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraIssue('unsupported');
       setErrorMessage(text('This browser does not support camera access.', 'هذا المتصفح لا يدعم الوصول إلى الكاميرا.'));
       setCameraState('error');
       return;
@@ -76,6 +206,9 @@ export function LiveCoachPage() {
     const isNewSession = !streamRef.current;
     if (isNewSession) progressRef.current = { analyzedSamples: 0, goodSamples: 0, corrections: {} };
     setCameraState('starting');
+    setCameraIssue(null);
+    setIsPaused(false);
+    setBodyDetected(false);
     setErrorMessage('');
     streamRef.current?.getTracks().forEach((track) => track.stop());
 
@@ -94,12 +227,16 @@ export function LiveCoachPage() {
       await refreshDevices();
     } catch (error) {
       const denied = error instanceof DOMException && error.name === 'NotAllowedError';
+      const missing = error instanceof DOMException && (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError');
+      setCameraIssue(denied ? 'permission-denied' : missing ? 'no-camera' : 'unknown');
       setErrorMessage(denied
         ? text('Camera permission was denied.', 'تم رفض إذن الكاميرا.')
+        : missing
+          ? text('No camera was found on this device.', 'لم يتم العثور على كاميرا على هذا الجهاز.')
         : text('The camera could not be started.', 'تعذر تشغيل الكاميرا.'));
       setCameraState('error');
     }
-  }, [deviceId, facingMode, refreshDevices, text]);
+  }, [canStartSession, deviceId, facingMode, refreshDevices, selectedTracking?.reason, text]);
 
   const switchCamera = async () => {
     const next = facingMode === 'user' ? 'environment' : 'user';
@@ -152,7 +289,7 @@ export function LiveCoachPage() {
   }, []);
 
   useEffect(() => {
-    if (cameraState !== 'live' || modelState !== 'ready') return;
+    if (cameraState !== 'live' || modelState !== 'ready' || isPaused) return;
 
     const analyze = () => {
       const video = videoRef.current;
@@ -175,15 +312,19 @@ export function LiveCoachPage() {
           context.clearRect(0, 0, canvas.width, canvas.height);
           const result = landmarker.detectForVideo(video, now);
           const landmarks = result.landmarks[0];
+          setBodyDetected(Boolean(landmarks));
           if (landmarks) {
             const drawing = new DrawingUtils(context);
             drawing.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#67e8f9', lineWidth: 3 });
             drawing.drawLandmarks(landmarks, { color: '#ffffff', fillColor: '#22c55e', lineWidth: 1.4, radius: 3.4 });
           }
 
-          const nextFeedback = landmarks
-            ? assessPose(exercise as SupportedExercise, landmarks)
-            : { level: 'waiting' as const, message: 'step_into_frame', score: null };
+          const trackingSupport = selectedTracking?.support ?? 'unsupported';
+          const nextFeedback = landmarks && supportedPose
+            ? assessPose(supportedPose, landmarks)
+            : landmarks && trackingSupport === 'basic'
+              ? createPoseFeedback('basic_tracking', estimatePoseConfidence(landmarks), 'basic')
+              : createPoseFeedback(landmarks ? 'unsupported_exercise' : 'step_into_frame', landmarks ? estimatePoseConfidence(landmarks) : 0, 'basic');
           if (nextFeedback.score !== null) {
             const progress = progressRef.current;
             progress.analyzedSamples += 1;
@@ -208,19 +349,17 @@ export function LiveCoachPage() {
       animationRef.current = null;
       canvasRef.current?.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     };
-  }, [cameraState, exercise, modelState]);
+  }, [cameraState, isPaused, modelState, selectedTracking?.support, supportedPose]);
 
   useEffect(() => {
-    feedbackCandidateRef.current = { key: '', frames: 0 };
-    progressRef.current = { analyzedSamples: 0, goodSamples: 0, corrections: {} };
-    setPoseFeedback({ level: 'waiting', message: 'step_into_frame', score: null });
-  }, [exercise]);
+    resetSession();
+  }, [exercise, resetSession]);
 
   const getSessionContext = useCallback((): LiveSessionContext => {
     const progress = progressRef.current;
     const cue = feedbackCopy[poseFeedback.message]?.[0] || poseFeedback.message;
     return {
-      exercise,
+      exercise: selectedExercise?.name ?? exercise,
       elapsed_seconds: elapsed,
       camera_active: cameraState === 'live',
       pose_analysis_ready: modelState === 'ready',
@@ -234,25 +373,51 @@ export function LiveCoachPage() {
         .slice(0, 3)
         .map(([message, samples]) => ({ cue: feedbackCopy[message]?.[0] || message, samples })),
     };
-  }, [cameraState, elapsed, exercise, modelState, poseFeedback]);
+  }, [cameraState, elapsed, exercise, modelState, poseFeedback, selectedExercise?.name]);
 
   useEffect(() => {
-    if (cameraState !== 'live') return;
+    if (cameraState !== 'live' || isPaused) return;
     const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
     return () => window.clearInterval(timer);
-  }, [cameraState]);
+  }, [cameraState, isPaused]);
 
   useEffect(() => stopCamera, [stopCamera]);
 
-  const selectedExerciseLabel = useMemo(() => {
-    const item = exercises.find((entry) => entry.value === exercise);
-    return item ? (isArabic ? item.ar : item.en) : exercise;
-  }, [exercise, isArabic]);
+  useEffect(() => {
+    if (!requestedExercise) return;
+    setDifficulty(requestedExercise.difficulty);
+    setExercise(requestedExercise.id);
+  }, [requestedExercise]);
+
+  useEffect(() => {
+    if (filteredExercises.length > 0 && !filteredExercises.some((item) => item.id === exercise)) {
+      setExercise(filteredExercises[0].id);
+    }
+  }, [exercise, filteredExercises]);
 
   const liveReady = cameraState === 'live';
   const trackingReady = modelState === 'ready';
-  const analysisActive = liveReady && trackingReady;
-  const needsVisibilityAdjustment = poseFeedback.message === 'full_body_required' || poseFeedback.message === 'step_into_frame';
+  const analysisActive = liveReady && trackingReady && !isPaused;
+  const bodyNotDetected = liveReady && trackingReady && !bodyDetected;
+  const needsVisibilityAdjustment = ['full_body_required', 'step_into_frame', 'low_pose_confidence'].includes(poseFeedback.message);
+  const confidenceLabel = poseFeedback.confidence > 0
+    ? `${poseFeedback.confidence}%`
+    : bodyDetected
+      ? text('Pose visible', 'الوضعية ظاهرة')
+      : text('Waiting for body', 'بانتظار ظهور الجسم');
+  const supportLabel = supportedPose
+    ? poseFeedback.supportLevel === 'full'
+      ? text('Full analysis', 'تحليل كامل')
+      : text('Basic tracking', 'تتبع أساسي')
+    : text('Preview only', 'عرض فقط');
+  const trackingSupportLabel = selectedTracking?.support === 'full'
+    ? text('Full analysis', 'تحليل كامل')
+    : selectedTracking?.support === 'basic'
+      ? text('Basic tracking', 'تتبع أساسي')
+      : text('Not supported', 'غير مدعوم');
+  const trackedRatio = progressRef.current.analyzedSamples
+    ? `${Math.round((progressRef.current.goodSamples / progressRef.current.analyzedSamples) * 100)}%`
+    : text('Collecting', 'قيد الجمع');
 
   const guidanceItems = [
     { label: text('Full body visible', 'ظهور الجسم كاملًا'), active: !needsVisibilityAdjustment },
@@ -347,6 +512,12 @@ export function LiveCoachPage() {
                   </div>
                 ))}
               </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <InfoChip label={text('Difficulty', 'المستوى')} value={difficulty === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')} />
+                <InfoChip label={text('Analysis', 'التحليل')} value={trackingSupportLabel} />
+                <InfoChip label={text('Confidence', 'الثقة')} value={confidenceLabel} />
+                <InfoChip label={text('Reps', 'التكرارات')} value={text('Pending', 'لاحقاً')} />
+              </div>
             </div>
           </aside>
 
@@ -422,7 +593,7 @@ export function LiveCoachPage() {
                         : text('Your AI Coach will track movement and help correct your exercise form in real time.', 'سيقوم مدربك الذكي بتتبع الحركة ومساعدتك على تصحيح التمرين في الوقت الحقيقي.')}
                     </p>
                     {cameraState !== 'starting' && cameraState !== 'error' && (
-                      <Button onClick={() => startCamera()} className="rounded-full px-6" disabled={cameraState === 'starting'}>
+                      <Button onClick={() => startCamera()} className="rounded-full px-6" disabled={cameraState === 'starting' || !canStartSession}>
                         <Camera className="mr-2 h-4 w-4" />
                         {text('Start Camera', 'تشغيل الكاميرا')}
                       </Button>
@@ -466,11 +637,16 @@ export function LiveCoachPage() {
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   {cameraState === 'live' ? (
                     <>
+                      <Button variant="secondary" onClick={() => setIsPaused((value) => !value)} className="rounded-full border border-white/10 bg-white/[0.06] px-5">
+                        {isPaused ? <Play className="mr-2 h-4 w-4" /> : <Pause className="mr-2 h-4 w-4" />}
+                        {isPaused ? text('Resume', 'استئناف') : text('Pause', 'إيقاف مؤقت')}
+                      </Button>
+                      <Button variant="secondary" onClick={resetSession} className="rounded-full border border-white/10 bg-white/[0.06] px-5"><RotateCcw className="mr-2 h-4 w-4" />{text('Reset', 'إعادة ضبط')}</Button>
                       <Button variant="destructive" onClick={stopCamera} className="rounded-full px-5 shadow-[0_16px_36px_rgba(239,68,68,0.22)]"><CameraOff className="mr-2 h-4 w-4" />{text('Stop Session', 'إيقاف الجلسة')}</Button>
                       <Button variant="secondary" onClick={switchCamera} className="rounded-full border border-white/10 bg-white/[0.06] px-5"><RefreshCw className="mr-2 h-4 w-4" />{text('Switch camera', 'تبديل الكاميرا')}</Button>
                     </>
                   ) : (
-                    <Button onClick={() => startCamera()} disabled={cameraState === 'starting'} className="rounded-full px-6"><Camera className="mr-2 h-4 w-4" />{text('Start camera', 'تشغيل الكاميرا')}</Button>
+                    <Button onClick={() => startCamera()} disabled={cameraState === 'starting' || !canStartSession} className="rounded-full px-6"><Camera className="mr-2 h-4 w-4" />{text('Start camera', 'تشغيل الكاميرا')}</Button>
                   )}
                 </div>
               </div>
@@ -487,12 +663,94 @@ export function LiveCoachPage() {
               <p className="mt-1 text-xs leading-6 text-muted-foreground">
                 {text('Choose the exercise so your AI Coach can evaluate the correct form.', 'اختر التمرين حتى يتمكن المدرب الذكي من تقييم الأداء الصحيح.')}
               </p>
-              <Select value={exercise} onValueChange={setExercise}>
-                <SelectTrigger id="exercise" className="mt-3 rounded-2xl border-white/10 bg-black/20"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {exercises.map((item) => <SelectItem key={item.value} value={item.value}>{language === 'ar' ? item.ar : item.en}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{text('Tracking', 'التتبع')}</span>
+                  <span className={cn(
+                    'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                    selectedTracking?.support === 'full' && 'bg-emerald-400/12 text-emerald-200',
+                    selectedTracking?.support === 'basic' && 'bg-cyan-400/12 text-cyan-100',
+                    selectedTracking?.support === 'unsupported' && 'bg-amber-400/12 text-amber-200'
+                  )}>
+                    {trackingSupportLabel}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-6 text-muted-foreground">
+                  {selectedTracking?.reason ?? text('Select an exercise to see tracking support.', 'اختر تمريناً لعرض دعم التتبع.')}
+                </p>
+              </div>
+              <div className="mt-3 grid grid-cols-2 rounded-2xl border border-white/10 bg-black/20 p-1">
+                {(['normal', 'advanced'] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setDifficulty(level)}
+                    className={cn(
+                      'rounded-xl px-3 py-2 text-sm font-semibold transition',
+                      difficulty === level ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {level === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative mt-3">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={exerciseQuery}
+                  onChange={(event) => setExerciseQuery(event.target.value)}
+                  placeholder={text('Search exercises', 'ابحث عن تمرين')}
+                  className="h-11 w-full rounded-2xl border border-white/10 bg-black/20 pl-10 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-cyan-300/40"
+                />
+              </div>
+
+              <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+                {filteredExercises.map((item) => {
+                  const active = item.id === exercise;
+                  const label = localizedLabel(item.name, item.nameAr, language);
+                  const itemSupportLabel = item.tracking.support === 'full'
+                    ? text('Full analysis', 'تحليل كامل')
+                    : item.tracking.support === 'basic'
+                      ? text('Basic tracking', 'تتبع أساسي')
+                      : text('Not supported', 'غير مدعوم');
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setExercise(item.id)}
+                      className={cn(
+                        'w-full rounded-2xl border px-3 py-3 text-left transition',
+                        active ? 'border-cyan-300/35 bg-cyan-400/10' : 'border-white/8 bg-white/[0.03] hover:border-white/16 hover:bg-white/[0.06]'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-white">{label}</div>
+                          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                            <span>{item.source.muscle}</span>
+                            <span>•</span>
+                            <span>{item.source.location}</span>
+                            <span>•</span>
+                            <span className={cn(
+                              'rounded-full px-2 py-0.5',
+                              item.tracking.support === 'full' && 'bg-emerald-400/10 text-emerald-200',
+                              item.tracking.support === 'basic' && 'bg-cyan-400/10 text-cyan-100',
+                              item.tracking.support === 'unsupported' && 'bg-amber-400/10 text-amber-200'
+                            )}>{itemSupportLabel}</span>
+                          </div>
+                        </div>
+                        {active && <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-200" />}
+                      </div>
+                    </button>
+                  );
+                })}
+                {filteredExercises.length === 0 && (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
+                    {text('No exercises match this filter.', 'لا توجد تمارين مطابقة لهذا الفلتر.')}
+                  </div>
+                )}
+              </div>
             </div>
 
             {devices.length > 1 && (
@@ -534,6 +792,9 @@ export function LiveCoachPage() {
 }
 
 const feedbackCopy: Record<string, [string, string]> = {
+  basic_tracking: ['Pose tracking is active. Keep your body visible and move with control.', 'تتبع الوضعية فعّال. أبقِ جسمك ظاهراً وتحرك بتحكم.'],
+  low_pose_confidence: ['Improve lighting and keep the working joints visible', 'حسّن الإضاءة وأظهر المفاصل المطلوبة'],
+  unsupported_exercise: ['Pose visibility is active. Detailed scoring is not available for this exercise yet.', 'رؤية الوضعية فعالة. التقييم التفصيلي غير متاح لهذا التمرين حالياً.'],
   step_into_frame: ['Step into the frame', 'قف أمام الكاميرا'],
   full_body_required: ['Keep your full body visible', 'أظهر جسمك كاملًا'],
   both_legs_required: ['Keep both legs visible', 'أظهر الساقين كاملتين'],
@@ -561,6 +822,18 @@ function FeedbackPanel({ feedback, modelState, text }: {
     : modelState === 'error'
       ? text('Pose analysis could not start', 'تعذر تشغيل تحليل الحركة')
       : text(copy[0], copy[1]);
+  const phaseLabel = feedback.repPhase
+    ? feedback.repPhase === 'hold'
+      ? text('Hold', 'ثبات')
+      : feedback.repPhase === 'top'
+        ? text('Top', 'الأعلى')
+        : feedback.repPhase === 'bottom'
+          ? text('Bottom', 'الأسفل')
+          : text('Transition', 'انتقال')
+    : text('Pending', 'لاحقاً');
+  const supportLabel = feedback.supportLevel === 'full'
+    ? text('Full analysis', 'تحليل كامل')
+    : text('Basic tracking', 'تتبع أساسي');
   return (
     <div className={cn(
       'rounded-[28px] border p-5 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl',
@@ -572,9 +845,15 @@ function FeedbackPanel({ feedback, modelState, text }: {
         <span className={cn('text-xs font-semibold uppercase tracking-[0.24em]', level === 'good' ? 'text-emerald-300' : level === 'adjust' ? 'text-amber-300' : 'text-cyan-100/70')}>
           {level === 'good' ? text('Good form', 'أداء جيد') : level === 'adjust' ? text('Adjust posture', 'عدّل وضعيتك') : text('Watching', 'جاري التتبع')}
         </span>
-        {feedback.score !== null && <span className="font-mono text-sm font-semibold">{feedback.score}%</span>}
+        <span className="font-mono text-sm font-semibold">{feedback.confidence}%</span>
       </div>
       <p className="text-sm font-medium leading-7 text-foreground">{message}</p>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        <InfoChip label={text('Confidence', 'الثقة')} value={`${feedback.confidence}%`} />
+        <InfoChip label={text('Score', 'النتيجة')} value={feedback.score !== null ? `${feedback.score}%` : text('Not ready', 'غير جاهز')} />
+        <InfoChip label={text('Phase', 'المرحلة')} value={phaseLabel} />
+        <InfoChip label={text('Support', 'الدعم')} value={supportLabel} />
+      </div>
     </div>
   );
 }
@@ -586,6 +865,15 @@ function StatusRow({ label, value, active }: { label: string; value: string; act
       <span className={cn('flex items-center gap-1.5 font-medium', active ? 'text-emerald-500' : 'text-muted-foreground')}>
         {active && <CheckCircle2 className="h-4 w-4" />}{value}
       </span>
+    </div>
+  );
+}
+
+function InfoChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2">
+      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+      <div className="mt-1 truncate font-semibold text-white">{value}</div>
     </div>
   );
 }

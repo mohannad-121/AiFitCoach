@@ -1,5 +1,6 @@
 import React, { type ComponentType, type ReactNode, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Brain,
   Dumbbell,
@@ -15,7 +16,7 @@ import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUser } from '@/contexts/UserContext';
-import { getExercisesByFilters } from '@/data/exercises';
+import { getExercisesByFilters, type Exercise } from '@/data/exercises';
 import { localizedLabel, repairMojibake } from '@/lib/text';
 
 type FilterValue = string | null;
@@ -67,6 +68,7 @@ const aiTips: Record<string, string> = {
 export function WorkoutsPage() {
   const { language } = useLanguage();
   const { profile } = useUser();
+  const navigate = useNavigate();
 
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
@@ -156,6 +158,15 @@ export function WorkoutsPage() {
     setGenderFilter(null);
     setLocationFilter(null);
     setGoalFilter(null);
+  };
+
+  const trainWithCamera = (exercise: Exercise) => {
+    navigate(`/live-coach?exerciseId=${encodeURIComponent(exercise.id)}`, {
+      state: {
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+      },
+    });
   };
 
   return (
@@ -325,6 +336,7 @@ export function WorkoutsPage() {
                         setExpandedExerciseId((current) => (current === exercise.id ? null : exercise.id))
                       }
                       onCollapse={() => setExpandedExerciseId(null)}
+                      onTrainWithCamera={trainWithCamera}
                     />
                   </motion.div>
                 ))}

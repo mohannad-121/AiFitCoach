@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision';
-import { assessPose } from '@/lib/poseFeedback';
+import { assessPose, getPoseFeedbackSupport } from '@/lib/poseFeedback';
 
 function pose(points: Record<number, [number, number]>) {
   return Array.from({ length: 33 }, (_, index): NormalizedLandmark => ({
@@ -29,5 +29,33 @@ describe('assessPose', () => {
 
   it('does not score a pose when required joints are hidden', () => {
     expect(assessPose('push-up', pose({ 11: [0.2, 0.5] })).level).toBe('waiting');
+  });
+
+  it('returns camera guidance instead of scoring when confidence is low', () => {
+    const landmarks = pose({ 11: [0.2, 0.5], 23: [0.5, 0.5], 27: [0.8, 0.5] });
+    landmarks[11].visibility = 0.4;
+    landmarks[23].visibility = 0.4;
+    landmarks[27].visibility = 0.4;
+
+    const feedback = assessPose('plank', landmarks);
+
+    expect(feedback.level).toBe('waiting');
+    expect(feedback.message).toBe('low_pose_confidence');
+    expect(feedback.score).toBeNull();
+    expect(feedback.confidence).toBe(40);
+  });
+
+  it('returns structured feedback for reliable exercises', () => {
+    const landmarks = pose({ 11: [0.2, 0.5], 13: [0.35, 0.5], 15: [0.5, 0.5], 23: [0.5, 0.5], 27: [0.8, 0.5] });
+    const feedback = assessPose('push-up', landmarks);
+
+    expect(feedback.supportLevel).toBe('full');
+    expect(feedback.confidence).toBeGreaterThan(90);
+    expect(feedback.repPhase).toBeTruthy();
+    expect(feedback.status).toMatch(/good_form|needs_adjustment/);
+  });
+
+  it('keeps lunge available as basic tracking', () => {
+    expect(getPoseFeedbackSupport('lunge')).toBe('basic');
   });
 });
