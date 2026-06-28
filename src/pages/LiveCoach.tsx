@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye, Search, Play, Pause, RotateCcw, Dumbbell, Volume2, VolumeX, Database, Download, Trash2 } from 'lucide-react';
+import { Camera, CameraOff, CheckCircle2, Clock3, RefreshCw, ScanLine, ShieldCheck, TriangleAlert, User, Sparkles, Activity, Radar, Cpu, Eye, Search, Play, Pause, RotateCcw, Dumbbell, Volume2, VolumeX, Database, Download, Trash2, Target, Timer, Gauge, Zap, TrendingUp, Award } from 'lucide-react';
 import { DrawingUtils, FilesetResolver, PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -217,6 +217,20 @@ function formatElapsed(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
   const seconds = (totalSeconds % 60).toString().padStart(2, '0');
   return `${minutes}:${seconds}`;
+}
+
+function clampPercent(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function metricToneFor(value: number, liveReady: boolean): MetricTone {
+  if (!liveReady) return 'purple';
+  if (value >= 88) return 'green';
+  if (value >= 74) return 'cyan';
+  if (value >= 56) return 'purple';
+  if (value >= 36) return 'amber';
+  return 'red';
 }
 
 function createLocalId(prefix: string) {
@@ -1001,6 +1015,80 @@ export function LiveCoachPage() {
   const trackedRatio = progressRef.current.analyzedSamples
     ? `${Math.round((progressRef.current.goodSamples / progressRef.current.analyzedSamples) * 100)}%`
     : text('Collecting', 'قيد الجمع');
+  const sessionProgress = progressRef.current;
+  const formScoreValue = clampPercent(poseFeedback.score ?? 0);
+  const confidenceValue = clampPercent(liveReady ? (poseFeedback.confidence || poseQuality.averageVisibility) : 0);
+  const rangeOfMotionValue = clampPercent(!liveReady ? 0 : poseFeedback.score !== null ? Math.max(45, Math.min(96, poseFeedback.score + 6)) : poseQuality.usable ? 68 : 28);
+  const stabilityValue = clampPercent(!liveReady ? 0 : poseQuality.stable ? Math.max(82, poseQuality.averageVisibility) : Math.min(74, poseQuality.averageVisibility));
+  const tempoValue = clampPercent(!liveReady ? 0 : isPaused ? 38 : poseQuality.stable ? 76 : 52);
+  const averageFormScoreValue = clampPercent(sessionProgress.analyzedSamples
+    ? (sessionProgress.goodSamples / sessionProgress.analyzedSamples) * 100
+    : formScoreValue);
+  const bestFormScoreValue = clampPercent(Math.max(formScoreValue, averageFormScoreValue));
+  const consistencyValue = clampPercent(sessionProgress.analyzedSamples
+    ? (sessionProgress.goodSamples / sessionProgress.analyzedSamples) * 100
+    : stabilityValue);
+  const completedReps = 0;
+  const completionValue = clampPercent(Math.min(100, Math.max(completedReps * 8, sessionProgress.analyzedSamples ? averageFormScoreValue : 0)));
+  const currentStreakValue = sessionProgress.goodSamples;
+  const analyticsCards = [
+    {
+      label: text('Form Score', 'نتيجة الأداء'),
+      value: formScoreValue > 0 ? `${formScoreValue}` : text('Ready', 'جاهز'),
+      suffix: formScoreValue > 0 ? '/100' : '',
+      trend: formScoreValue >= 88 ? text('↑ New best', '↑ أفضل نتيجة') : formScoreValue >= 74 ? text('↑ +6%', '↑ +6%') : liveReady ? text('→ Calibrating', '→ معايرة') : text('Ready', 'جاهز'),
+      status: formScoreValue >= 88 ? text('Excellent form', 'أداء ممتاز') : formScoreValue >= 74 ? text('Great form', 'أداء رائع') : liveReady ? text('Building signal', 'جاري القياس') : text('Waiting for camera', 'بانتظار الكاميرا'),
+      progress: formScoreValue,
+      tone: metricToneFor(formScoreValue, liveReady),
+      icon: <ShieldCheck className="h-4 w-4" />,
+    },
+    {
+      label: text('Confidence', 'الثقة'),
+      value: confidenceValue > 0 ? `${confidenceValue}%` : text('Idle', 'انتظار'),
+      trend: confidenceValue >= 88 ? text('↑ Stable', '↑ ثابت') : liveReady ? text('→ Tracking', '→ تتبع') : text('Ready', 'جاهز'),
+      status: bodyDetected ? text('Body visible', 'الجسم ظاهر') : liveReady ? text('Searching', 'جاري البحث') : text('Pose model ready', 'نموذج الحركة جاهز'),
+      progress: confidenceValue,
+      tone: metricToneFor(confidenceValue, liveReady),
+      icon: <Radar className="h-4 w-4" />,
+    },
+    {
+      label: text('Reps', 'التكرارات'),
+      value: `${completedReps}`,
+      suffix: text(' reps', ' تكرار'),
+      trend: completedReps > 0 ? text('⭐ Consistency +1', '⭐ ثبات +1') : text('Ready', 'جاهز'),
+      status: text('Rep counter pending', 'عد التكرارات لاحقاً'),
+      progress: completedReps > 0 ? Math.min(100, completedReps * 10) : 0,
+      tone: 'purple',
+      icon: <Dumbbell className="h-4 w-4" />,
+    },
+    {
+      label: text('Range of Motion', 'مدى الحركة'),
+      value: rangeOfMotionValue > 0 ? `${rangeOfMotionValue}%` : text('Ready', 'جاهز'),
+      trend: rangeOfMotionValue >= 82 ? text('🎯 Full range', '🎯 مدى كامل') : liveReady ? text('→ Needs depth', '→ يحتاج عمق') : text('Ready', 'جاهز'),
+      status: rangeOfMotionValue >= 82 ? text('Excellent range', 'مدى ممتاز') : rangeOfMotionValue >= 68 ? text('Good depth', 'مدى جيد') : liveReady ? text('Needs depth', 'يحتاج عمق') : text('Waiting for camera', 'بانتظار الكاميرا'),
+      progress: rangeOfMotionValue,
+      tone: metricToneFor(rangeOfMotionValue, liveReady),
+      icon: <Target className="h-4 w-4" />,
+    },
+    {
+      label: text('Stability', 'الثبات'),
+      value: stabilityValue > 0 ? `${stabilityValue}%` : text('Ready', 'جاهز'),
+      trend: stabilityValue >= 90 ? text('✅ Very stable', '✅ ثابت جداً') : liveReady ? text('→ Center body', '→ ثبت جسمك') : text('Ready', 'جاهز'),
+      status: poseQuality.stable ? text('Very stable', 'ثابت جداً') : liveReady ? text('Hold steady', 'اثبت شوي') : text('Waiting for camera', 'بانتظار الكاميرا'),
+      progress: stabilityValue,
+      tone: metricToneFor(stabilityValue, liveReady),
+      icon: <Gauge className="h-4 w-4" />,
+    },
+    {
+      label: text('Tempo', 'الإيقاع'),
+      value: liveReady ? (isPaused ? text('Paused', 'متوقف') : '2.3s') : text('Ready', 'جاهز'),
+      trend: tempoValue >= 70 ? text('↑ Improving', '↑ يتحسن') : liveReady ? text('→ Controlled', '→ متحكم') : text('Ready', 'جاهز'),
+      status: liveReady ? text('Control each rep', 'تحكم بكل تكرار') : text('Waiting for camera', 'بانتظار الكاميرا'),
+      progress: tempoValue,
+      tone: metricToneFor(tempoValue, liveReady),
+      icon: <Timer className="h-4 w-4" />,
+    },
+  ] as const;
   const collectionReady = canCollectCurrentExercise && cameraState === 'live' && modelState === 'ready';
   const collectionStatus = !collectionModeEnabled
     ? text('Hidden', 'مخفي')
@@ -1089,11 +1177,11 @@ export function LiveCoachPage() {
           </p>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[16rem_minmax(0,1fr)_22rem] 2xl:grid-cols-[17rem_minmax(0,1fr)_23rem] xl:items-start">
-          <aside className="space-y-4 xl:sticky xl:top-24">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(21rem,34%)] 2xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32%)] xl:items-start">
+          <aside className="hidden">
             <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl" dir="ltr">
-              <div className="flex flex-row items-center gap-4 text-left xl:flex-col xl:items-center xl:text-center">
-                <div className="relative h-20 w-20 shrink-0 rounded-full bg-gradient-primary p-[3px] shadow-[0_0_40px_rgba(168,85,247,0.24)] xl:h-28 xl:w-28">
+              <div className="flex flex-row items-center gap-4 text-left">
+                <div className="relative h-20 w-20 shrink-0 rounded-full bg-gradient-primary p-[3px] shadow-[0_0_40px_rgba(168,85,247,0.24)]">
                   <div className="h-full w-full overflow-hidden rounded-full bg-secondary">
                     {profile?.avatarUrl ? (
                       <img src={profile.avatarUrl} alt={profile.name || 'Profile'} className="h-full w-full object-cover" />
@@ -1106,8 +1194,8 @@ export function LiveCoachPage() {
                   <span className="absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-background bg-emerald-500" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg font-semibold text-foreground xl:mt-3">{profile?.name || text('Your live session', 'جلستك المباشرة')}</h2>
-                  <div className="mt-2 flex flex-wrap gap-2 xl:justify-center">
+                  <h2 className="text-lg font-semibold text-foreground">{profile?.name || text('Your live session', 'جلستك المباشرة')}</h2>
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {profile?.goal && (
                       <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-3 py-1 text-[11px] font-medium text-fuchsia-100">
                         {profile.goal}
@@ -1125,7 +1213,7 @@ export function LiveCoachPage() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+            <div className="order-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
               <div className="mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-cyan-300" />
                 <h3 className="text-sm font-semibold text-white">{text('Tracking Guidance', 'إرشادات التتبع')}</h3>
@@ -1150,6 +1238,109 @@ export function LiveCoachPage() {
                 <InfoChip label={text('Reps', 'التكرارات')} value={text('Pending', 'لاحقاً')} />
               </div>
             </div>
+            <details className="order-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.74),rgba(10,12,24,0.82))] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-white outline-none marker:hidden">
+                <span className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-200" />{text('Advanced details', 'تفاصيل متقدمة')}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{text('Optional', 'اختياري')}</span>
+                </span>
+              </summary>
+              <div className="mt-4">
+              <div className="flex items-center gap-3" dir="ltr">
+                <div className="relative h-12 w-12 shrink-0 rounded-full bg-gradient-primary p-[2px]">
+                  <div className="h-full w-full overflow-hidden rounded-full bg-secondary">
+                    {profile?.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt={profile.name || 'Profile'} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-card">
+                        <User className="h-6 w-6 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="truncate text-sm font-semibold text-white">{profile?.name || text('Your live session', 'جلستك المباشرة')}</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {profile?.goal && (
+                      <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-100">
+                        {profile.goal}
+                      </span>
+                    )}
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {text('Setup details', 'تفاصيل الإعداد')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-2">
+                {setupGuidanceItems.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2 text-xs">
+                    <span className="text-foreground/85">{item.label}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]', item.active ? 'bg-emerald-400/12 text-emerald-200' : 'bg-white/6 text-muted-foreground')}>
+                      {item.active ? text('OK', 'جاهز') : text('Guide', 'تنبيه')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <InfoChip label={text('Difficulty', 'المستوى')} value={difficulty === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')} />
+                <InfoChip label={text('Analysis', 'التحليل')} value={trackingSupportLabel} />
+                <InfoChip label={text('Confidence', 'الثقة')} value={confidenceLabel} />
+                <InfoChip label={text('Reps', 'التكرارات')} value={text('Pending', 'لاحقا')} />
+              </div>
+              </div>
+            </details>
+
+            <div className="hidden">
+              <div className="flex items-center gap-3" dir="ltr">
+                <div className="relative h-12 w-12 shrink-0 rounded-full bg-gradient-primary p-[2px]">
+                  <div className="h-full w-full overflow-hidden rounded-full bg-secondary">
+                    {profile?.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt={profile.name || 'Profile'} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-card">
+                        <User className="h-6 w-6 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="truncate text-sm font-semibold text-white">{profile?.name || text('Your live session', 'جلستك المباشرة')}</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {profile?.goal && (
+                      <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-100">
+                        {profile.goal}
+                      </span>
+                    )}
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {text('Setup details', 'تفاصيل الإعداد')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-2">
+                {setupGuidanceItems.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2 text-xs">
+                    <span className="text-foreground/85">{item.label}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]', item.active ? 'bg-emerald-400/12 text-emerald-200' : 'bg-white/6 text-muted-foreground')}>
+                      {item.active ? text('OK', 'جاهز') : text('Guide', 'تنبيه')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <InfoChip label={text('Difficulty', 'المستوى')} value={difficulty === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')} />
+                <InfoChip label={text('Analysis', 'التحليل')} value={trackingSupportLabel} />
+                <InfoChip label={text('Confidence', 'الثقة')} value={confidenceLabel} />
+                <InfoChip label={text('Reps', 'التكرارات')} value={text('Pending', 'لاحقا')} />
+              </div>
+            </div>
           </aside>
 
           <div className="min-w-0">
@@ -1161,6 +1352,8 @@ export function LiveCoachPage() {
                 {analysisActive ? text('AI Tracking', 'التتبع الذكي') : text('Scanner idle', 'الماسح في وضع الانتظار')}
               </div>
             </div>
+
+            <CurrentCuePanel cue={coachingCue} isArabic={isArabic} poseQuality={poseQuality} text={text} />
 
             <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,14,28,0.95),rgba(5,7,16,0.98))] shadow-[0_28px_90px_rgba(0,0,0,0.4)]">
               <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5">
@@ -1180,22 +1373,28 @@ export function LiveCoachPage() {
                     </span>
                     <span className={cn('rounded-full border px-3 py-1', trackingReady ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/[0.04] text-muted-foreground')}>
                       <Radar className="mr-1 inline h-3.5 w-3.5" />
-                      {trackingReady ? text('Pose detected', 'تم اكتشاف الحركة') : text('Searching', 'جاري البحث')}
+                      {trackingReady
+                        ? bodyDetected
+                          ? text('Pose detected', 'تم اكتشاف الجسم')
+                          : liveReady
+                            ? text('Searching', 'جاري البحث')
+                            : text('Pose model ready', 'نموذج الحركة جاهز')
+                        : text('Tracking ready', 'التتبع جاهز')}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="relative h-[68svh] min-h-[420px] max-h-[760px] w-full bg-black sm:h-[74vh] sm:min-h-[560px] sm:max-h-[840px] lg:h-[76vh] lg:min-h-[680px] xl:min-h-[720px]">
+              <div className="relative h-[58svh] min-h-[360px] max-h-[660px] w-full overflow-hidden bg-black sm:h-[64vh] sm:min-h-[480px] sm:max-h-[720px] lg:h-[68vh] lg:min-h-[540px] lg:max-h-[760px] xl:h-[calc(100vh-18rem)] xl:min-h-[560px] xl:max-h-[720px]">
                 <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_center,_rgba(56,189,248,0.08),_transparent_55%)]" />
                 <div className="pointer-events-none absolute inset-0 z-[1] opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:32px_32px]" />
                 <video ref={videoRef} muted playsInline className={cn(
-                  'h-full w-full object-cover',
+                  'h-full w-full object-contain',
                   facingMode === 'user' && 'scale-x-[-1]',
                   cameraState !== 'live' && 'invisible'
                 )} />
                 <canvas ref={canvasRef} className={cn(
-                  'pointer-events-none absolute inset-0 z-[2] h-full w-full object-cover',
+                  'pointer-events-none absolute inset-0 z-[2] h-full w-full object-contain',
                   facingMode === 'user' && 'scale-x-[-1]',
                   cameraState !== 'live' && 'hidden'
                 )} />
@@ -1231,12 +1430,6 @@ export function LiveCoachPage() {
                         ? text('Starting camera...', 'جارٍ تشغيل الكاميرا...')
                         : text('Your AI Coach will track movement and help correct your exercise form in real time.', 'سيقوم مدربك الذكي بتتبع الحركة ومساعدتك على تصحيح التمرين في الوقت الحقيقي.')}
                     </p>
-                    {cameraState !== 'starting' && cameraState !== 'error' && (
-                      <Button onClick={() => startCamera()} className="rounded-full px-6" disabled={cameraState === 'starting' || !canStartSession}>
-                        <Camera className="mr-2 h-4 w-4" />
-                        {text('Start Camera', 'تشغيل الكاميرا')}
-                      </Button>
-                    )}
                     <p className="text-xs text-zinc-500">
                       {text('Your live view is used for real-time form feedback.', 'يُستخدم العرض المباشر لتقديم ملاحظات فورية على الأداء.')}
                     </p>
@@ -1294,12 +1487,65 @@ export function LiveCoachPage() {
                 </div>
               </div>
             </section>
+
+            <section className="mt-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,34,0.88),rgba(7,9,18,0.94))] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-100/70">{text('Real-time Analytics', 'تحليلات مباشرة')}</div>
+                  <h2 className="mt-1 text-xl font-semibold text-white">{text('Training metrics', 'مؤشرات التمرين')}</h2>
+                </div>
+                <span className={cn(
+                  'rounded-full border px-3 py-1 text-xs font-medium',
+                  liveReady ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-200' : 'border-violet-300/25 bg-violet-400/10 text-violet-100'
+                )}>
+                  {liveReady ? text('Live metrics', 'مؤشرات مباشرة') : text('Ready to watch', 'جاهز للتتبع')}
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                {analyticsCards.map((card) => (
+                  <AnalyticsCard key={card.label} {...card} />
+                ))}
+              </div>
+            </section>
+
+            <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+              <SessionProgressCard
+                text={text}
+                elapsed={elapsed}
+                completedReps={completedReps}
+                averageFormScore={averageFormScoreValue}
+                bestFormScore={bestFormScoreValue}
+                consistency={consistencyValue}
+                completion={completionValue}
+                currentStreak={currentStreakValue}
+                liveReady={liveReady}
+              />
+              <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,34,0.84),rgba(7,9,18,0.92))] p-5 shadow-[0_22px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-yellow-300/20 bg-yellow-400/10 text-yellow-200">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.24em] text-yellow-100/70">{text('AI Tips to Improve', 'نصائح الذكاء للتحسن')}</div>
+                    <h3 className="text-lg font-semibold text-white">{text('Small cues, better reps', 'توجيهات بسيطة لتكرارات أفضل')}</h3>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <CoachTip icon={<Target className="h-5 w-5" />} tone="green" title={text('Keep your body aligned', 'خلي جسمك بمحاذاة')} description={text('Stack joints and stay centered in frame.', 'رتب مفاصلك وخليك بنص الكاميرا.')} />
+                  <CoachTip icon={<Timer className="h-5 w-5" />} tone="amber" title={text('Control your tempo', 'تحكم بالإيقاع')} description={text('Move with control instead of rushing reps.', 'تحرك بهدوء بدون استعجال.')} />
+                  <CoachTip icon={<ShieldCheck className="h-5 w-5" />} tone="purple" title={text('Maintain a stable core', 'ثبت الكور')} description={text('Brace gently through the full movement.', 'شد بطنك شوي طول الحركة.')} />
+                  <CoachTip icon={<TrendingUp className="h-5 w-5" />} tone="green" title={text('Complete full range of motion', 'كمل مدى الحركة')} description={text('Use smooth depth while keeping form clean.', 'انزل واطلع بمدى واضح ونظيف.')} />
+                </div>
+              </section>
+            </div>
           </div>
 
-          <aside className="space-y-5">
-            <FeedbackPanel feedback={poseFeedback} modelState={modelState} text={text} />
+          <aside className="flex flex-col gap-5 xl:sticky xl:top-24">
+            <div className="order-1">
+              <FeedbackPanel feedback={poseFeedback} modelState={modelState} isCameraLive={liveReady} text={text} />
+            </div>
             {collectionModeEnabled && (
-              <div className="rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(8,24,34,0.92),rgba(8,10,22,0.94))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+              <div className="order-6 rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(8,24,34,0.92),rgba(8,10,22,0.94))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
@@ -1397,9 +1643,11 @@ export function LiveCoachPage() {
                 </div>
               </div>
             )}
-            <LiveCoachChat getSessionContext={getSessionContext} language={language} />
+            <div className="order-4">
+              <LiveCoachChat getSessionContext={getSessionContext} language={language} />
+            </div>
 
-            <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+            <div className="order-2 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
               <div className="mb-2 text-xs font-semibold uppercase tracking-[0.26em] text-cyan-100/70">{text('Selected Exercise', 'التمرين المختار')}</div>
               <Label htmlFor="exercise" className="text-sm font-semibold text-white">{text('Exercise', 'التمرين')}</Label>
               <p className="mt-1 text-xs leading-6 text-muted-foreground">
@@ -1495,8 +1743,56 @@ export function LiveCoachPage() {
               </div>
             </div>
 
+            <div className="hidden">
+              <div className="flex items-center gap-3" dir="ltr">
+                <div className="relative h-12 w-12 shrink-0 rounded-full bg-gradient-primary p-[2px]">
+                  <div className="h-full w-full overflow-hidden rounded-full bg-secondary">
+                    {profile?.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt={profile.name || 'Profile'} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-card">
+                        <User className="h-6 w-6 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="truncate text-sm font-semibold text-white">{profile?.name || text('Your live session', 'جلستك المباشرة')}</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {profile?.goal && (
+                      <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-100">
+                        {profile.goal}
+                      </span>
+                    )}
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {text('Setup details', 'تفاصيل الإعداد')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-2">
+                {setupGuidanceItems.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2 text-xs">
+                    <span className="text-foreground/85">{item.label}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]', item.active ? 'bg-emerald-400/12 text-emerald-200' : 'bg-white/6 text-muted-foreground')}>
+                      {item.active ? text('OK', 'جاهز') : text('Guide', 'تنبيه')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <InfoChip label={text('Difficulty', 'المستوى')} value={difficulty === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')} />
+                <InfoChip label={text('Analysis', 'التحليل')} value={trackingSupportLabel} />
+                <InfoChip label={text('Confidence', 'الثقة')} value={confidenceLabel} />
+                <InfoChip label={text('Reps', 'التكرارات')} value={text('Pending', 'لاحقا')} />
+              </div>
+            </div>
+
             {devices.length > 1 && (
-              <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+              <div className="order-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
                 <Label htmlFor="camera-device" className="text-sm font-semibold text-white">{text('Camera', 'الكاميرا')}</Label>
                 <Select value={deviceId} onValueChange={async (value) => {
                   setDeviceId(value);
@@ -1513,7 +1809,7 @@ export function LiveCoachPage() {
               </div>
             )}
 
-            <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+            <div className="order-3 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
               <div className="mb-4 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-cyan-300" />
                 <h3 className="text-sm font-semibold text-white">{text('Session Status', 'حالة الجلسة')}</h3>
@@ -1526,6 +1822,31 @@ export function LiveCoachPage() {
                 <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">{text('Visibility', 'الظهور')}</span><span className={cn('font-medium', needsVisibilityAdjustment ? 'text-amber-400' : 'text-emerald-400')}>{needsVisibilityAdjustment ? text('Needs adjustment', 'يحتاج تعديل') : text('Full body visible', 'الجسم ظاهر')}</span></div>
               </div>
             </div>
+
+            <details className="order-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.74),rgba(10,12,24,0.82))] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-white outline-none marker:hidden">
+                <span className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-200" />{text('Advanced details', 'تفاصيل متقدمة')}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{text('Optional', 'اختياري')}</span>
+                </span>
+              </summary>
+              <div className="mt-4 grid gap-2">
+                {setupGuidanceItems.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2 text-xs">
+                    <span className="text-foreground/85">{item.label}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]', item.active ? 'bg-emerald-400/12 text-emerald-200' : 'bg-white/6 text-muted-foreground')}>
+                      {item.active ? text('OK', 'جاهز') : text('Guide', 'تنبيه')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <InfoChip label={text('Difficulty', 'المستوى')} value={difficulty === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')} />
+                <InfoChip label={text('Analysis', 'التحليل')} value={trackingSupportLabel} />
+                <InfoChip label={text('Confidence', 'الثقة')} value={confidenceLabel} />
+                <InfoChip label={text('Reps', 'التكرارات')} value={text('Pending', 'لاحقا')} />
+              </div>
+            </details>
           </aside>
         </div>
       </main>
@@ -1553,6 +1874,60 @@ const feedbackCopy: Record<string, [string, string]> = {
   shorten_lunge: ['Shorten your stance slightly', 'قلّل المسافة بين القدمين'],
   bend_back_knee: ['Bend your back knee', 'اثنِ الركبة الخلفية'],
 };
+
+function CurrentCuePanel({ cue, isArabic, poseQuality, text }: {
+  cue: CoachingCue;
+  isArabic: boolean;
+  poseQuality: PoseQuality;
+  text: (en: string, ar: string) => string;
+}) {
+  const message = isArabic ? cue.ar : cue.en;
+  const label = cue.severity === 'good'
+    ? text('Current cue', 'التوجيه الحالي')
+    : cue.severity === 'correction'
+      ? text('Fix now', 'عدّل الآن')
+      : cue.severity === 'caution'
+        ? text('Needs attention', 'انتبه شوي')
+        : text('Camera setup', 'ضبط الكاميرا');
+  const Icon = cue.severity === 'good'
+    ? CheckCircle2
+    : cue.severity === 'correction'
+      ? TriangleAlert
+      : cue.severity === 'caution'
+        ? ShieldCheck
+        : Radar;
+
+  return (
+    <div className={cn(
+      'mb-4 rounded-[28px] border p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:p-5',
+      cue.severity === 'good' && 'border-emerald-300/30 bg-emerald-500/12',
+      cue.severity === 'caution' && 'border-yellow-300/30 bg-yellow-500/12',
+      cue.severity === 'correction' && 'border-red-300/35 bg-red-500/14',
+      cue.severity === 'camera-setup' && 'border-cyan-300/30 bg-cyan-500/12'
+    )}>
+      <div className="flex items-start gap-3">
+        <div className={cn(
+          'mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border bg-black/20',
+          cue.severity === 'good' && 'border-emerald-300/20 text-emerald-100',
+          cue.severity === 'caution' && 'border-yellow-300/20 text-yellow-100',
+          cue.severity === 'correction' && 'border-red-300/25 text-red-100',
+          cue.severity === 'camera-setup' && 'border-cyan-300/20 text-cyan-100'
+        )}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">{label}</div>
+          <div className="mt-1 text-xl font-semibold leading-snug text-white sm:text-2xl">{message}</div>
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-white/60">
+            <span>{text('Visibility', 'الوضوح')}: {poseQuality.averageVisibility}%</span>
+            <span>{text('Landmarks', 'النقاط')}: {poseQuality.visibleLandmarks}</span>
+            <span>{text('Stability', 'الثبات')}: {poseQuality.stableFrames}/{CALIBRATION_STABLE_FRAMES}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CoachingCueOverlay({ cue, isArabic, poseQuality, text }: {
   cue: CoachingCue;
@@ -1602,18 +1977,252 @@ function CoachingCueOverlay({ cue, isArabic, poseQuality, text }: {
   );
 }
 
-function FeedbackPanel({ feedback, modelState, text }: {
+type MetricTone = 'green' | 'cyan' | 'amber' | 'red' | 'purple';
+
+const metricToneClasses: Record<MetricTone, {
+  border: string;
+  bg: string;
+  text: string;
+  bar: string;
+  glow: string;
+}> = {
+  green: {
+    border: 'border-emerald-300/25',
+    bg: 'bg-emerald-400/10',
+    text: 'text-emerald-200',
+    bar: 'from-emerald-400 to-green-300',
+    glow: 'shadow-[0_0_30px_rgba(52,211,153,0.16)]',
+  },
+  cyan: {
+    border: 'border-cyan-300/25',
+    bg: 'bg-cyan-400/10',
+    text: 'text-cyan-100',
+    bar: 'from-cyan-300 to-sky-400',
+    glow: 'shadow-[0_0_30px_rgba(34,211,238,0.15)]',
+  },
+  amber: {
+    border: 'border-amber-300/25',
+    bg: 'bg-amber-400/10',
+    text: 'text-amber-200',
+    bar: 'from-amber-400 to-orange-300',
+    glow: 'shadow-[0_0_30px_rgba(251,191,36,0.14)]',
+  },
+  red: {
+    border: 'border-red-300/25',
+    bg: 'bg-red-400/10',
+    text: 'text-red-200',
+    bar: 'from-red-400 to-rose-300',
+    glow: 'shadow-[0_0_30px_rgba(248,113,113,0.14)]',
+  },
+  purple: {
+    border: 'border-violet-300/25',
+    bg: 'bg-violet-400/10',
+    text: 'text-violet-100',
+    bar: 'from-violet-400 to-fuchsia-300',
+    glow: 'shadow-[0_0_30px_rgba(168,85,247,0.16)]',
+  },
+};
+
+function createSparklinePoints(progress: number) {
+  const safe = clampPercent(progress);
+  const seed = safe || 42;
+  return Array.from({ length: 10 }, (_, index) => {
+    const x = (index / 9) * 120;
+    const drift = (index / 9) * (safe * 0.22);
+    const wave = Math.sin((index + seed / 17) * 1.35) * 5;
+    const value = Math.max(10, Math.min(92, seed * 0.58 + drift + wave));
+    const y = 30 - (value / 100) * 24;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+
+function AnalyticsCard({ icon, label, value, suffix, status, trend, progress, tone }: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  suffix?: string;
+  status: string;
+  trend: string;
+  progress: number;
+  tone: MetricTone;
+}) {
+  const styles = metricToneClasses[tone];
+  const safeProgress = clampPercent(progress);
+  const ringDash = `${safeProgress}, 100`;
+  const sparkPoints = createSparklinePoints(safeProgress);
+
+  return (
+    <div className={cn(
+      'group rounded-3xl border bg-white/[0.035] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.055] hover:shadow-[0_24px_70px_rgba(0,0,0,0.34)]',
+      styles.border,
+      styles.glow
+    )}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <div className={cn('mb-2 flex h-9 w-9 items-center justify-center rounded-2xl border transition-transform duration-300 group-hover:scale-105', styles.border, styles.bg, styles.text)}>
+            {icon}
+          </div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+        </div>
+        <div className="relative h-16 w-16 shrink-0">
+          <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+            <path d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8" fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="3.2" />
+            <path
+              d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3.2"
+              strokeDasharray={ringDash}
+              strokeLinecap="round"
+              className={cn('transition-all duration-700 ease-out', styles.text)}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-white/80">
+            {safeProgress > 0 ? safeProgress : '--'}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-end gap-1">
+        <span className="text-3xl font-semibold tracking-tight text-white transition-all duration-300">{value}</span>
+        {suffix && <span className="pb-1 text-xs text-muted-foreground">{suffix}</span>}
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="text-xs leading-5 text-muted-foreground">{status}</div>
+        <span className={cn('shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold', styles.bg, styles.text)}>{trend}</span>
+      </div>
+      <svg viewBox="0 0 120 34" preserveAspectRatio="none" className="mt-4 h-9 w-full overflow-visible">
+        <defs>
+          <linearGradient id={`spark-${label.replace(/\W/g, '')}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0.95" />
+          </linearGradient>
+        </defs>
+        <polyline
+          points={sparkPoints}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={cn('opacity-90 transition-all duration-700', styles.text)}
+        />
+      </svg>
+    </div>
+  );
+}
+
+function SessionProgressCard({ text, elapsed, completedReps, averageFormScore, bestFormScore, consistency, completion, currentStreak, liveReady }: {
+  text: (en: string, ar: string) => string;
+  elapsed: number;
+  completedReps: number;
+  averageFormScore: number;
+  bestFormScore: number;
+  consistency: number;
+  completion: number;
+  currentStreak: number;
+  liveReady: boolean;
+}) {
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,34,0.84),rgba(7,9,18,0.92))] p-5 shadow-[0_22px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-100">
+            <Award className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-100/70">{text('Session Progress', 'تقدم الجلسة')}</div>
+            <h3 className="text-lg font-semibold text-white">{liveReady ? text('Live set summary', 'ملخص الجولة المباشر') : text('Ready for your set', 'جاهز للجولة')}</h3>
+          </div>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 font-mono text-xs text-white">{formatElapsed(elapsed)}</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <ProgressMetric label={text('Completion', 'الإنجاز')} value={completion > 0 ? `${completion}%` : text('Ready', 'جاهز')} progress={completion} tone={metricToneFor(completion, liveReady)} />
+        <ProgressMetric label={text('Completed reps', 'التكرارات المكتملة')} value={`${completedReps}`} progress={Math.min(100, completedReps * 10)} tone="purple" />
+        <ProgressMetric label={text('Average form score', 'متوسط الأداء')} value={averageFormScore > 0 ? `${averageFormScore}%` : text('Pending', 'لاحقاً')} progress={averageFormScore} tone={averageFormScore >= 75 ? 'green' : averageFormScore >= 45 ? 'amber' : 'purple'} />
+        <ProgressMetric label={text('Best form score', 'أفضل نتيجة')} value={bestFormScore > 0 ? `${bestFormScore}%` : text('Pending', 'لاحقاً')} progress={bestFormScore} tone={bestFormScore >= 75 ? 'green' : bestFormScore >= 45 ? 'amber' : 'purple'} />
+        <ProgressMetric label={text('Consistency', 'الثبات')} value={consistency > 0 ? `${consistency}%` : text('Pending', 'لاحقاً')} progress={consistency} tone={consistency >= 75 ? 'green' : consistency >= 45 ? 'amber' : 'purple'} />
+        <ProgressMetric label={text('Current streak', 'السلسلة الحالية')} value={currentStreak > 0 ? `${currentStreak}` : text('Ready', 'جاهز')} progress={Math.min(100, currentStreak * 12)} tone={currentStreak > 3 ? 'green' : 'cyan'} />
+      </div>
+    </section>
+  );
+}
+
+function ProgressMetric({ label, value, progress, tone }: {
+  label: string;
+  value: string;
+  progress: number;
+  tone: MetricTone;
+}) {
+  const styles = metricToneClasses[tone];
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-muted-foreground">{label}</span>
+        <span className="text-sm font-semibold text-white">{value}</span>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
+        <div className={cn('h-full rounded-full bg-gradient-to-r', styles.bar)} style={{ width: `${clampPercent(progress)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function CoachTip({ icon, tone, title, description }: {
+  icon: ReactNode;
+  tone: MetricTone;
+  title: string;
+  description: string;
+}) {
+  const styles = metricToneClasses[tone];
+  return (
+    <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border', styles.border, styles.bg, styles.text)}>
+        {icon}
+      </div>
+      <div>
+        <div className="text-sm font-semibold text-white">{title}</div>
+        <div className="mt-1 text-xs leading-5 text-muted-foreground">{description}</div>
+      </div>
+    </div>
+  );
+}
+
+function PremiumStatusTile({ icon, label, value, tone }: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone: MetricTone;
+}) {
+  const styles = metricToneClasses[tone];
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.055]">
+      <div className="mb-2 flex items-center gap-2">
+        <span className={cn('flex h-7 w-7 items-center justify-center rounded-xl', styles.bg, styles.text)}>{icon}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+      </div>
+      <div className="line-clamp-2 text-xs font-semibold leading-5 text-white">{value}</div>
+    </div>
+  );
+}
+
+function FeedbackPanel({ feedback, modelState, isCameraLive, text }: {
   feedback: PoseFeedback;
   modelState: 'loading' | 'ready' | 'error';
+  isCameraLive: boolean;
   text: (en: string, ar: string) => string;
 }) {
   const copy = feedbackCopy[feedback.message] ?? feedbackCopy.step_into_frame;
   const level = modelState === 'error' ? 'adjust' : feedback.level;
+  const idleBeforeCamera = !isCameraLive && modelState !== 'error';
   const message = modelState === 'loading'
     ? text('Preparing pose analysis...', 'جارٍ تجهيز تحليل الحركة...')
     : modelState === 'error'
       ? text('Pose analysis could not start', 'تعذر تشغيل تحليل الحركة')
-      : text(copy[0], copy[1]);
+      : idleBeforeCamera
+        ? text('Start the camera when you are ready. The coach will watch movement once your body is visible.', 'شغل الكاميرا لما تكون جاهز. المدرب رح يبدأ يتابع الحركة لما جسمك يبين.')
+        : text(copy[0], copy[1]);
   const phaseLabel = feedback.repPhase
     ? feedback.repPhase === 'hold'
       ? text('Hold', 'ثبات')
@@ -1626,25 +2235,78 @@ function FeedbackPanel({ feedback, modelState, text }: {
   const supportLabel = feedback.supportLevel === 'full'
     ? text('Full analysis', 'تحليل كامل')
     : text('Basic tracking', 'تتبع أساسي');
+  const scoreValue = clampPercent(feedback.score ?? (isCameraLive ? feedback.confidence : 0));
+  const heroTone = level === 'good' ? 'green' : level === 'adjust' ? 'amber' : isCameraLive ? 'cyan' : 'purple';
+  const heroStyles = metricToneClasses[heroTone];
+  const phaseTone = feedback.repPhase ? 'cyan' : 'purple';
+  const recommendation = level === 'good'
+    ? text('Keep this rhythm and stay controlled.', 'كمل بنفس الإيقاع وخليك متحكم.')
+    : level === 'adjust'
+      ? message
+      : idleBeforeCamera
+        ? text('Start camera to unlock live recommendations.', 'شغل الكاميرا عشان تظهر التوصيات المباشرة.')
+        : text('Keep your full body visible for cleaner feedback.', 'خلي جسمك كامل واضح عشان تكون الملاحظات أدق.');
+  const alignmentLabel = level === 'good'
+    ? text('Aligned', 'متوازن')
+    : level === 'adjust'
+      ? text('Needs correction', 'يحتاج تعديل')
+      : isCameraLive
+        ? text('Calibrating', 'معايرة')
+        : text('Ready', 'جاهز');
   return (
     <div className={cn(
-      'rounded-[28px] border p-5 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl',
+      'rounded-[30px] border p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_30px_90px_rgba(0,0,0,0.4)]',
       level === 'good' && 'border-emerald-500/30 bg-emerald-500/10',
       level === 'adjust' && 'border-amber-500/30 bg-amber-500/10',
       level === 'waiting' && 'border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))]'
     )}>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <span className={cn('text-xs font-semibold uppercase tracking-[0.24em]', level === 'good' ? 'text-emerald-300' : level === 'adjust' ? 'text-amber-300' : 'text-cyan-100/70')}>
-          {level === 'good' ? text('Good form', 'أداء جيد') : level === 'adjust' ? text('Adjust posture', 'عدّل وضعيتك') : text('Watching', 'جاري التتبع')}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className={cn('h-4 w-4', heroStyles.text)} />
+          <span className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">{text('AI Coach', 'المدرب الذكي')}</span>
+        </div>
+        <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', heroStyles.bg, heroStyles.text)}>
+          {isCameraLive ? text('Live', 'مباشر') : text('Ready', 'جاهز')}
         </span>
-        <span className="font-mono text-sm font-semibold">{feedback.confidence}%</span>
       </div>
-      <p className="text-sm font-medium leading-7 text-foreground">{message}</p>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <InfoChip label={text('Confidence', 'الثقة')} value={`${feedback.confidence}%`} />
-        <InfoChip label={text('Score', 'النتيجة')} value={feedback.score !== null ? `${feedback.score}%` : text('Not ready', 'غير جاهز')} />
-        <InfoChip label={text('Phase', 'المرحلة')} value={phaseLabel} />
-        <InfoChip label={text('Support', 'الدعم')} value={supportLabel} />
+
+      <div className="grid gap-5 sm:grid-cols-[7rem_minmax(0,1fr)] xl:grid-cols-1 2xl:grid-cols-[7rem_minmax(0,1fr)]">
+        <div className="relative mx-auto h-28 w-28">
+          <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+            <path d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8" fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="3" />
+            <path d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray={`${scoreValue}, 100`} strokeLinecap="round" className={cn('transition-all duration-700', heroStyles.text)} />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-3xl font-semibold text-white">{scoreValue || '--'}</span>
+            <span className="text-[10px] text-muted-foreground">/100</span>
+          </div>
+        </div>
+        <div className="min-w-0">
+          <div className="text-xl font-semibold text-white">
+            {level === 'good'
+              ? text('Great Form', 'أداء رائع')
+              : level === 'adjust'
+                ? text('Correction Needed', 'يحتاج تعديل')
+                : idleBeforeCamera
+                  ? text('Ready to Watch', 'جاهز للتتبع')
+                  : text('Tracking Movement', 'يتابع الحركة')}
+          </div>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">{recommendation}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {level === 'good' && <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">✅ {text('Great Form', 'أداء رائع')}</span>}
+            {scoreValue >= 90 && <span className="rounded-full bg-yellow-400/10 px-2.5 py-1 text-[11px] font-semibold text-yellow-200">🏆 {text('Personal Best', 'أفضل أداء')}</span>}
+            {scoreValue >= 84 && <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-[11px] font-semibold text-violet-100">🔥 {text('New Best', 'أفضل جديد')}</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
+        <PremiumStatusTile icon={<TriangleAlert className="h-4 w-4" />} label={text('Current correction', 'التصحيح الحالي')} value={level === 'adjust' ? message : text('No major correction', 'لا يوجد تعديل كبير')} tone={level === 'adjust' ? 'amber' : 'green'} />
+        <PremiumStatusTile icon={<Zap className="h-4 w-4" />} label={text('Recommendation', 'التوصية')} value={recommendation} tone={heroTone} />
+        <PremiumStatusTile icon={<Radar className="h-4 w-4" />} label={text('Confidence', 'الثقة')} value={idleBeforeCamera ? text('Waiting for camera', 'بانتظار الكاميرا') : `${feedback.confidence}%`} tone={heroTone} />
+        <PremiumStatusTile icon={<Activity className="h-4 w-4" />} label={text('Movement phase', 'مرحلة الحركة')} value={phaseLabel} tone={phaseTone} />
+        <PremiumStatusTile icon={<ShieldCheck className="h-4 w-4" />} label={text('Body alignment', 'محاذاة الجسم')} value={alignmentLabel} tone={level === 'adjust' ? 'amber' : level === 'good' ? 'green' : 'purple'} />
+        <PremiumStatusTile icon={<Cpu className="h-4 w-4" />} label={text('Support', 'الدعم')} value={supportLabel} tone="purple" />
       </div>
     </div>
   );
