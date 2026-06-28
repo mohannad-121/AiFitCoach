@@ -49,6 +49,9 @@ const advancedExerciseTerms = [
   'single-leg',
 ];
 
+const POSE_WASM_PATH = '/mediapipe/wasm';
+const POSE_MODEL_PATH = '/models/pose_landmarker_lite.task';
+
 function classifyExerciseDifficulty(exercise: Exercise): DifficultyLevel {
   const searchable = `${exercise.id} ${exercise.name}`.toLowerCase();
 
@@ -248,21 +251,23 @@ export function LiveCoachPage() {
   useEffect(() => {
     let cancelled = false;
     const initialize = async () => {
+      setModelState('loading');
       try {
-        const vision = await FilesetResolver.forVisionTasks('/mediapipe/wasm');
+        const vision = await FilesetResolver.forVisionTasks(POSE_WASM_PATH);
         let landmarker: PoseLandmarker;
         try {
           landmarker = await PoseLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: '/models/pose_landmarker_lite.task', delegate: 'GPU' },
+            baseOptions: { modelAssetPath: POSE_MODEL_PATH, delegate: 'GPU' },
             runningMode: 'VIDEO',
             numPoses: 1,
             minPoseDetectionConfidence: 0.55,
             minPosePresenceConfidence: 0.55,
             minTrackingConfidence: 0.55,
           });
-        } catch {
+        } catch (gpuError) {
+          console.warn('Live Coach pose model GPU initialization failed; retrying on CPU.', gpuError);
           landmarker = await PoseLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: '/models/pose_landmarker_lite.task', delegate: 'CPU' },
+            baseOptions: { modelAssetPath: POSE_MODEL_PATH, delegate: 'CPU' },
             runningMode: 'VIDEO',
             numPoses: 1,
             minPoseDetectionConfidence: 0.55,
@@ -276,8 +281,12 @@ export function LiveCoachPage() {
         }
         landmarkerRef.current = landmarker;
         setModelState('ready');
-      } catch {
-        if (!cancelled) setModelState('error');
+      } catch (error) {
+        console.error('Live Coach pose model failed to load.', error);
+        if (!cancelled) {
+          setModelState('error');
+          setPoseFeedback(createPoseFeedback('pose_model_unavailable'));
+        }
       }
     };
     initialize();
@@ -310,7 +319,18 @@ export function LiveCoachPage() {
         const context = canvas.getContext('2d');
         if (context) {
           context.clearRect(0, 0, canvas.width, canvas.height);
-          const result = landmarker.detectForVideo(video, now);
+          let result: ReturnType<PoseLandmarker['detectForVideo']>;
+          try {
+            result = landmarker.detectForVideo(video, now);
+          } catch (error) {
+            console.error('Live Coach pose detection loop failed.', error);
+            setModelState('error');
+            setBodyDetected(false);
+            setPoseFeedback(createPoseFeedback('pose_detection_unavailable'));
+            if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+            animationRef.current = null;
+            return;
+          }
           const landmarks = result.landmarks[0];
           setBodyDetected(Boolean(landmarks));
           if (landmarks) {
@@ -795,6 +815,8 @@ const feedbackCopy: Record<string, [string, string]> = {
   basic_tracking: ['Pose tracking is active. Keep your body visible and move with control.', 'تتبع الوضعية فعّال. أبقِ جسمك ظاهراً وتحرك بتحكم.'],
   low_pose_confidence: ['Improve lighting and keep the working joints visible', 'حسّن الإضاءة وأظهر المفاصل المطلوبة'],
   unsupported_exercise: ['Pose visibility is active. Detailed scoring is not available for this exercise yet.', 'رؤية الوضعية فعالة. التقييم التفصيلي غير متاح لهذا التمرين حالياً.'],
+  pose_model_unavailable: ['Pose analysis could not load. Check the model assets and refresh.', 'تعذر تحميل تحليل الحركة. تحقق من ملفات النموذج ثم حدّث الصفحة.'],
+  pose_detection_unavailable: ['Pose tracking stopped. Refresh the camera session and try again.', 'توقف تتبع الحركة. أعد تشغيل جلسة الكاميرا وحاول مرة أخرى.'],
   step_into_frame: ['Step into the frame', 'قف أمام الكاميرا'],
   full_body_required: ['Keep your full body visible', 'أظهر جسمك كاملًا'],
   both_legs_required: ['Keep both legs visible', 'أظهر الساقين كاملتين'],
