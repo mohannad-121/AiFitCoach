@@ -56,6 +56,29 @@ interface CoachingCue {
   speak: boolean;
 }
 
+interface LiveCoachProgress {
+  analyzedSamples: number;
+  goodSamples: number;
+  scoredSamples: number;
+  scoreSum: number;
+  bestScore: number | null;
+  corrections: Record<string, number>;
+}
+
+interface RecentLiveSession {
+  sessionId: string;
+  exerciseId: string;
+  exerciseName: string;
+  duration: number;
+  timestamp: string;
+  bestFormScore: number | null;
+  averageFormScore: number | null;
+  confidence: number | null;
+  supportLevel: ExerciseTrackingConfig['support'];
+  corrections: Array<{ message: string; count: number }>;
+  finalStatus: string;
+}
+
 interface DataCollectionSample {
   sampleId: string;
   sessionId: string;
@@ -121,6 +144,8 @@ const CALIBRATION_STABLE_FRAMES = 8;
 const VOICE_COOLDOWN_MS = 8000;
 const COLLECTION_SAMPLE_INTERVAL_MS = 350;
 const DATA_COLLECTION_APP_VERSION = 'live-coach-collection-v1';
+const RECENT_SESSIONS_STORAGE_KEY = 'aifitcoach_livecoach_recent_sessions';
+const RECENT_SESSIONS_LIMIT = 3;
 const COLLECTION_EXERCISES: CollectionExercise[] = ['squat', 'push-up', 'plank'];
 const LANDMARK_NAMES = [
   'nose',
@@ -224,6 +249,17 @@ function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function createEmptyProgress(): LiveCoachProgress {
+  return {
+    analyzedSamples: 0,
+    goodSamples: 0,
+    scoredSamples: 0,
+    scoreSum: 0,
+    bestScore: null,
+    corrections: {},
+  };
+}
+
 function metricToneFor(value: number, liveReady: boolean): MetricTone {
   if (!liveReady) return 'purple';
   if (value >= 88) return 'green';
@@ -238,6 +274,28 @@ function createLocalId(prefix: string) {
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   return `${prefix}_${random}`;
+}
+
+function loadRecentLiveSessions(): RecentLiveSession[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_SESSIONS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, RECENT_SESSIONS_LIMIT) : [];
+  } catch (error) {
+    console.warn('Live Coach recent sessions could not be read.', error);
+    return [];
+  }
+}
+
+function persistRecentLiveSessions(sessions: RecentLiveSession[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RECENT_SESSIONS_STORAGE_KEY, JSON.stringify(sessions.slice(0, RECENT_SESSIONS_LIMIT)));
+  } catch (error) {
+    console.warn('Live Coach recent sessions could not be saved.', error);
+  }
 }
 
 function getLocalParticipantId() {
@@ -544,12 +602,14 @@ export function LiveCoachPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const landmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationRef = useRef<number | null>(null);
+  const stopCameraRef = useRef<() => void>(() => {});
   const lastInferenceRef = useRef(0);
   const feedbackCandidateRef = useRef({ key: '', frames: 0 });
   const smoothedLandmarksRef = useRef<NormalizedLandmark[] | null>(null);
   const poseQualityRef = useRef<PoseQuality>(emptyPoseQuality());
   const lastSpokenCueRef = useRef({ key: '', time: 0 });
-  const progressRef = useRef({ analyzedSamples: 0, goodSamples: 0, corrections: {} as Record<string, number> });
+  const progressRef = useRef<LiveCoachProgress>(createEmptyProgress());
+  const liveSessionIdRef = useRef(createLocalId('live_session'));
   const collectionSessionIdRef = useRef(createLocalId('session'));
   const collectionParticipantIdRef = useRef('');
   const collectionActiveRef = useRef(false);
@@ -597,6 +657,7 @@ export function LiveCoachPage() {
   const [collectionDifficulty, setCollectionDifficulty] = useState<CollectionDifficulty>('normal');
   const [collectionSamples, setCollectionSamples] = useState<DataCollectionSample[]>([]);
   const [isCollecting, setIsCollecting] = useState(false);
+  const [recentSessions, setRecentSessions] = useState<RecentLiveSession[]>(() => loadRecentLiveSessions());
 
   const text = useCallback((en: string, ar: string) => (language === 'ar' ? ar : en), [language]);
   const isArabic = language === 'ar';
@@ -626,7 +687,49 @@ export function LiveCoachPage() {
       .slice(0, 42);
   }, [difficulty, exerciseQuery, liveExercises]);
 
+  const saveSessionSummary = useCallback(() => {
+    if (cameraState !== 'live') return;
+    const progress = progressRef.current;
+    const meaningfulAnalysis = progress.analyzedSamples > 0 || poseFeedback.score !== null || bodyDetected;
+    if (!meaningfulAnalysis && elapsed <= 5) return;
+
+    const corrections = Object.entries(progress.corrections)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([message, count]) => ({ message: feedbackCopy[message]?.[0] || message, count }));
+    const averageFormScore = progress.scoredSamples > 0
+      ? clampPercent(progress.scoreSum / progress.scoredSamples)
+      : progress.analyzedSamples > 0
+        ? clampPercent((progress.goodSamples / progress.analyzedSamples) * 100)
+        : null;
+    const summary: RecentLiveSession = {
+      sessionId: liveSessionIdRef.current,
+      exerciseId: selectedExercise?.id ?? exercise,
+      exerciseName: selectedExercise?.name ?? exercise,
+      duration: elapsed,
+      timestamp: new Date().toISOString(),
+      bestFormScore: progress.bestScore !== null ? clampPercent(progress.bestScore) : poseFeedback.score,
+      averageFormScore,
+      confidence: poseFeedback.confidence > 0 ? poseFeedback.confidence : null,
+      supportLevel: selectedTracking?.support ?? 'unsupported',
+      corrections,
+      finalStatus: feedbackCopy[poseFeedback.message]?.[0] || poseFeedback.status || poseFeedback.message,
+    };
+
+    setRecentSessions((current) => {
+      const next = [summary, ...current.filter((item) => item.sessionId !== summary.sessionId)].slice(0, RECENT_SESSIONS_LIMIT);
+      persistRecentLiveSessions(next);
+      return next;
+    });
+  }, [bodyDetected, cameraState, elapsed, exercise, poseFeedback, selectedExercise?.id, selectedExercise?.name, selectedTracking?.support]);
+
+  const clearRecentSessions = useCallback(() => {
+    setRecentSessions([]);
+    persistRecentLiveSessions([]);
+  }, []);
+
   const stopCamera = useCallback(() => {
+    saveSessionSummary();
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
     animationRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -643,10 +746,11 @@ export function LiveCoachPage() {
     setPoseQuality(poseQualityRef.current);
     smoothedLandmarksRef.current = null;
     setPoseFeedback(createPoseFeedback());
-  }, []);
+  }, [saveSessionSummary]);
 
   const resetSession = useCallback(() => {
-    progressRef.current = { analyzedSamples: 0, goodSamples: 0, corrections: {} };
+    progressRef.current = createEmptyProgress();
+    liveSessionIdRef.current = createLocalId('live_session');
     feedbackCandidateRef.current = { key: '', frames: 0 };
     smoothedLandmarksRef.current = null;
     setElapsed(0);
@@ -744,7 +848,10 @@ export function LiveCoachPage() {
     }
 
     const isNewSession = !streamRef.current;
-    if (isNewSession) progressRef.current = { analyzedSamples: 0, goodSamples: 0, corrections: {} };
+    if (isNewSession) {
+      progressRef.current = createEmptyProgress();
+      liveSessionIdRef.current = createLocalId('live_session');
+    }
     setCameraState('starting');
     setCameraIssue(null);
     setIsPaused(false);
@@ -903,6 +1010,9 @@ export function LiveCoachPage() {
           if (nextFeedback.score !== null) {
             const progress = progressRef.current;
             progress.analyzedSamples += 1;
+            progress.scoredSamples += 1;
+            progress.scoreSum += nextFeedback.score;
+            progress.bestScore = progress.bestScore === null ? nextFeedback.score : Math.max(progress.bestScore, nextFeedback.score);
             if (nextFeedback.level === 'good') progress.goodSamples += 1;
             if (nextFeedback.level === 'adjust') {
               progress.corrections[nextFeedback.message] = (progress.corrections[nextFeedback.message] || 0) + 1;
@@ -977,7 +1087,11 @@ export function LiveCoachPage() {
     return () => window.clearInterval(timer);
   }, [cameraState, isPaused]);
 
-  useEffect(() => stopCamera, [stopCamera]);
+  useEffect(() => {
+    stopCameraRef.current = stopCamera;
+  }, [stopCamera]);
+
+  useEffect(() => () => stopCameraRef.current(), []);
 
   useEffect(() => {
     if (!requestedExercise) return;
@@ -1238,6 +1352,74 @@ export function LiveCoachPage() {
                 <InfoChip label={text('Reps', 'التكرارات')} value={text('Pending', 'لاحقاً')} />
               </div>
             </div>
+            <div className="order-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.78),rgba(10,12,24,0.86))] p-5 shadow-[0_16px_48px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Clock3 className="h-4 w-4 text-violet-200" />
+                  <h3 className="text-sm font-semibold text-white">{text('Recent Sessions', 'آخر الجلسات')}</h3>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearRecentSessions}
+                  disabled={recentSessions.length === 0}
+                  className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:text-white"
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  {text('Clear', 'مسح')}
+                </Button>
+              </div>
+
+              {recentSessions.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs leading-6 text-muted-foreground">
+                  {text('Stop a session longer than 5 seconds to save a local summary here.', 'أنهِ جلسة أطول من 5 ثواني لحفظ ملخص محلي هنا.')}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentSessions.map((session) => {
+                    const support = session.supportLevel === 'full'
+                      ? text('Full analysis', 'تحليل كامل')
+                      : session.supportLevel === 'basic'
+                        ? text('Basic tracking', 'تتبع أساسي')
+                        : text('Not supported', 'غير مدعوم');
+                    return (
+                      <div key={session.sessionId} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-white">{session.exerciseName}</div>
+                            <div className="mt-1 text-[11px] text-muted-foreground">
+                              {new Date(session.timestamp).toLocaleString()} · {support}
+                            </div>
+                          </div>
+                          <span className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-mono text-cyan-100">
+                            {formatElapsed(session.duration)}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                          <InfoChip label={text('Best', 'أفضل')} value={session.bestFormScore !== null ? `${session.bestFormScore}` : '--'} />
+                          <InfoChip label={text('Avg', 'المتوسط')} value={session.averageFormScore !== null ? `${session.averageFormScore}` : '--'} />
+                          <InfoChip label={text('Conf.', 'الثقة')} value={session.confidence !== null ? `${session.confidence}%` : '--'} />
+                        </div>
+                        <div className="mt-3 rounded-xl border border-white/8 bg-black/20 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
+                          <span className="text-white/80">{text('Final cue', 'آخر تنبيه')}:</span> {session.finalStatus}
+                        </div>
+                        {session.corrections.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {session.corrections.map((correction) => (
+                              <span key={correction.message} className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-100">
+                                {correction.message} ×{correction.count}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <details className="order-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.74),rgba(10,12,24,0.82))] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
               <summary className="cursor-pointer list-none text-sm font-semibold text-white outline-none marker:hidden">
                 <span className="flex items-center justify-between gap-3">
