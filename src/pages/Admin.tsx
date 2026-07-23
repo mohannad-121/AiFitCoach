@@ -203,7 +203,12 @@ export function AdminPage() {
       toast({
         variant: 'destructive',
         title: language === 'ar' ? 'تعذر تحميل المستخدمين' : 'Could not load users',
-        description: error instanceof Error ? error.message : 'Request failed.',
+        description:
+          error instanceof Error && error.message === 'Invalid admin credentials'
+            ? 'This password does not match the admin password configured on the server.'
+            : error instanceof Error
+              ? error.message
+              : 'Request failed.',
       });
     } finally {
       setLoadingUsers(false);
