@@ -2,6 +2,8 @@ import { Capacitor } from '@capacitor/core';
 
 const LOCAL_BACKEND_URL = 'http://127.0.0.1:8012';
 const ANDROID_EMULATOR_BACKEND_URL = 'http://10.0.2.2:8012';
+const RENDER_BACKEND_URL = 'https://fit-coach-ai-backend-ms4i.onrender.com';
+const UNCONFIGURED_CUSTOM_BACKEND_HOST = 'api.aifitcoach.dev';
 
 function isLoopbackHost(value: string): boolean {
   return value === 'localhost' || value === '127.0.0.1' || value === '::1';
@@ -32,6 +34,18 @@ function inferRenderBackendUrl(currentOrigin: string): string | null {
   }
 }
 
+export function resolveConfiguredBackendUrl(configured: string): string {
+  const normalized = configured.replace(/\/$/, '');
+  try {
+    if (new URL(normalized).hostname === UNCONFIGURED_CUSTOM_BACKEND_HOST) {
+      return RENDER_BACKEND_URL;
+    }
+  } catch {
+    return normalized;
+  }
+  return normalized;
+}
+
 export function isPublicAppOrigin(): boolean {
   if (typeof window === 'undefined' || !window.location?.origin) {
     return false;
@@ -42,7 +56,7 @@ export function isPublicAppOrigin(): boolean {
 export function getBackendBaseUrl(): string {
   const configured = import.meta.env.VITE_AI_BACKEND_URL?.trim();
   if (configured) {
-    const normalized = configured.replace(/\/$/, '');
+    const normalized = resolveConfiguredBackendUrl(configured);
     if (typeof window !== 'undefined' && window.location?.origin && isPublicOrigin(window.location.origin)) {
       try {
         if (isLoopbackHost(new URL(normalized).hostname)) {
