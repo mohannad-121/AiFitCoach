@@ -12,43 +12,37 @@ vi.mock('@/contexts/LanguageContext', () => ({
   }),
 }));
 
-vi.mock('@/data/exerciseVideoResolver', () => ({
-  getExerciseVideoUrl: () => '/videos/demo.mp4',
-  isLocalExerciseVideo: () => true,
-}));
-
 describe('ExerciseCard', () => {
-  it('expands inline to show the video and exercise instructions', () => {
+  it('expands inline to show exercise instructions without embedding a video', () => {
     const onToggleExpanded = vi.fn();
     const onCollapse = vi.fn();
 
     const { rerender } = render(
       <ExerciseCard
         exercise={exercises[0]}
-        selectedGender={null}
         isExpanded={false}
         onToggleExpanded={onToggleExpanded}
         onCollapse={onCollapse}
       />
     );
 
-    fireEvent.click(screen.getByText('Push-Ups'));
+    fireEvent.click(screen.getByRole('button', { name: /view instructions/i }));
 
     expect(onToggleExpanded).toHaveBeenCalledTimes(1);
 
     rerender(
       <ExerciseCard
         exercise={exercises[0]}
-        selectedGender={null}
         isExpanded={true}
         onToggleExpanded={onToggleExpanded}
         onCollapse={onCollapse}
       />
     );
 
-    expect(screen.getByText(/How to do this exercise/i)).toBeInTheDocument();
-    expect(screen.getByLabelText('Close exercise details')).toBeInTheDocument();
+    expect(screen.getByText(/Exercise instructions/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Close instructions')).toBeInTheDocument();
     expect(screen.getByText(/1\. Set up for Push-Ups/i)).toBeInTheDocument();
     expect(screen.queryByText('تمرين الضغط')).not.toBeInTheDocument();
+    expect(document.querySelector('video, iframe')).not.toBeInTheDocument();
   });
 });

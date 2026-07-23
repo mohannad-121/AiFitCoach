@@ -51,7 +51,7 @@ describe('WorkoutsPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Select a muscle to view exercise videos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Select a muscle to view matching exercises/i)).toBeInTheDocument();
     expect(screen.queryByText('Lateral Raises')).not.toBeInTheDocument();
   });
 

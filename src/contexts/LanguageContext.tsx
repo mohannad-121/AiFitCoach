@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { repairMojibake } from '@/lib/text';
 
 type Language = 'en' | 'ar';
@@ -293,25 +293,41 @@ const translations: Record<Language, Record<string, string>> = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+function getInitialLanguage(): Language {
+  try {
+    return localStorage.getItem('fitcoach_language') === 'ar' ? 'ar' : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>(() => (
-    localStorage.getItem('fitcoach_language') === 'ar' ? 'ar' : 'en'
-  ));
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
   const dir = language === 'ar' ? 'rtl' : 'ltr';
+
+  const setLanguage = useCallback((nextLanguage: Language) => {
+    setLanguageState(nextLanguage === 'ar' ? 'ar' : 'en');
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = dir;
-    localStorage.setItem('fitcoach_language', language);
+    try {
+      localStorage.setItem('fitcoach_language', language);
+    } catch {
+      // Keep the selected language for the current visit when storage is unavailable.
+    }
   }, [dir, language]);
 
-  const t = (key: string): string => {
+  const t = useCallback((key: string): string => {
     const value = translations[language][key] || key;
     return repairMojibake(value);
-  };
+  }, [language]);
+
+  const value = useMemo(() => ({ language, setLanguage, t, dir }), [dir, language, setLanguage, t]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, dir }}>
+    <LanguageContext.Provider value={value}>
       <div dir={dir} data-language={language}>{children}</div>
     </LanguageContext.Provider>
   );

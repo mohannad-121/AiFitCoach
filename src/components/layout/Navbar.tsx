@@ -77,10 +77,13 @@ export function Navbar() {
             </Button>
 
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={toggleLanguage}
               className="border-border/50 text-muted-foreground hover:text-foreground"
+              aria-label={language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
+              aria-pressed={language === 'ar'}
             >
               <Globe className="w-4 h-4 me-1" />
               {language === 'en' ? 'عربي' : 'EN'}

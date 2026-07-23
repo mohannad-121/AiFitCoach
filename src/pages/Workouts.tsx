@@ -330,7 +330,6 @@ export function WorkoutsPage() {
                   >
                     <ExerciseCard
                       exercise={exercise}
-                      selectedGender={genderFilter}
                       isExpanded={expandedExerciseId === exercise.id}
                       onToggleExpanded={() =>
                         setExpandedExerciseId((current) => (current === exercise.id ? null : exercise.id))
@@ -346,8 +345,8 @@ export function WorkoutsPage() {
                 icon={<Target className="h-14 w-14" />}
                 title={localizedLabel('No matching exercise signals found', 'ما في نتائج مطابقة حالياً', language)}
                 helper={localizedLabel(
-                  'Your AI coach is ready. Try changing goal, place, or gender filters to reveal matching exercise videos.',
-                  'مدربك الذكي جاهز. غيّر الهدف أو المكان أو الجنس لإظهار فيديوهات مطابقة.',
+                  'Your AI coach is ready. Try changing goal, place, or gender filters to reveal matching exercises.',
+                  'مدربك الذكي جاهز. غيّر الهدف أو المكان أو الجنس لإظهار تمارين مطابقة.',
                   language
                 )}
               />
@@ -360,14 +359,14 @@ export function WorkoutsPage() {
                 'اختر عضلة لفتح التمارين المستهدفة',
                 language
               )}
-              helper={localizedLabel(
-                'Your AI coach will filter videos by muscle, goal, place, and profile.',
-                'مدربك الذكي سيصفي الفيديوهات حسب العضلة والهدف والمكان والملف الشخصي.',
+                helper={localizedLabel(
+                  'Your AI coach will filter exercises by muscle, goal, place, and profile.',
+                  'مدربك الذكي سيصفي التمارين حسب العضلة والهدف والمكان والملف الشخصي.',
                 language
               )}
-              srOnlyText={localizedLabel(
-                'Select a muscle to view exercise videos.',
-                'اختر عضلة لعرض فيديوهات التمرين.',
+                srOnlyText={localizedLabel(
+                  'Select a muscle to view matching exercises.',
+                  'اختر عضلة لعرض التمارين المطابقة.',
                 language
               )}
             />
@@ -398,8 +397,8 @@ function WorkoutHero({ language }: { language: 'en' | 'ar' }) {
       </div>
       <p className="mx-auto mt-6 max-w-3xl text-balance text-base leading-8 text-white/68 sm:text-lg">
         {localizedLabel(
-          'Select any muscle and unlock personalized exercise videos based on your goal, place, and body profile.',
-          'اختر أي عضلة وافتح فيديوهات تمارين مخصصة حسب هدفك ومكان التدريب وملف جسمك.',
+          'Select any muscle to find personalized exercises based on your goal, place, and body profile.',
+          'اختر أي عضلة للعثور على تمارين مخصصة حسب هدفك ومكان التدريب وملف جسمك.',
           language
         )}
       </p>
