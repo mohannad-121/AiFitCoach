@@ -104,6 +104,6 @@ describe('CoachPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByPlaceholderText('Ask your AI Coach about workouts, meals, recovery, or your schedule...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask your coach...')).toBeInTheDocument();
   });
 });

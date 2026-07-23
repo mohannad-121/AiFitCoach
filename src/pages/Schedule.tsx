@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, BellRing, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Loader2, MessageSquareText, Trash2, UtensilsCrossed } from 'lucide-react';
+import { Activity, BellRing, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Loader2, MessageSquareText, MoreHorizontal, Trash2, UtensilsCrossed } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AI_BACKEND_URL } from '@/lib/backendUrl';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -307,7 +308,7 @@ export function SchedulePage() {
   const [highlightItemName, setHighlightItemName] = useState('');
   const [coachPinToast, setCoachPinToast] = useState<{ exerciseName: string; authorName: string } | null>(null);
   const targetItemRef = useRef<HTMLDivElement | null>(null);
-  const todayPlanRef = useRef<HTMLElement | null>(null);
+  const todayPlanRef = useRef<HTMLDivElement | null>(null);
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
@@ -407,7 +408,7 @@ export function SchedulePage() {
 
       const parsedRemotePlans = (plansData || []).map(p => ({
         ...p,
-        plan_data: (p.plan_data as any) as PlanDay[],
+        plan_data: p.plan_data as unknown as PlanDay[],
       }));
       const normalizedRemotePlans = parsedRemotePlans.map(normalizeLegacyWorkoutPlan);
       const normalizedLocalPlans = localPlans.map(normalizeLegacyWorkoutPlan);
@@ -1050,30 +1051,30 @@ export function SchedulePage() {
                 <span>{language === 'ar' ? 'التحكم الذكي بالجدول' : 'AI SCHEDULE CONTROL'}</span>
               </div>
               <h1 className="font-display text-4xl md:text-5xl text-foreground mb-2">
-                {language === 'ar' ? 'الجدول اليومي' : 'DAILY SCHEDULE'}
+                {language === 'ar' ? 'الجدول' : 'Schedule'}
               </h1>
               <p className="text-muted-foreground max-w-2xl">
                 {language === 'ar'
                   ? 'رتب أسبوعك بوضوح: راقب اليوم المختار، العناصر المكتملة، ملاحظاتك، والخطط النشطة في مكان واحد.'
-                  : 'Keep the page organized around one selected day, clear progress, your notes, and your active plans.'}
+                  : 'Your plan for the day.'}
               </p>
             </div>
 
             <div className="schedule-header-actions self-start lg:self-auto">
               <div className="schedule-date-badge">
-                <span>{language === 'ar' ? 'تم التحديث' : 'Live Date'}</span>
+                <span>{language === 'ar' ? 'التاريخ المحدد' : 'Selected date'}</span>
                 <strong>{selectedDateBadge}</strong>
               </div>
 
               <div className="schedule-mode-switcher flex bg-card/80 rounded-xl p-1 gap-1 border border-border/50 self-start lg:self-auto">
-            <button onClick={() => setViewTab('workout')}
+            <button type="button" aria-pressed={viewTab === 'workout'} onClick={() => setViewTab('workout')}
               className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
                 viewTab === 'workout' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}>
               <Dumbbell className="w-4 h-4" />
               {language === 'ar' ? 'التمارين' : 'Workouts'}
             </button>
-            <button onClick={() => setViewTab('nutrition')}
+            <button type="button" aria-pressed={viewTab === 'nutrition'} onClick={() => setViewTab('nutrition')}
               className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
                 viewTab === 'nutrition' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}>
@@ -1099,7 +1100,7 @@ export function SchedulePage() {
             </div>
           </div>
 
-          <div className="schedule-command-grid">
+          <div className="schedule-command-grid" hidden>
             <div className="schedule-command-card">
               <span>{language === 'ar' ? 'الحالة' : 'Status'}</span>
               <strong>{selectedDayStatus}</strong>
@@ -1128,28 +1129,28 @@ export function SchedulePage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-foreground">
-                {language === 'ar' ? 'التقويم الأسبوعي' : 'Weekly calendar'}
+                {language === 'ar' ? 'هذا الأسبوع' : 'This week'}
               </h2>
               <p className="text-sm text-muted-foreground">
                 {language === 'ar'
                   ? 'اختر اليوم لترى ما هو مخطط وما الذي تم إنجازه بالفعل.'
-                  : 'Pick any day to inspect what is planned and what has already been completed.'}
+                  : 'Select a day.'}
               </p>
             </div>
 
             <div className="flex items-center justify-between gap-3 md:justify-end">
-              <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w - 1)}>
+              <Button variant="ghost" size="icon" aria-label="Previous week" onClick={() => setWeekOffset(w => w - 1)}>
                 <ChevronLeft className="w-5 h-5" />
               </Button>
               <div className="text-center min-w-[180px]">
                 <p className="text-sm font-semibold text-foreground">{formatWeekRange()}</p>
                 {weekOffset !== 0 && (
-                  <button onClick={() => setWeekOffset(0)} className="text-xs text-primary hover:underline">
+                  <button type="button" onClick={() => setWeekOffset(0)} className="text-xs text-primary hover:underline">
                     {language === 'ar' ? 'العودة لليوم' : 'Back to today'}
                   </button>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w + 1)}>
+              <Button variant="ghost" size="icon" aria-label="Next week" onClick={() => setWeekOffset(w => w + 1)}>
                 <ChevronRight className="w-5 h-5" />
               </Button>
             </div>
@@ -1164,6 +1165,9 @@ export function SchedulePage() {
               return (
                 <button
                   key={idx}
+                  type="button"
+                  aria-current={selected ? 'date' : undefined}
+                  aria-label={`${formatDayName(date)} ${formatDateShort(date)}`}
                   onClick={() => setSelectedDateIdx(idx)}
                   className={`flex flex-col items-center py-3 px-1 rounded-xl transition-all text-xs min-h-[84px] ${
                     selected
@@ -1175,7 +1179,7 @@ export function SchedulePage() {
                 >
                   <span className="font-medium">{formatDayName(date)}</span>
                   <span className={`text-lg font-bold ${selected ? '' : 'text-foreground'}`}>{formatDateShort(date)}</span>
-                  {!selected && (hasMatch || hasActivity) && (
+                  {(hasMatch || hasActivity) && (
                     <div className="mt-auto pt-2 flex items-center gap-1">
                       {hasMatch && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                       {hasActivity && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
@@ -1186,7 +1190,7 @@ export function SchedulePage() {
             })}
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
+          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground" hidden>
             <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-primary" />{language === 'ar' ? 'يوجد عنصر مجدول' : 'Planned item exists'}</div>
             <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-accent" />{language === 'ar' ? 'يوجد نشاط أو ملاحظة' : 'Activity or note recorded'}</div>
           </div>
@@ -1256,7 +1260,7 @@ export function SchedulePage() {
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-5">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                    {language === 'ar' ? 'منطقة اليوم المختار' : 'Selected day workspace'}
+                    {language === 'ar' ? 'خطة اليوم' : 'Day plan'}
                   </p>
                   <h2 className="text-xl font-bold text-foreground">
                     {language === 'ar' ? currentPlan.title_ar || currentPlan.title : currentPlan.title}
@@ -1546,7 +1550,7 @@ export function SchedulePage() {
             <div className={`schedule-next-panel glass-card rounded-2xl p-6 schedule-status-${statusTone}`}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {language === 'ar' ? 'ملخص اليوم' : 'Day summary'}
+                  {language === 'ar' ? 'ملخص' : 'Summary'}
                 </h3>
                 <span className="text-xs text-muted-foreground">{selectedLogDate}</span>
               </div>
@@ -1563,17 +1567,28 @@ export function SchedulePage() {
                 </div>
               </div>
 
+              <div className="mb-3 border-t border-border/20 pt-3">
+                <p className="text-xs font-medium text-muted-foreground">{language === 'ar' ? 'نصيحة المدرب' : 'Coach tip'}</p>
+                <p className="mt-1 text-sm text-foreground">
+                  {isDayComplete
+                    ? (language === 'ar' ? 'يومك مكتمل.' : 'Your day is complete.')
+                    : nextItemName
+                      ? (language === 'ar' ? `ابدأ بـ ${nextItemName}.` : `Start with ${nextItemName}.`)
+                      : (language === 'ar' ? 'خذ وقتاً للحركة.' : 'Make time to move.')}
+                </p>
+              </div>
+
               <div className="schedule-summary-grid space-y-3 text-sm">
                 <div className="rounded-xl border border-border/40 bg-card/40 p-3">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'نوع العرض' : 'Current view'}</p>
-                  <p className="font-medium text-foreground">{language === 'ar' ? (viewTab === 'workout' ? 'التمارين' : 'التغذية') : (viewTab === 'workout' ? 'Workouts' : 'Nutrition')}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'التالي' : 'Next'}</p>
+                  <p className="font-medium text-foreground truncate">{nextItemName || (isDayComplete ? (language === 'ar' ? 'مكتمل' : 'Complete') : (language === 'ar' ? 'لا يوجد' : 'None'))}</p>
                 </div>
                 <div className="rounded-xl border border-border/40 bg-card/40 p-3">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'العناصر المكتملة' : 'Completed items'}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'تم' : 'Done'}</p>
                   <p className="font-medium text-foreground">{dailyProgress ? dailyProgress.completed : 0}</p>
                 </div>
                 <div className="rounded-xl border border-border/40 bg-card/40 p-3">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'العناصر الناقصة' : 'Missing items'}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'متبقي' : 'Left'}</p>
                   <p className="font-medium text-foreground">{selectedItemsRemaining}</p>
                 </div>
                 <div className="rounded-xl border border-border/40 bg-card/40 p-3">
@@ -1608,12 +1623,13 @@ export function SchedulePage() {
             <div className="schedule-log-panel glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {language === 'ar' ? 'ملاحظات اليوم' : 'Daily log'}
+                  {language === 'ar' ? 'سجل سريع' : 'Quick log'}
                 </h3>
                 <span className="text-xs text-muted-foreground">{selectedLogDate}</span>
               </div>
 
               <div className="space-y-4">
+                {viewTab === 'workout' && (
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-2">
                     {language === 'ar' ? 'شو تمرنت اليوم؟' : 'What did you train today?'}
@@ -1626,7 +1642,9 @@ export function SchedulePage() {
                     rows={3}
                   />
                 </div>
+                )}
 
+                {viewTab === 'nutrition' && (
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-2">
                     {language === 'ar' ? 'شو أكلت اليوم؟' : 'How was your nutrition today?'}
@@ -1656,7 +1674,9 @@ export function SchedulePage() {
                     rows={3}
                   />
                 </div>
+                )}
 
+                {viewTab === 'workout' && (
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-2">
                     {language === 'ar' ? 'مزاجك/طاقتك اليوم' : 'Mood / Energy'}
@@ -1673,13 +1693,14 @@ export function SchedulePage() {
                       </button>
                     ))}
                   </div>
-                  <Input
+                  <Input hidden
                     value={logDraft.mood}
                     onChange={(e) => setLogDraft(prev => ({ ...prev, mood: e.target.value }))}
                     placeholder={language === 'ar' ? 'مثال: طاقة عالية، مرهق...' : 'e.g. High energy, tired...'}
                     className="bg-secondary/40 border-border"
                   />
                 </div>
+                )}
 
                 <div className="flex flex-col gap-3">
                   <p className="text-xs text-muted-foreground">
@@ -1712,6 +1733,11 @@ export function SchedulePage() {
                     <p className="font-medium text-foreground">
                       {language === 'ar' ? plan.title_ar || plan.title : plan.title}
                     </p>
+                    {plan.is_active && (
+                      <span className="mt-1 inline-flex rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        {language === 'ar' ? 'نشط' : 'Active'}
+                      </span>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {new Date(plan.created_at).toLocaleDateString(language === 'ar' ? 'ar' : 'en')}
                     </p>
@@ -1727,9 +1753,19 @@ export function SchedulePage() {
                         {language === 'ar' ? 'تفعيل' : 'Activate'}
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => deletePlan(plan.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" aria-label="Plan options">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deletePlan(plan.id)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -1740,4 +1776,3 @@ export function SchedulePage() {
     </div>
   );
 }
-

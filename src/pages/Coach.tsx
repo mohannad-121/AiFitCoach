@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, VolumeX, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage, Copy, Check, Lock } from 'lucide-react';
+import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage, Copy, Check, Lock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -209,7 +209,7 @@ const WEEK_TEMPLATE = [
   { day: 'Wednesday', dayAr: 'الأربعاء' },
   { day: 'Thursday', dayAr: 'الخميس' },
   { day: 'Friday', dayAr: 'الجمعة' },
-];
+] as const;
 const JS_WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
 interface CoachNavigationState {
@@ -789,14 +789,14 @@ export function CoachPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTypingReply, setIsTypingReply] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [autoSpeak] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PendingPlanState | null>(null);
   const [pendingPlanOptions, setPendingPlanOptions] = useState<PendingPlanOptionsState | null>(null);
   const [pendingProfileConfirmation, setPendingProfileConfirmation] = useState<PendingProfileConfirmationState | null>(null);
   const [profileUpdateFeedback, setProfileUpdateFeedback] = useState<ProfileUpdateFeedbackState | null>(null);
-  const [showRagDebug, setShowRagDebug] = useState(false);
+  const [showRagDebug] = useState(false);
   const [ragDebugData, setRagDebugData] = useState<RagDebugData | null>(null);
   const [ragDebugLoading, setRagDebugLoading] = useState(false);
   const [ragDebugError, setRagDebugError] = useState('');
@@ -1362,22 +1362,6 @@ export function CoachPage() {
     };
     window.speechSynthesis.speak(utterance);
   }, [endVoiceModeTurn, language, resolvePreferredVoice, selectedVoice, speakWithBackendTts]);
-
-  const voicePreviewText = selectedVoice === ARABIC_VOICE_AGENT_ID
-    ? 'مرحبا، أنا المساعد الصوتي العربي لفِت كوتش. كيف أقدر أساعدك اليوم؟'
-    : (language === 'ar' ? 'مرحبًا، أنا مدربك الشخصي' : 'Hello, I am your personal coach');
-
-  const toggleVoiceMode = useCallback(() => {
-    if (voiceModeRef.current) {
-      setVoiceMode(false);
-      stopListening();
-      stopAllSpeech();
-      return;
-    }
-    setVoiceMode(true);
-    setAutoSpeak(true);
-    window.setTimeout(() => startListeningIfPossible(), 120);
-  }, [startListeningIfPossible, stopAllSpeech, stopListening]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     const scrollContainer = messagesScrollRef.current;
@@ -3050,17 +3034,14 @@ export function CoachPage() {
       <UpgradeModal open={Boolean(upgradeReason)} onOpenChange={(open) => !open && setUpgradeReason('')} reason={upgradeReason} />
 
       <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden pt-16 pb-16 md:pb-0">
-        <aside className="hidden md:flex w-80 shrink-0 flex-col border-r border-white/10 bg-[rgba(10,12,24,0.72)] backdrop-blur-2xl">
-          <div className="border-b border-white/10 p-5">
-            <div className="mb-4">
+        <aside className="hidden w-60 shrink-0 flex-col border-r border-white/10 bg-[rgba(10,12,24,0.72)] backdrop-blur-2xl md:flex">
+          <div className="border-b border-white/10 p-4">
+            <div className="mb-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
-                {isArabic ? 'جلسات المدرب' : 'Coach Sessions'}
+                {isArabic ? 'المحادثات' : 'Chats'}
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {isArabic ? 'سجل المحادثات والخطط والردود الذكية.' : 'Your premium conversation vault for plans, insights, and follow-ups.'}
-              </p>
             </div>
-            <Button variant="hero" className="h-12 w-full rounded-2xl shadow-[0_18px_40px_rgba(168,85,247,0.28)]" onClick={createConversation}>
+            <Button variant="hero" className="h-11 w-full rounded-xl shadow-[0_18px_40px_rgba(168,85,247,0.28)]" onClick={createConversation}>
               <Plus className="w-4 h-4" />
               {t('coach.newChat')}
             </Button>
@@ -3068,7 +3049,7 @@ export function CoachPage() {
           </div>
           <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
             {loadingConvs && (
-              <div className="rounded-3xl border border-white/8 bg-white/[0.04] px-4 py-5 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-white/8 bg-white/[0.04] px-3 py-4 text-sm text-muted-foreground">
                 {isArabic ? 'جاري تحميل الجلسات...' : 'Loading sessions...'}
               </div>
             )}
@@ -3079,13 +3060,13 @@ export function CoachPage() {
                 tabIndex={0}
                 onClick={() => selectConversation(conv.id)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { selectConversation(conv.id); } }}
-                className={`mb-2 flex w-full items-center gap-3 rounded-3xl border px-4 py-3 text-left transition-all duration-300 group ${
+                className={`mb-2 flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-300 group ${
                   conv.id === currentId
                     ? 'border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/18 via-violet-500/16 to-cyan-400/16 text-white shadow-[0_16px_40px_rgba(168,85,247,0.18)]'
                     : 'border-white/8 bg-white/[0.03] text-muted-foreground hover:-translate-y-0.5 hover:border-fuchsia-300/20 hover:bg-white/[0.06] hover:text-foreground'
                 }`}
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
                   conv.id === currentId ? 'border-white/20 bg-white/10 text-fuchsia-200' : 'border-white/8 bg-black/20 text-muted-foreground'
                 }`}>
                   <MessageSquare className="h-4 w-4" />
@@ -3126,11 +3107,8 @@ export function CoachPage() {
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
-                        {isArabic ? 'جلسات المدرب' : 'Coach Sessions'}
+                        {isArabic ? 'المحادثات' : 'Chats'}
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {isArabic ? 'كل محادثاتك الذكية في مكان واحد.' : 'Every coaching conversation in one place.'}
-                      </p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="rounded-2xl border border-white/10 bg-white/[0.04]">
                       <X className="w-4 h-4" />
@@ -3170,86 +3148,29 @@ export function CoachPage() {
         </AnimatePresence>
 
         <main className="mx-auto flex min-h-0 w-full max-w-[1680px] flex-1 overflow-hidden px-3 py-3 sm:px-4 lg:px-6">
-          <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <section className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.92),rgba(8,10,22,0.94))] shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-              <div className="relative z-20 shrink-0 border-b border-white/10 bg-[linear-gradient(180deg,rgba(14,16,30,0.96),rgba(14,16,30,0.78))] px-4 py-4 backdrop-blur-xl sm:px-5 lg:px-6">
+          <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+            <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.92),rgba(8,10,22,0.94))] shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+              <div className="relative z-20 shrink-0 border-b border-white/10 bg-[linear-gradient(180deg,rgba(14,16,30,0.96),rgba(14,16,30,0.78))] px-4 py-3 backdrop-blur-xl sm:px-5 lg:px-6">
                 <div className="absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-start gap-3">
-                    <Button variant="ghost" size="icon" className="rounded-2xl border border-white/10 bg-white/[0.04] md:hidden" onClick={() => setSidebarOpen(true)}>
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="rounded-xl border border-white/10 bg-white/[0.04] md:hidden" onClick={() => setSidebarOpen(true)} aria-label={isArabic ? 'فتح المحادثات' : 'Open chats'}>
                       <Menu className="w-5 h-5" />
                     </Button>
-                    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/30 via-violet-500/20 to-cyan-400/20 shadow-[0_0_40px_rgba(168,85,247,0.22)]">
-                      <div className="absolute inset-1 rounded-[14px] border border-white/10" />
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/30 via-violet-500/20 to-cyan-400/20 shadow-[0_0_32px_rgba(168,85,247,0.2)]">
+                      <div className="absolute inset-1 rounded-lg border border-white/10" />
                       <Bot className="relative z-10 w-5 h-5 text-primary-foreground" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h1 className="text-lg font-semibold text-foreground sm:text-xl">{isArabic ? 'المدرب الذكي للياقة' : 'AI Fitness Coach'}</h1>
-                        <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-200">
+                        <h1 className="text-base font-semibold text-foreground sm:text-lg">{isArabic ? 'المدرب الذكي للياقة' : 'AI Fitness Coach'}</h1>
+                        <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
                           {isArabic ? 'جاهز' : 'Ready'}
                         </span>
                       </div>
-                      <p className="mt-1 max-w-3xl text-xs leading-6 text-muted-foreground sm:text-sm">
-                        {isArabic
-                          ? 'إرشاد ذكي مخصص للتمارين والتغذية والتعافي والجدولة، داخل مركز قيادة واحد أنيق.'
-                          : 'Personalized fitness, nutrition, recovery, and schedule intelligence in one luxury command center.'}
-                      </p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setShowVoiceSettings(!showVoiceSettings)} className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]">
+                    <Button variant="ghost" size="icon" onClick={() => setShowVoiceSettings(!showVoiceSettings)} className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]" aria-label={isArabic ? 'إعدادات الصوت' : 'Voice settings'}>
                       <Settings2 className="w-4 h-4" />
                     </Button>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant={showRagDebug ? 'default' : 'ghost'} size="sm" onClick={() => setShowRagDebug((prev) => !prev)} className={`rounded-full border ${showRagDebug ? 'border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-500/80 to-cyan-400/70 text-white' : 'border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground'}`}>
-                      {showRagDebug ? (isArabic ? 'عرض RAG' : 'RAG View') : (isArabic ? 'أدوات RAG' : 'RAG Tools')}
-                    </Button>
-                    {isSupported && (
-                      <Button
-                        variant={voiceMode ? 'default' : 'ghost'}
-                        size="sm"
-                        className={`gap-2 rounded-full border ${voiceMode ? 'border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-500/80 to-violet-500/80 text-white' : 'border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground'}`}
-                        onClick={toggleVoiceMode}
-                        title={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
-                        aria-label={language === 'ar' ? 'رسالة صوتية واحدة' : 'Single voice turn'}
-                      >
-                        {voiceMode ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                        <span className="hidden md:inline">
-                          {voiceMode
-                            ? (language === 'ar' ? 'إيقاف التسجيل' : 'Stop voice')
-                            : (language === 'ar' ? 'رسالة صوتية' : 'Voice turn')}
-                        </span>
-                      </Button>
-                    )}
-                    <Button
-                      variant={autoSpeak ? 'default' : 'ghost'}
-                      size="icon"
-                      className={`rounded-full border ${autoSpeak ? 'border-cyan-300/40 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground'}`}
-                      onClick={() => { setAutoSpeak(!autoSpeak); if (isAssistantSpeaking) stopAllSpeech(); }}
-                    >
-                      {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                    </Button>
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-muted-foreground">
-                      {isArabic ? 'الملف الشخصي مفعل' : 'Using your profile data'}
-                    </span>
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-muted-foreground">
-                      {isSupported ? (isArabic ? 'الصوت جاهز' : 'Voice ready') : (isArabic ? 'الصوت غير متاح' : 'Voice unavailable')}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {[
-                      isArabic ? 'يعتمد على ملفك الشخصي' : 'Profile-aware coaching',
-                      isArabic ? 'يبني الخطط ويحفظها' : 'Builds plans + saves to schedule',
-                      isArabic ? 'صوت + ملفات + RAG' : 'Voice + uploads + RAG',
-                    ].map((chip) => (
-                      <span
-                        key={chip}
-                        className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] font-medium text-foreground/90"
-                      >
-                        {chip}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               </div>
 
@@ -3295,9 +3216,6 @@ export function CoachPage() {
                           )}
                         </SelectContent>
                       </Select>
-                      <Button size="sm" variant="ghost" className="rounded-2xl border border-white/10 bg-white/[0.04]" onClick={() => speakWithVoice(voicePreviewText)}>
-                        <Volume2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   </motion.div>
                 )}
@@ -3305,38 +3223,24 @@ export function CoachPage() {
 
               <div ref={messagesScrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto scroll-smooth scrollbar-thin [scrollbar-gutter:stable] px-4 py-5 sm:px-5 lg:px-6">
                 {currentMessages.length === 0 && !isLoading && !isVoiceProcessing && (
-                  <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.32)]">
-                    <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-                      <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/25 via-violet-500/18 to-cyan-400/18 shadow-[0_0_70px_rgba(168,85,247,0.22)]">
-                        <div className="absolute inset-2 rounded-full border border-white/10" />
-                        <Bot className="relative z-10 h-8 w-8 text-white" />
-                      </div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
-                        {isArabic ? 'مركز قيادة المدرب الذكي' : 'AI COACH COMMAND CENTER'}
-                      </div>
-                      <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                        {isArabic ? 'كيف أساعدك اليوم؟' : 'How can I coach you today?'}
-                      </h2>
-                      <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                        {isArabic
-                          ? 'اطلب خطة تمرين، إرشادًا غذائيًا، نصائح للتعافي، أو تحسينًا لجدولك — وسأبني لك ردًا مخصصًا حسب ملفك الشخصي.'
-                          : 'Ask for a workout plan, nutrition guidance, recovery advice, or schedule optimization — and I’ll personalize it around your profile.'}
-                      </p>
-                      <p className="mt-3 text-xs text-cyan-100/80">
-                        {isArabic ? 'المدرب يستطيع استخدام هدفك وبياناتك ونشاطك لتخصيص الإجابة.' : 'Your coach can use your profile, goal, and activity data to personalize answers.'}
-                      </p>
-                      <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="mx-auto flex min-h-[260px] max-w-2xl flex-col items-center justify-center py-8 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/25 via-violet-500/18 to-cyan-400/18 shadow-[0_0_36px_rgba(168,85,247,0.18)]">
+                      <Bot className="h-5 w-5 text-white" />
+                    </div>
+                    <h2 className="mt-4 text-lg font-semibold text-white">
+                      {isArabic ? 'اسأل مدربك' : 'Ask your coach'}
+                    </h2>
+                    <div className="mt-5 flex flex-wrap justify-center gap-2">
                         {quickPrompts.map((prompt) => (
                           <button
                             key={prompt}
                             type="button"
                             onClick={() => { setInput(prompt); focusInput(); }}
-                            className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-foreground transition-all hover:-translate-y-0.5 hover:border-fuchsia-300/30 hover:bg-white/[0.08]"
+                            className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-foreground transition-colors hover:border-fuchsia-300/30 hover:bg-white/[0.08]"
                           >
                             {prompt}
                           </button>
                         ))}
-                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -3408,16 +3312,6 @@ export function CoachPage() {
                                 >
                                   {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                                   <span>{isCopied ? (language === 'ar' ? 'تم النسخ' : 'Copied') : (language === 'ar' ? 'نسخ' : 'Copy')}</span>
-                                </button>
-                              )}
-                              {message.role === 'assistant' && (
-                                <button
-                                  type="button"
-                                  onClick={() => isAssistantSpeaking ? stopAllSpeech() : speakWithVoice(message.content)}
-                                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[11px] text-muted-foreground transition-all hover:border-cyan-300/25 hover:bg-white/[0.08] hover:text-foreground"
-                                >
-                                  {isAssistantSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                                  <span>{isAssistantSpeaking ? (language === 'ar' ? 'إيقاف' : 'Stop') : (language === 'ar' ? 'استماع' : 'Listen')}</span>
                                 </button>
                               )}
                             </div>
@@ -3652,21 +3546,7 @@ export function CoachPage() {
               </AnimatePresence>
 
               <div className="relative z-20 shrink-0 border-t border-white/10 bg-[linear-gradient(180deg,rgba(7,9,18,0),rgba(7,9,18,0.92)_20%,rgba(7,9,18,0.98))] px-4 pb-3 pt-3 sm:px-5 lg:px-6">
-                {currentMessages.length <= 1 && (
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {quickPrompts.slice(0, 4).map((prompt) => (
-                      <button
-                        key={`quick-${prompt}`}
-                        type="button"
-                        onClick={() => { setInput(prompt); focusInput(); }}
-                        className="rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-2 text-xs text-muted-foreground transition-all hover:border-fuchsia-300/25 hover:bg-white/[0.08] hover:text-foreground"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="glass-card rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(20,23,40,0.92),rgba(10,12,24,0.94))] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.38)]" onDragOver={(event) => event.preventDefault()} onDrop={handleAttachmentDrop}>
+                <div className="glass-card rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(20,23,40,0.92),rgba(10,12,24,0.94))] p-2.5 shadow-[0_20px_60px_rgba(0,0,0,0.32)]" onDragOver={(event) => event.preventDefault()} onDrop={handleAttachmentDrop}>
                   {(isChatLimitReached || isUploadLimitReached || isPlanLimitReached) && (
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300/20 bg-gradient-to-r from-violet-500/10 to-amber-400/10 px-4 py-3 shadow-[0_0_30px_rgba(245,158,11,.08)]">
                       <div className="flex items-start gap-2 text-xs text-amber-100"><Lock className="mt-0.5 h-4 w-4 shrink-0"/><div>{isChatLimitReached && <p>Chat limit reached. Upgrade to continue talking with your AI Coach.</p>}{isUploadLimitReached && <p>Upload limit reached. Upgrade to add more files.</p>}{isPlanLimitReached && <p>Plan generation limit reached. Upgrade to create more plans.</p>}</div></div>
@@ -3730,34 +3610,14 @@ export function CoachPage() {
                       {attachmentError}
                     </div>
                   )}
-                  <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs text-muted-foreground">
-                    <span className="leading-6">
-                      {language === 'ar'
-                        ? 'ارفع ملفات PDF أو صور مثل تقارير التحاليل، صور الوجبات، ملصقات المكملات، أو لقطات التقدم.'
-                        : 'Upload PDFs or images like lab reports, meal photos, supplement labels, or progress screenshots.'}
-                    </span>
-                    <span className="shrink-0 rounded-full border border-cyan-300/15 bg-cyan-400/10 px-2.5 py-1 text-cyan-100">
+                  <div className="mb-2 flex items-center justify-between px-1 text-xs text-muted-foreground">
+                    <span>{language === 'ar' ? 'مرفقات' : 'Attachments'}</span>
+                    <span className="text-cyan-100">
                       {selectedAttachments.length}/{MAX_CHAT_ATTACHMENTS}
                     </span>
                   </div>
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
-                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1">
-                        {isArabic ? 'خطة ذكية' : 'Plan builder'}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1">
-                        {isArabic ? 'مزامنة الجدول' : 'Schedule sync'}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1">
-                        {isArabic ? 'السياق مفعل' : 'Context active'}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-cyan-100/80">
-                      {isArabic ? 'الردود تعتمد على ملفك الشخصي والجلسة الحالية' : 'Responses use your profile and current session context'}
-                    </span>
-                  </div>
                   <div className="flex items-end gap-2">
-                    <Button title={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isSubscriptionGateLoading || isBusy || isUploadLimitReached} className={`h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] ${isUploadLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
+                    <Button title={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} aria-label={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isSubscriptionGateLoading || isBusy || isUploadLimitReached} className={`h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] ${isUploadLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
                       <Paperclip className="w-4 h-4" />
                     </Button>
                     {isSupported && (
@@ -3766,7 +3626,8 @@ export function CoachPage() {
                         size="icon"
                         onClick={isListening ? stopListening : startListeningIfPossible}
                         disabled={isSubscriptionGateLoading || isBusy || isAssistantSpeaking || isChatLimitReached}
-                        className={`h-11 w-11 shrink-0 rounded-2xl border ${isListening ? 'animate-pulse border-destructive/30 bg-destructive/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'}`}
+                        aria-label={isListening ? (language === 'ar' ? 'إيقاف الاستماع' : 'Stop listening') : (language === 'ar' ? 'بدء الرسالة الصوتية' : 'Start voice message')}
+                        className={`h-11 w-11 shrink-0 rounded-xl border ${isListening ? 'animate-pulse border-destructive/30 bg-destructive/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'}`}
                       >
                         {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                       </Button>
@@ -3780,15 +3641,15 @@ export function CoachPage() {
                         isChatLimitReached
                           ? 'Chat message limit reached. Upgrade your plan to continue.'
                           : language === 'ar'
-                          ? 'اسأل مدربك الذكي عن التمارين أو الوجبات أو التعافي أو جدولك...'
-                          : 'Ask your AI Coach about workouts, meals, recovery, or your schedule...'
+                          ? 'اسأل مدربك...'
+                          : 'Ask your coach...'
                       }
-                      className="min-h-[56px] max-h-40 resize-y rounded-2xl border-white/10 bg-black/20 px-4 py-3 focus-visible:ring-1"
+                      className="min-h-[52px] max-h-40 resize-y rounded-xl border-white/10 bg-black/20 px-4 py-3 focus-visible:ring-1"
                       disabled={isBusy}
                       readOnly={isChatLimitReached}
                       rows={2}
                     />
-                    <Button title={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} variant="hero" size="icon" onClick={sendMessage} disabled={isSubscriptionGateLoading || isChatLimitReached || isBusy || (!input.trim() && selectedAttachments.length === 0)} className={`h-12 w-12 shrink-0 rounded-2xl shadow-[0_18px_38px_rgba(168,85,247,0.28)] ${isChatLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
+                    <Button title={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} aria-label={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} variant="hero" size="icon" onClick={sendMessage} disabled={isSubscriptionGateLoading || isChatLimitReached || isBusy || (!input.trim() && selectedAttachments.length === 0)} className={`h-11 w-11 shrink-0 rounded-xl shadow-[0_18px_38px_rgba(168,85,247,0.28)] ${isChatLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
                       {isChatLimitReached ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </div>
@@ -3797,59 +3658,51 @@ export function CoachPage() {
             </section>
 
             <aside className="hidden min-h-0 overflow-y-auto overscroll-contain xl:flex">
-              <div className="flex h-fit w-full flex-col gap-4 rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.9),rgba(8,10,22,0.92))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
-                    {isArabic ? 'حالة المدرب' : 'Coach Status'}
-                  </div>
-                  <h2 className="mt-2 text-xl font-semibold text-white">
-                    {isArabic ? 'لوحة السياق الذكي' : 'AI Context Panel'}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {isArabic ? 'عرض سريع لبيانات الملف الشخصي وحالة الجلسة والملفات المرفوعة.' : 'A quick view of your profile context, session state, and uploaded assets.'}
-                  </p>
-                </div>
+              <div className="flex h-fit w-full flex-col gap-4 rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.9),rgba(8,10,22,0.92))] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl">
+                <h2 className="text-base font-semibold text-white">
+                  {isArabic ? 'السياق' : 'Context'}
+                </h2>
 
                 <div className="grid gap-3">
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
+                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
                         {isArabic ? 'وضع الجلسة' : 'Session mode'}
                       </span>
-                      <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                      <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
                         {isArabic ? 'نشط' : 'Online'}
                       </span>
                     </div>
-                    <div className="grid gap-2 text-sm text-foreground">
-                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'المحادثة' : 'Conversation'}</span><span>{conversations.length}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'الملفات' : 'Files attached'}</span><span>{selectedAttachments.length}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'الصوت' : 'Voice mode'}</span><span>{voiceMode ? (isArabic ? 'مفعل' : 'On') : (isArabic ? 'متوقف' : 'Off')}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">{isArabic ? 'RAG' : 'RAG'}</span><span>{showRagDebug ? (isArabic ? 'مرئي' : 'Visible') : (isArabic ? 'هادئ' : 'Idle')}</span></div>
+                    <div className="divide-y divide-white/8 text-sm text-foreground">
+                      <div className="flex items-center justify-between gap-3 py-2 first:pt-0"><span className="text-muted-foreground">{isArabic ? 'المحادثات' : 'Chats'}</span><span>{conversations.length}</span></div>
+                      <div className="flex items-center justify-between gap-3 py-2"><span className="text-muted-foreground">{isArabic ? 'الملفات' : 'Files'}</span><span>{selectedAttachments.length}</span></div>
+                      <div className="flex items-center justify-between gap-3 py-2"><span className="text-muted-foreground">{isArabic ? 'الصوت' : 'Voice'}</span><span>{voiceMode ? (isArabic ? 'مفعل' : 'On') : (isArabic ? 'متوقف' : 'Off')}</span></div>
+                      <div className="flex items-center justify-between gap-3 pb-0 pt-2"><span className="text-muted-foreground">RAG</span><span>{isArabic ? 'نشط' : 'Active'}</span></div>
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
+                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                     <div className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
                       {isArabic ? 'سياق الملف الشخصي' : 'Profile Context'}
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {profileContextEntries.map((item) => (
-                        <div key={item.label} className="flex items-start justify-between gap-3 border-b border-white/6 pb-3 last:border-b-0 last:pb-0">
-                          <span className="text-sm text-muted-foreground">{item.label}</span>
-                          <span className="max-w-[58%] text-right text-sm font-medium text-foreground">{String(item.value)}</span>
+                        <div key={item.label} className="flex items-start justify-between gap-3 border-b border-white/6 pb-2 last:border-b-0 last:pb-0">
+                          <span className="text-xs text-muted-foreground">{item.label}</span>
+                          <span className="max-w-[58%] text-right text-xs font-medium text-foreground">{String(item.value)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.08))] p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
-                      {isArabic ? 'تلميح ذكي' : 'AI Tip'}
+                  <div className="rounded-lg border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.08))] p-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/70">
+                      {isArabic ? 'تلميح' : 'Tip'}
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-foreground/90">
+                    <p className="mt-2 text-sm leading-6 text-foreground/90">
                       {isArabic
-                        ? 'كلما أضفت تفاصيل أكثر عن الهدف أو الوقت أو الإصابات أو الأجهزة المتاحة، أصبحت الخطة أدق وأكثر فائدة.'
-                        : 'The more detail you share about your goal, schedule, injuries, and available equipment, the sharper your plan becomes.'}
+                        ? 'اذكر هدفك ووقتك وإصاباتك أو معداتك للحصول على خطة أدق.'
+                        : 'Share your goal, time, injuries, or equipment for a more precise plan.'}
                     </p>
                   </div>
                 </div>
