@@ -13,13 +13,20 @@ DEFAULT_SUCCESS_MODEL = Path(__file__).resolve().parent / "model_success.pkl"
 DEFAULT_PLAN_INTENT_MODEL = Path(__file__).resolve().parent / "model_plan_intent.pkl"
 
 
+class ModelUnavailableError(FileNotFoundError):
+    """Raised when an optional local model artifact cannot be used."""
+
+
 def _load_pickle(path: Path) -> dict[str, Any]:
     if not path.exists():
-        raise FileNotFoundError(f"Model file not found: {path}")
-    with path.open("rb") as f:
-        artifact = pickle.load(f)
+        raise ModelUnavailableError(f"Model file not found: {path}")
+    try:
+        with path.open("rb") as f:
+            artifact = pickle.load(f)
+    except (OSError, EOFError, pickle.UnpicklingError, ValueError, AttributeError) as exc:
+        raise ModelUnavailableError(f"Model file is unavailable: {path}") from exc
     if not isinstance(artifact, dict) or "model" not in artifact:
-        raise ValueError(f"Invalid model artifact format in: {path}")
+        raise ModelUnavailableError(f"Invalid model artifact format in: {path}")
     return artifact
 
 

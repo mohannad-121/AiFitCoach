@@ -33,8 +33,12 @@ chrome-coach-debug/
 # Backend runtime logs
 ai_backend/ai_backend/logs/
 
-# Large voice assets (use Git LFS - tracked in .gitattributes)
-# ai_backend/voice_assets/** - now tracked by LFS
+# Large local-only assets
+/ai_backend/voice_assets/
+/ai_backend/datasets/branded_food.csv
+/ai_backend/datasets/programs_detailed_boostcamp_kaggle.csv
+/ai_backend/model_*.pkl
+/public/videos/
 
 # Audio cache files
 ai_backend/*.wav
