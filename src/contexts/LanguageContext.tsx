@@ -18,8 +18,16 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.coach': 'AI Coach',
     'nav.profile': 'Profile',
     'nav.schedule': 'Schedule',
+    'nav.liveCoach': 'Live Coach',
+    'nav.coachNotes': 'Coach Notes',
+    'nav.subscription': 'Subscription',
+    'nav.admin': 'Admin',
+    'nav.menu': 'More',
+    'nav.login': 'Login',
+    'nav.logout': 'Logout',
 
     // Hero
+    'hero.eyebrow': 'AI TRAINING, BUILT AROUND YOU',
     'hero.title': 'YOUR AI FITNESS COACH, REIMAGINED.',
     'hero.subtitle': 'Personalized training, nutrition intelligence, live progress, and AI coaching — built around your body, goals, and lifestyle.',
     'hero.cta': 'Start Coaching',
@@ -96,6 +104,51 @@ const translations: Record<Language, Record<string, string>> = {
     'common.error': 'Something went wrong',
     'common.save': 'Save',
     'common.cancel': 'Cancel',
+
+    // Subscription
+    'subscription.membership': 'FitCoach membership',
+    'subscription.title': 'Train without limits.',
+    'subscription.subtitle': 'Choose the intelligence, uploads, and plan capacity that fit your goals.',
+    'subscription.currentPlan': 'Current Plan',
+    'subscription.billingPeriod': 'Billing period',
+    'subscription.manageBilling': 'Manage Billing',
+    'subscription.billingUnavailable': 'Billing is temporarily unavailable. Showing plans while the backend reconnects.',
+    'subscription.uploads': 'Uploads',
+    'subscription.messages': 'Chat Messages',
+    'subscription.generatedPlans': 'Generated Plans',
+    'subscription.unlimited': 'unlimited',
+    'subscription.limitReached': 'Limit reached. Upgrade to continue.',
+    'subscription.bestValue': 'Best Value',
+    'subscription.current': 'Current Plan',
+    'subscription.manageDowngrade': 'Manage downgrade',
+    'subscription.upgradeTo': 'Upgrade to',
+    'subscription.plan.free.name': 'Free',
+    'subscription.plan.plus.name': 'Plus',
+    'subscription.plan.pro.name': 'Pro',
+    'subscription.plan.free.uploads': '2 uploads',
+    'subscription.plan.free.messages': '30 chat messages',
+    'subscription.plan.free.plans': '1 generated plan',
+    'subscription.plan.plus.uploads': '15 uploads',
+    'subscription.plan.plus.messages': '60 chat messages',
+    'subscription.plan.plus.plans': '3 generated plans',
+    'subscription.plan.pro.uploads': '30 uploads',
+    'subscription.plan.pro.messages': '100 chat messages',
+    'subscription.plan.pro.plans': '10 generated plans',
+    'subscription.viewPlan': 'View plan',
+    'subscription.planCreditsUsed': 'Plan credits used',
+    'subscription.upgrade': 'Upgrade',
+    'subscription.generatedLimitTitle': 'You reached your generated plan limit',
+    'subscription.planLimitTitle': 'You reached your plan limit',
+    'subscription.generatedLimitDescription': 'Upgrade to create more personalized plans.',
+    'subscription.planLimitDescription': 'Upgrade to continue using your coach features.',
+    'subscription.maybeLater': 'Maybe later',
+
+    // Not found
+    'notFound.eyebrow': 'LOST REP',
+    'notFound.title': 'This route is off the training plan.',
+    'notFound.description': 'Return to your dashboard or explore workouts to get back on track.',
+    'notFound.home': 'Home',
+    'notFound.workouts': 'Workouts',
   },
   ar: {
     // Navigation
@@ -104,8 +157,16 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.coach': 'المدرب الذكي',
     'nav.profile': 'الملف',
     'nav.schedule': 'الجدول',
+    'nav.liveCoach': 'المدرب المباشر',
+    'nav.coachNotes': 'ملاحظات المدرب',
+    'nav.subscription': 'الاشتراك',
+    'nav.admin': 'الإدارة',
+    'nav.menu': 'القائمة',
+    'nav.login': 'دخول',
+    'nav.logout': 'خروج',
 
     // Hero
+    'hero.eyebrow': 'تدريب ذكي مصمم لك',
     'hero.title': 'مدرب لياقتك بالذكاء الاصطناعي، بتجربة جديدة.',
     'hero.subtitle': 'تدريب شخصي، وذكاء غذائي، وتقدم مباشر، وتوجيه بالذكاء الاصطناعي — مصمم لجسمك وأهدافك وأسلوب حياتك.',
     'hero.cta': 'ابدأ التدريب',
@@ -182,18 +243,66 @@ const translations: Record<Language, Record<string, string>> = {
     'common.error': 'صار خطأ',
     'common.save': 'حفظ',
     'common.cancel': 'إلغاء',
+
+    // Subscription
+    'subscription.membership': 'عضوية فت كوتش',
+    'subscription.title': 'تدرّب بلا حدود.',
+    'subscription.subtitle': 'اختر مستوى الذكاء وسعة الرفع والخطط التي تناسب أهدافك.',
+    'subscription.currentPlan': 'الخطة الحالية',
+    'subscription.billingPeriod': 'فترة الفوترة',
+    'subscription.manageBilling': 'إدارة الفوترة',
+    'subscription.billingUnavailable': 'الفوترة غير متاحة مؤقتًا. نعرض الخطط إلى أن يعاود الخادم الاتصال.',
+    'subscription.uploads': 'الملفات المرفوعة',
+    'subscription.messages': 'رسائل المحادثة',
+    'subscription.generatedPlans': 'الخطط المُنشأة',
+    'subscription.unlimited': 'غير محدود',
+    'subscription.limitReached': 'تم الوصول إلى الحد. قم بالترقية للمتابعة.',
+    'subscription.bestValue': 'أفضل قيمة',
+    'subscription.current': 'الخطة الحالية',
+    'subscription.manageDowngrade': 'إدارة التخفيض',
+    'subscription.upgradeTo': 'الترقية إلى',
+    'subscription.plan.free.name': 'مجاني',
+    'subscription.plan.plus.name': 'بلس',
+    'subscription.plan.pro.name': 'برو',
+    'subscription.plan.free.uploads': 'رفع ملفين',
+    'subscription.plan.free.messages': '30 رسالة محادثة',
+    'subscription.plan.free.plans': 'خطة واحدة مُنشأة',
+    'subscription.plan.plus.uploads': 'رفع 15 ملفًا',
+    'subscription.plan.plus.messages': '60 رسالة محادثة',
+    'subscription.plan.plus.plans': '3 خطط مُنشأة',
+    'subscription.plan.pro.uploads': 'رفع 30 ملفًا',
+    'subscription.plan.pro.messages': '100 رسالة محادثة',
+    'subscription.plan.pro.plans': '10 خطط مُنشأة',
+    'subscription.viewPlan': 'عرض الخطة',
+    'subscription.planCreditsUsed': 'تم استخدام رصيد الخطط',
+    'subscription.upgrade': 'ترقية',
+    'subscription.generatedLimitTitle': 'وصلت إلى حد الخطط المُنشأة',
+    'subscription.planLimitTitle': 'وصلت إلى حد خطتك',
+    'subscription.generatedLimitDescription': 'قم بالترقية لإنشاء المزيد من الخطط المخصصة.',
+    'subscription.planLimitDescription': 'قم بالترقية لمتابعة استخدام ميزات المدرب.',
+    'subscription.maybeLater': 'لاحقًا',
+
+    // Not found
+    'notFound.eyebrow': 'طريق مفقود',
+    'notFound.title': 'هذه الصفحة خارج خطتك التدريبية.',
+    'notFound.description': 'ارجع إلى لوحة التحكم أو استكشف التمارين للعودة إلى المسار.',
+    'notFound.home': 'الرئيسية',
+    'notFound.workouts': 'التمارين',
   },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => (
+    localStorage.getItem('fitcoach_language') === 'ar' ? 'ar' : 'en'
+  ));
   const dir = language === 'ar' ? 'rtl' : 'ltr';
 
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = dir;
+    localStorage.setItem('fitcoach_language', language);
   }, [dir, language]);
 
   const t = (key: string): string => {

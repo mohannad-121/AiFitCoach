@@ -1,21 +1,38 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Subscription, subscriptionRequest } from '@/lib/subscription';
 
-const FALLBACK_SUBSCRIPTION: Subscription = {
-  plan: 'free',
-  status: 'offline',
-  currentPeriodStart: null,
-  currentPeriodEnd: null,
-  isUnlimited: true,
-  usage: {
-    uploadsUsed: 0,
-    uploadsLimit: null,
-    chatMessagesUsed: 0,
-    chatMessagesLimit: null,
-    generatedPlansUsed: 0,
-    generatedPlansLimit: null,
-  },
+const toUsageCount = (value: unknown) => (
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0
+);
+
+const toUsageLimit = (value: unknown) => (
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+);
+
+const normalizeSubscription = (value: unknown): Subscription => {
+  const candidate = value && typeof value === 'object' ? value as Partial<Subscription> : {};
+  const usage: Partial<Subscription['usage']> = candidate.usage && typeof candidate.usage === 'object'
+    ? candidate.usage
+    : {};
+
+  return {
+    plan: candidate.plan === 'plus' || candidate.plan === 'pro' ? candidate.plan : 'free',
+    status: typeof candidate.status === 'string' && candidate.status.trim() ? candidate.status : 'offline',
+    currentPeriodStart: typeof candidate.currentPeriodStart === 'string' ? candidate.currentPeriodStart : null,
+    currentPeriodEnd: typeof candidate.currentPeriodEnd === 'string' ? candidate.currentPeriodEnd : null,
+    isUnlimited: typeof candidate.isUnlimited === 'boolean' ? candidate.isUnlimited : true,
+    usage: {
+      uploadsUsed: toUsageCount(usage.uploadsUsed),
+      uploadsLimit: toUsageLimit(usage.uploadsLimit),
+      chatMessagesUsed: toUsageCount(usage.chatMessagesUsed),
+      chatMessagesLimit: toUsageLimit(usage.chatMessagesLimit),
+      generatedPlansUsed: toUsageCount(usage.generatedPlansUsed),
+      generatedPlansLimit: toUsageLimit(usage.generatedPlansLimit),
+    },
+  };
 };
+
+const FALLBACK_SUBSCRIPTION = normalizeSubscription(null);
 
 export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -24,7 +41,7 @@ export function useSubscription() {
   const refresh = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      setSubscription(await subscriptionRequest('/api/subscription/me'));
+      setSubscription(normalizeSubscription(await subscriptionRequest('/api/subscription/me')));
     } catch (e) {
       setSubscription(FALLBACK_SUBSCRIPTION);
       setError(e instanceof Error ? e.message : 'Unable to load subscription.');

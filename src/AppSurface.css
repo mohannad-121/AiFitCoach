@@ -146,6 +146,31 @@
   box-shadow: 0 0 0 3px rgba(217, 108, 219, 0.1), 0 0 22px rgba(155, 98, 244, 0.08);
 }
 
+:root[dir='rtl'] .app-page-shell :is(input, textarea, [role='combobox']) {
+  direction: rtl;
+  text-align: start;
+}
+
+:root[dir='rtl'] .app-page-shell :is(input[type='number'], input[type='email'], input[type='password'], input[type='tel']) {
+  direction: ltr;
+  text-align: left;
+}
+
+:root[dir='rtl'] [data-radix-popper-content-wrapper] :is([role='menu'], [role='listbox'], [role='dialog']) {
+  direction: rtl;
+  text-align: start;
+}
+
+:root[dir='rtl'] .fitcoach-home .home-hero-content,
+:root[dir='rtl'] .fitcoach-home .home-section-heading.is-left {
+  text-align: start;
+}
+
+:root[dir='rtl'] .fitcoach-home .home-section-heading.is-left {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
 .app-page-shell button.bg-primary,
 .app-page-shell a.bg-primary {
   border-color: rgba(255, 255, 255, 0.25);

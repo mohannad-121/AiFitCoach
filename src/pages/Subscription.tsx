@@ -4,21 +4,22 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { subscriptionRequest } from '@/lib/subscription';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const plans = [
-  { id: 'free', name: 'Free', price: 0, items: ['2 uploads', '30 chat messages', '1 generated plan'] },
-  { id: 'plus', name: 'Plus', price: 10, items: ['15 uploads', '60 chat messages', '3 generated plans'] },
-  { id: 'pro', name: 'Pro', price: 15, items: ['30 uploads', '100 chat messages', '10 generated plans'], premium: true },
+  { id: 'free', price: 0, itemKeys: ['subscription.plan.free.uploads', 'subscription.plan.free.messages', 'subscription.plan.free.plans'], premium: false },
+  { id: 'plus', price: 10, itemKeys: ['subscription.plan.plus.uploads', 'subscription.plan.plus.messages', 'subscription.plan.plus.plans'], premium: false },
+  { id: 'pro', price: 15, itemKeys: ['subscription.plan.pro.uploads', 'subscription.plan.pro.messages', 'subscription.plan.pro.plans'], premium: true },
 ] as const;
 
-function Bar({ label, used, limit }: { label: string; used: number; limit: number | null }) {
+function Bar({ label, used, limit, unlimitedLabel, limitReachedLabel }: { label: string; used: number; limit: number | null; unlimitedLabel: string; limitReachedLabel: string }) {
   const percent = limit == null ? 0 : Math.min(100, (used / limit) * 100);
 
   return (
     <div>
       <div className="mb-1 flex justify-between text-xs text-slate-300">
         <span>{label}</span>
-        <span>{used} / {limit ?? 'unlimited'}</span>
+        <span dir="ltr">{used} / {limit ?? unlimitedLabel}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-white/10">
         <div
@@ -28,13 +29,28 @@ function Bar({ label, used, limit }: { label: string; used: number; limit: numbe
           style={{ width: `${limit == null ? 100 : percent}%` }}
         />
       </div>
-      {percent >= 100 && <p className="mt-1 text-xs text-rose-300">Limit reached. Upgrade to continue.</p>}
+      {percent >= 100 && <p className="mt-1 text-xs text-rose-300">{limitReachedLabel}</p>}
     </div>
   );
 }
 
 export function SubscriptionPage() {
+  const { language, t } = useLanguage();
   const { subscription, loading, error } = useSubscription();
+  const usage = {
+    uploadsUsed: subscription?.usage?.uploadsUsed ?? 0,
+    uploadsLimit: subscription?.usage?.uploadsLimit ?? null,
+    chatMessagesUsed: subscription?.usage?.chatMessagesUsed ?? 0,
+    chatMessagesLimit: subscription?.usage?.chatMessagesLimit ?? null,
+    generatedPlansUsed: subscription?.usage?.generatedPlansUsed ?? 0,
+    generatedPlansLimit: subscription?.usage?.generatedPlansLimit ?? null,
+  };
+  const statusLabel = language === 'ar'
+    ? ({ active: 'نشط', offline: 'غير متصل', canceled: 'ملغى', past_due: 'متأخر' }[subscription?.status.toLowerCase() || ''] || subscription?.status)
+    : subscription?.status;
+  const formatBillingDate = (value: string | null | undefined) => (
+    value ? new Date(value).toLocaleDateString(language === 'ar' ? 'ar-JO' : 'en-US') : '-'
+  );
 
   const checkout = async (plan: 'plus' | 'pro') => {
     const { url } = await subscriptionRequest('/api/billing/create-checkout-session', {
@@ -57,10 +73,10 @@ export function SubscriptionPage() {
         <div className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(circle_at_30%_10%,rgba(168,85,247,.22),transparent_40%),radial-gradient(circle_at_75%_15%,rgba(34,211,238,.15),transparent_35%)]" />
         <div className="relative text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/20 bg-fuchsia-400/10 px-4 py-2 text-xs uppercase tracking-[.25em] text-fuchsia-200">
-            <Sparkles className="h-4 w-4" /> FitCoach membership
+            <Sparkles className="h-4 w-4" /> {t('subscription.membership')}
           </span>
-          <h1 className="mt-5 text-4xl font-black md:text-6xl">Train without limits.</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-slate-300">Choose the intelligence, uploads, and plan capacity that fit your goals.</p>
+          <h1 className="mt-5 text-4xl font-black md:text-6xl">{t('subscription.title')}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-slate-300">{t('subscription.subtitle')}</p>
         </div>
 
         {loading ? (
@@ -69,36 +85,35 @@ export function SubscriptionPage() {
           <>
             {error && (
               <p className="relative mt-8 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-center text-sm text-amber-100">
-                Billing is temporarily unavailable. Showing plans while the backend reconnects.
+                {t('subscription.billingUnavailable')}
               </p>
             )}
 
             <section className="relative mt-10 rounded-3xl border border-white/10 bg-white/[.045] p-6 backdrop-blur-2xl">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm text-slate-400">Current Plan</p>
+                  <p className="text-sm text-slate-400">{t('subscription.currentPlan')}</p>
                   <h2 className="text-2xl font-bold capitalize">
-                    {subscription.plan}{' '}
+                    {t(`subscription.plan.${subscription.plan}.name`)}{' '}
                     <span className="ml-2 rounded-full bg-emerald-400/15 px-2 py-1 text-xs uppercase text-emerald-300">
-                      {subscription.status}
+                      {statusLabel}
                     </span>
                   </h2>
                 </div>
                 {subscription.plan !== 'free' && (
                   <Button variant="outline" onClick={() => void portal()}>
-                    Manage Billing
+                    {t('subscription.manageBilling')}
                   </Button>
                 )}
               </div>
 
               <p className="mb-5 text-xs text-slate-400">
-                Billing period: {subscription.currentPeriodStart ? new Date(subscription.currentPeriodStart).toLocaleDateString() : '-'} to{' '}
-                {subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : '-'}
+                {t('subscription.billingPeriod')}: <span dir="ltr">{formatBillingDate(subscription.currentPeriodStart)} - {formatBillingDate(subscription.currentPeriodEnd)}</span>
               </p>
               <div className="grid gap-5 md:grid-cols-3">
-                <Bar label="Uploads" used={subscription.usage.uploadsUsed} limit={subscription.usage.uploadsLimit} />
-                <Bar label="Chat Messages" used={subscription.usage.chatMessagesUsed} limit={subscription.usage.chatMessagesLimit} />
-                <Bar label="Generated Plans" used={subscription.usage.generatedPlansUsed} limit={subscription.usage.generatedPlansLimit} />
+                <Bar label={t('subscription.uploads')} used={usage.uploadsUsed} limit={usage.uploadsLimit} unlimitedLabel={t('subscription.unlimited')} limitReachedLabel={t('subscription.limitReached')} />
+                <Bar label={t('subscription.messages')} used={usage.chatMessagesUsed} limit={usage.chatMessagesLimit} unlimitedLabel={t('subscription.unlimited')} limitReachedLabel={t('subscription.limitReached')} />
+                <Bar label={t('subscription.generatedPlans')} used={usage.generatedPlansUsed} limit={usage.generatedPlansLimit} unlimitedLabel={t('subscription.unlimited')} limitReachedLabel={t('subscription.limitReached')} />
               </div>
             </section>
 
@@ -118,20 +133,20 @@ export function SubscriptionPage() {
                 >
                   {plan.premium && (
                     <span className="absolute right-5 top-5 rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 px-3 py-1 text-xs font-bold text-slate-950">
-                      Best Value
+                      {t('subscription.bestValue')}
                     </span>
                   )}
                   <Crown className={`h-8 w-8 ${plan.premium ? 'text-fuchsia-300' : 'text-violet-300'}`} />
-                  <h3 className="mt-5 text-2xl font-bold">{plan.name}</h3>
-                  <p className="mt-2 text-4xl font-black">
+                  <h3 className="mt-5 text-2xl font-bold">{t(`subscription.plan.${plan.id}.name`)}</h3>
+                  <p dir="ltr" className="mt-2 text-4xl font-black">
                     ${plan.price}
                     <span className="text-sm font-normal text-slate-400">/month</span>
                   </p>
                   <ul className="my-7 space-y-3 text-sm text-slate-300">
-                    {plan.items.map((item) => (
-                      <li key={item} className="flex gap-2">
+                    {plan.itemKeys.map((itemKey) => (
+                      <li key={itemKey} className="flex gap-2">
                         <Check className="h-4 w-4 text-cyan-300" />
-                        {item}
+                        {t(itemKey)}
                       </li>
                     ))}
                   </ul>
@@ -141,12 +156,12 @@ export function SubscriptionPage() {
                     className="w-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-500"
                   >
                     {subscription.plan === plan.id
-                      ? 'Current Plan'
+                      ? t('subscription.current')
                       : plan.id === 'free'
                         ? subscription.plan === 'free'
-                          ? 'Current Plan'
-                          : 'Manage downgrade'
-                        : `Upgrade to ${plan.name}`}
+                          ? t('subscription.current')
+                          : t('subscription.manageDowngrade')
+                        : `${t('subscription.upgradeTo')} ${t(`subscription.plan.${plan.id}.name`)}`}
                   </Button>
                 </motion.article>
               ))}

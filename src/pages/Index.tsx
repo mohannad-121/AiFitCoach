@@ -4,6 +4,7 @@ import {
   Activity,
   Apple,
   ArrowDown,
+  ArrowLeft,
   ArrowRight,
   BrainCircuit,
   CalendarCheck,
@@ -71,7 +72,7 @@ const particles = Array.from({ length: 10 }, (_, index) => ({
 }));
 
 const Index = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { isOnboarded } = useUser();
   const { user } = useAuth();
   const heroRef = useRef<HTMLElement>(null);
@@ -128,7 +129,7 @@ const Index = () => {
               variants={{ visible: { transition: { staggerChildren: 0.09, delayChildren: 0.08 } } }}
               >
               <motion.div variants={reveal} transition={{ duration: 0.65 }} className="home-eyebrow">
-                <ScanLine /> AI TRAINING, BUILT AROUND YOU
+                <ScanLine /> {t('hero.eyebrow')}
               </motion.div>
               <motion.h1 variants={reveal} transition={{ duration: 0.7 }} id="home-hero-title">
                 <span className="home-title-desktop">{heroTitle}</span>
@@ -142,7 +143,7 @@ const Index = () => {
               </motion.p>
               <motion.div variants={reveal} transition={{ duration: 0.7 }} className="home-hero-actions">
                 <Link to={primaryDestination} className={cn(buttonVariants({ variant: 'hero', size: 'xl' }), 'home-cta home-cta-primary')}>
-                  <span>{t('hero.cta')}</span><ArrowRight />
+                  <span>{t('hero.cta')}</span>{language === 'ar' ? <ArrowLeft /> : <ArrowRight />}
                 </Link>
                 <a href="#ai-coaching" className={cn(buttonVariants({ variant: 'glass', size: 'xl' }), 'home-cta home-cta-secondary')}>
                   <Sparkles /><span>{t('hero.secondary')}</span>

@@ -17,12 +17,12 @@ export function Navbar() {
   const navItems = [
     { path: '/', icon: Home, label: t('nav.home') },
     { path: '/workouts', icon: Dumbbell, label: t('nav.workouts') },
-    { path: '/live-coach', icon: ScanLine, label: language === 'ar' ? 'مباشر' : 'Live Coach' },
+    { path: '/live-coach', icon: ScanLine, label: t('nav.liveCoach') },
     { path: '/coach', icon: MessageCircle, label: t('nav.coach') },
-    { path: '/schedule', icon: Calendar, label: language === 'ar' ? 'الجدول' : 'Schedule' },
-    { path: '/coach-notifications', icon: BellRing, label: language === 'ar' ? 'إشعارات المدرب' : 'Coach Notes' },
+    { path: '/schedule', icon: Calendar, label: t('nav.schedule') },
+    { path: '/coach-notifications', icon: BellRing, label: t('nav.coachNotes') },
     { path: '/profile', icon: User, label: t('nav.profile') },
-    { path: '/subscription', icon: Crown, label: language === 'ar' ? 'الاشتراك' : 'Subscription' },
+    { path: '/subscription', icon: Crown, label: t('nav.subscription') },
   ];
 
   const mobileNavItems = navItems.filter((item) => ['/', '/workouts', '/live-coach', '/coach', '/schedule'].includes(item.path));
@@ -57,7 +57,7 @@ export function Navbar() {
                     isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  <item.icon className="w-4 h-4 mr-2" />
+                  <item.icon className="w-4 h-4 me-2" />
                   {item.label}
                 </Link>
               );
@@ -82,7 +82,7 @@ export function Navbar() {
               onClick={toggleLanguage}
               className="border-border/50 text-muted-foreground hover:text-foreground"
             >
-              <Globe className="w-4 h-4 mr-1" />
+              <Globe className="w-4 h-4 me-1" />
               {language === 'en' ? 'عربي' : 'EN'}
             </Button>
 
@@ -96,19 +96,19 @@ export function Navbar() {
                   : 'border-border/50 text-muted-foreground hover:text-foreground'
               )}
             >
-              <Shield className="w-4 h-4 md:mr-1" />
-              <span className="hidden md:inline">{language === 'ar' ? 'الإدارة' : 'Admin'}</span>
+              <Shield className="w-4 h-4 md:me-1" />
+              <span className="hidden md:inline">{t('nav.admin')}</span>
             </Link>
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="xl:hidden border-border/50" aria-label="Open app menu">
+                <Button variant="outline" size="icon" className="xl:hidden border-border/50" aria-label={t('nav.menu')}>
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side={language === 'ar' ? 'left' : 'right'} className="mobile-app-menu border-border/60 bg-background/95 pt-14 backdrop-blur-xl">
                 <SheetHeader className="text-start">
-                  <SheetTitle>{language === 'ar' ? 'القائمة' : 'More'}</SheetTitle>
+                  <SheetTitle>{t('nav.menu')}</SheetTitle>
                 </SheetHeader>
                 <div className="mt-6 grid gap-2">
                   {navItems.map((item) => (
@@ -122,21 +122,21 @@ export function Navbar() {
                   <SheetClose asChild>
                     <Link to="/admin" className={cn(buttonVariants({ variant: location.pathname === '/admin' ? 'default' : 'ghost' }), 'h-12 justify-start gap-3')}>
                       <Shield className="h-5 w-5" />
-                      {language === 'ar' ? 'الإدارة' : 'Admin'}
+                      {t('nav.admin')}
                     </Link>
                   </SheetClose>
                   {user ? (
                     <SheetClose asChild>
                       <Button variant="ghost" onClick={signOut} className="h-12 justify-start gap-3">
                         <LogOut className="h-5 w-5" />
-                        {language === 'ar' ? 'خروج' : 'Logout'}
+                        {t('nav.logout')}
                       </Button>
                     </SheetClose>
                   ) : (
                     <SheetClose asChild>
                       <Link to="/auth?force=1" className={cn(buttonVariants({ variant: 'ghost' }), 'h-12 justify-start gap-3')}>
                         <LogIn className="h-5 w-5" />
-                        {language === 'ar' ? 'دخول' : 'Login'}
+                        {t('nav.login')}
                       </Link>
                     </SheetClose>
                   )}
@@ -146,8 +146,8 @@ export function Navbar() {
 
             {user ? (
               <Button variant="ghost" size="sm" onClick={signOut} className="hidden xl:flex text-muted-foreground hover:text-foreground">
-                <LogOut className="w-4 h-4 mr-1" />
-                {language === 'ar' ? 'خروج' : 'Logout'}
+                <LogOut className="w-4 h-4 me-1" />
+                {t('nav.logout')}
               </Button>
             ) : (
               <Link
@@ -157,8 +157,8 @@ export function Navbar() {
                   'hidden xl:flex text-muted-foreground hover:text-foreground'
                 )}
               >
-                <LogIn className="w-4 h-4 mr-1" />
-                {language === 'ar' ? 'دخول' : 'Login'}
+                <LogIn className="w-4 h-4 me-1" />
+                {t('nav.login')}
               </Link>
             )}
           </div>

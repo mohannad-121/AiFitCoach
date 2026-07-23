@@ -66,6 +66,10 @@
   text-wrap: balance;
 }
 
+.schedule-kicker {
+  display: none;
+}
+
 .schedule-header p {
   line-height: 1.75;
   text-wrap: pretty;
@@ -543,5 +547,330 @@
   .schedule-task-row,
   .schedule-chip {
     transition: none;
+  }
+}
+
+/* Compact schedule redesign: hierarchy comes from the workspace, not decoration. */
+.schedule-page {
+  --schedule-line: hsl(var(--border) / 0.2);
+  --schedule-surface: hsl(231 28% 12% / 0.9);
+  --schedule-surface-strong: hsl(231 30% 14% / 0.96);
+  --schedule-panel-shadow: 0 18px 42px hsl(240 55% 4% / 0.22);
+  --schedule-glow: 0 0 0 1px hsl(var(--primary) / 0.12), 0 18px 42px hsl(270 90% 55% / 0.1);
+  background:
+    radial-gradient(circle at 6% 0%, hsl(281 90% 60% / 0.09), transparent 25%),
+    linear-gradient(180deg, hsl(234 38% 8%) 0%, hsl(234 45% 6%) 100%);
+}
+
+.schedule-page::before,
+.schedule-page::after {
+  display: none;
+}
+
+.schedule-container {
+  max-width: 78rem;
+  padding-bottom: 3rem;
+}
+
+.schedule-header {
+  margin-bottom: 1.25rem;
+}
+
+.schedule-header-top {
+  gap: 1rem;
+}
+
+.schedule-header h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+
+.schedule-header p {
+  line-height: 1.45;
+}
+
+.schedule-header-actions {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.schedule-date-badge {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.schedule-date-badge span {
+  display: none;
+}
+
+.schedule-date-badge strong {
+  font-size: 0.88rem;
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+
+.schedule-mode-switcher {
+  border-radius: 0.65rem;
+  border-color: hsl(var(--border) / 0.32);
+  padding: 0.2rem;
+  box-shadow: none;
+  background: hsl(var(--card) / 0.56);
+}
+
+.schedule-mode-switcher button {
+  min-width: 0;
+  padding: 0.48rem 0.7rem;
+  border-radius: 0.48rem;
+}
+
+.schedule-mode-switcher button.bg-primary {
+  box-shadow: none;
+  background: hsl(var(--primary));
+}
+
+.schedule-focus-bar {
+  gap: 0;
+  border-radius: 0.7rem;
+  border-color: hsl(var(--border) / 0.28);
+  background: var(--schedule-surface);
+  box-shadow: none;
+}
+
+.schedule-focus-bar > div {
+  padding: 0.85rem 1rem;
+  background: transparent;
+}
+
+.schedule-focus-bar > div + div {
+  border-inline-start: 1px solid hsl(var(--border) / 0.22);
+}
+
+.schedule-focus-bar strong {
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.schedule-focus-bar span {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+}
+
+.schedule-command-grid {
+  display: none;
+}
+
+.schedule-calendar,
+.schedule-plan-panel,
+.schedule-next-panel,
+.schedule-log-panel,
+.schedule-library .glass-card {
+  border-radius: 0.75rem;
+  border-color: hsl(var(--border) / 0.26);
+  background: var(--schedule-surface);
+  box-shadow: var(--schedule-panel-shadow);
+  backdrop-filter: none;
+}
+
+.schedule-calendar {
+  padding: 0.85rem;
+}
+
+.schedule-calendar .grid-cols-7 {
+  gap: 0.4rem;
+}
+
+.schedule-calendar .grid-cols-7 button {
+  min-height: 62px;
+  border-radius: 0.55rem;
+  border: 1px solid transparent;
+  backdrop-filter: none;
+}
+
+.schedule-calendar .grid-cols-7 button:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.schedule-calendar .grid-cols-7 button > span:first-child {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.schedule-calendar .grid-cols-7 button > span:nth-child(2) {
+  font-size: 1rem;
+}
+
+.schedule-main-grid {
+  gap: 1rem;
+}
+
+.schedule-plan-panel {
+  border-color: hsl(var(--primary) / 0.2);
+}
+
+.schedule-day-stats {
+  display: none;
+}
+
+.schedule-task-row {
+  min-height: 0;
+  padding: 0.8rem;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid hsl(var(--border) / 0.18);
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.schedule-task-row:first-child {
+  border-top: 1px solid hsl(var(--border) / 0.18);
+}
+
+.schedule-task-row:hover {
+  transform: none;
+  border-color: hsl(var(--border) / 0.3);
+  box-shadow: none;
+}
+
+.schedule-next-panel,
+.schedule-log-panel {
+  padding: 1rem;
+}
+
+.schedule-next-panel {
+  position: static;
+}
+
+.schedule-next-action {
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.schedule-next-icon {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+  border-radius: 0.45rem;
+  background: hsl(var(--primary) / 0.14);
+}
+
+.schedule-summary-grid {
+  gap: 0;
+  border-top: 1px solid hsl(var(--border) / 0.18);
+}
+
+.schedule-summary-grid > div {
+  padding: 0.7rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.schedule-summary-grid > div:nth-child(4) {
+  display: none;
+}
+
+.schedule-insight-panel {
+  display: none;
+}
+
+.schedule-chip-row {
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.schedule-chip {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.45rem;
+  font-size: 0.72rem;
+}
+
+.schedule-chip:hover {
+  transform: none;
+}
+
+.schedule-chip.is-active {
+  box-shadow: none;
+  background: hsl(var(--primary));
+}
+
+.schedule-log-panel textarea,
+.schedule-log-panel input {
+  border-radius: 0.5rem;
+  background: hsl(var(--background) / 0.45);
+}
+
+.schedule-library {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+}
+
+.schedule-library .glass-card {
+  padding: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .schedule-container {
+    padding-inline: 1rem;
+    padding-top: 5.25rem;
+  }
+
+  .schedule-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .schedule-mode-switcher {
+    width: auto;
+  }
+
+  .schedule-mode-switcher button {
+    width: auto;
+  }
+
+  .schedule-focus-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-focus-bar > div + div {
+    border-top: 1px solid hsl(var(--border) / 0.22);
+    border-inline-start: 0;
+  }
+
+  .schedule-calendar {
+    overflow: hidden;
+  }
+
+  .schedule-calendar .grid-cols-7 {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+    scrollbar-width: none;
+  }
+
+  .schedule-calendar .grid-cols-7::-webkit-scrollbar {
+    display: none;
+  }
+
+  .schedule-calendar .grid-cols-7 button {
+    width: 58px;
+    min-width: 58px;
+  }
+
+  .schedule-plan-panel,
+  .schedule-next-panel,
+  .schedule-log-panel {
+    padding: 1rem;
+    border-radius: 0.7rem;
   }
 }
