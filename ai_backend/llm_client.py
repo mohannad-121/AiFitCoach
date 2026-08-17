@@ -62,7 +62,7 @@ class LLMClient:
         lowered = message.lower()
         provider_name = "Gemini" if provider == "gemini" else "OpenAI"
         key_name = "GEMINI_API_KEY" if provider == "gemini" else "OPENAI_API_KEY"
-        model_example = "gemini-2.5-flash" if provider == "gemini" else "gpt-4o-mini"
+        model_example = "gemini-3.6-flash" if provider == "gemini" else "gpt-4o-mini"
 
         if status_code == 401:
             return f"{provider_name} authentication failed. Check {key_name} in Render."

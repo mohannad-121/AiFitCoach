@@ -21,9 +21,9 @@ services:
       - key: LLM_PROVIDER
         value: gemini
       - key: LLM_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.6-flash
       - key: GEMINI_VISION_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.6-flash
       - key: TRAINING_PIPELINE_ENABLED
         value: "0"
       - key: LOW_MEMORY_MODE

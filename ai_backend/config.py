@@ -15,9 +15,9 @@ GEMINI_OPENAI_BASE_URL = os.getenv(
     "GEMINI_OPENAI_BASE_URL",
     "https://generativelanguage.googleapis.com/v1beta/openai/",
 )
-LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.6-flash")
 OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", LLM_MODEL or "gpt-4o-mini")
-GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", LLM_MODEL or "gemini-2.5-flash")
+GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", LLM_MODEL or "gemini-3.6-flash")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
 # Auto mode prefers Gemini, then OpenAI, then a local Ollama model.
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto").lower()
