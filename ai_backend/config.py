@@ -10,10 +10,16 @@ load_dotenv(dotenv_path=BACKEND_DIR / ".env", override=True)
 
 # LLM Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_OPENAI_BASE_URL = os.getenv(
+    "GEMINI_OPENAI_BASE_URL",
+    "https://generativelanguage.googleapis.com/v1beta/openai/",
+)
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", LLM_MODEL or "gpt-4o-mini")
+GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", LLM_MODEL or "gemini-2.5-flash")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-# Prefer auto so hosted deployments can immediately use OpenAI when a key exists.
+# Auto mode prefers Gemini, then OpenAI, then a local Ollama model.
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto").lower()
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")

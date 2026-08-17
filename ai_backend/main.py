@@ -526,7 +526,7 @@ def _resolve_chat_response_mode() -> str:
     if configured in {'dataset_only', 'hybrid', 'llm', 'smart'}:
         return configured
     if configured == 'auto':
-        return 'smart' if getattr(LLM, 'active_provider', '') in {'openai', 'ollama'} else 'dataset_only'
+        return 'smart' if getattr(LLM, 'active_provider', '') in {'gemini', 'openai', 'ollama'} else 'dataset_only'
     return 'dataset_only'
 
 

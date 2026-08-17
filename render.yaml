@@ -19,11 +19,11 @@ services:
       - key: CHAT_RESPONSE_MODE
         value: smart
       - key: LLM_PROVIDER
-        value: auto
+        value: gemini
       - key: LLM_MODEL
-        value: gpt-4o-mini
-      - key: OPENAI_VISION_MODEL
-        value: gpt-4o-mini
+        value: gemini-2.5-flash
+      - key: GEMINI_VISION_MODEL
+        value: gemini-2.5-flash
       - key: TRAINING_PIPELINE_ENABLED
         value: "0"
       - key: LOW_MEMORY_MODE
@@ -32,7 +32,7 @@ services:
         value: llama3.2:3b
       - key: OLLAMA_BASE_URL
         sync: false
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: VITE_SUPABASE_URL
         sync: false
