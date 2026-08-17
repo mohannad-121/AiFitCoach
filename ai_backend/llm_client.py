@@ -17,6 +17,9 @@ except Exception:  # pragma: no cover - optional dependency in Ollama-only setup
     OpenAI = None
 
 from config import (
+    GEMINI_API_KEY,
+    GEMINI_OPENAI_BASE_URL,
+    GEMINI_VISION_MODEL,
     LLM_MODEL,
     LLM_PROVIDER,
     LLM_TEMPERATURE,
@@ -32,7 +35,7 @@ from utils_logger import log_error
 
 
 class LLMClient:
-    """LLM wrapper supporting OpenAI and local Ollama."""
+    """LLM wrapper supporting Gemini, OpenAI, and local Ollama."""
 
     _ollama_start_lock = Lock()
 
@@ -41,30 +44,42 @@ class LLMClient:
         self.temperature = temperature
         self.provider = (LLM_PROVIDER or "auto").lower()
         self.has_openai_key = bool(OPENAI_API_KEY) and (OpenAI is not None)
-        self._openai_client = OpenAI(api_key=OPENAI_API_KEY) if self.has_openai_key else None
+        self.has_gemini_key = bool(GEMINI_API_KEY) and (OpenAI is not None)
+        self._openai_client = None
+        if self.has_gemini_key and (self.provider == "gemini" or self.provider == "auto"):
+            self._openai_client = OpenAI(
+                api_key=GEMINI_API_KEY,
+                base_url=GEMINI_OPENAI_BASE_URL,
+            )
+        elif self.has_openai_key:
+            self._openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
     @staticmethod
-    def _openai_user_error(exc: Exception) -> str:
+    def _provider_user_error(exc: Exception, provider: str) -> str:
         status_code = getattr(exc, "status_code", None)
         error_code = getattr(exc, "code", None)
         message = str(getattr(exc, "message", "") or exc)
         lowered = message.lower()
+        provider_name = "Gemini" if provider == "gemini" else "OpenAI"
+        key_name = "GEMINI_API_KEY" if provider == "gemini" else "OPENAI_API_KEY"
+        model_example = "gemini-2.5-flash" if provider == "gemini" else "gpt-4o-mini"
 
         if status_code == 401:
-            return "OpenAI authentication failed. Check OPENAI_API_KEY in Render."
+            return f"{provider_name} authentication failed. Check {key_name} in Render."
         if status_code == 429 or error_code == "insufficient_quota" or "insufficient_quota" in lowered or "quota" in lowered:
-            return "OpenAI quota or billing limit was reached. Check your OpenAI billing/credits."
+            return f"{provider_name} quota or billing limit was reached. Check the provider's billing and limits."
         if status_code in {400, 404} and ("model" in lowered or error_code in {"model_not_found", "invalid_model"}):
-            return "OpenAI model is unavailable for this key. Set LLM_MODEL=gpt-4o-mini in Render."
+            return f"{provider_name} model is unavailable for this key. Set LLM_MODEL={model_example} in Render."
         if "connection" in lowered or "timeout" in lowered or "timed out" in lowered:
-            return "OpenAI request timed out. Please try again."
+            return f"{provider_name} request timed out. Please try again."
         return "I hit a temporary AI error. Please try again."
 
     @property
     def active_provider(self) -> str:
-        if self.provider in {"openai", "ollama"}:
+        if self.provider in {"gemini", "openai", "ollama"}:
             return self.provider
-        # auto mode: prefer OpenAI when key exists, otherwise Ollama.
+        if self.has_gemini_key:
+            return "gemini"
         return "openai" if self.has_openai_key else "ollama"
 
     @property
@@ -75,6 +90,8 @@ class LLMClient:
 
     @property
     def active_vision_model(self) -> str | None:
+        if self.active_provider == "gemini":
+            return GEMINI_VISION_MODEL
         if self.active_provider == "openai":
             return OPENAI_VISION_MODEL
         candidate = str(OLLAMA_VISION_MODEL or "").strip() or OLLAMA_MODEL
@@ -88,7 +105,7 @@ class LLMClient:
         tools: list[dict[str, Any]] | None = None,
     ) -> str:
         provider = self.active_provider
-        if provider == "openai":
+        if provider in {"gemini", "openai"}:
             return self._chat_openai(messages, temperature, max_tokens, tools)
         return self._chat_ollama(messages, temperature, max_tokens)
 
@@ -99,7 +116,7 @@ class LLMClient:
         max_tokens: int | None = None,
     ) -> Iterator[str]:
         provider = self.active_provider
-        if provider == "openai":
+        if provider in {"gemini", "openai"}:
             yield from self._chat_openai_stream(messages, temperature, max_tokens)
             return
         yield from self._chat_ollama_stream(messages, temperature, max_tokens)
@@ -112,16 +129,17 @@ class LLMClient:
         max_tokens: int | None = None,
     ) -> str | None:
         provider = self.active_provider
-        if provider == "openai":
+        if provider in {"gemini", "openai"}:
             return self._analyze_image_openai(image_bytes, mime_type, prompt, max_tokens)
         return self._analyze_image_ollama(image_bytes, prompt, max_tokens)
 
     def vision_support_status(self) -> tuple[bool, str]:
         provider = self.active_provider
-        if provider == "openai":
-            if self.has_openai_key and self._openai_client is not None:
+        if provider in {"gemini", "openai"}:
+            if self._openai_client is not None:
                 return True, ""
-            return False, "OpenAI vision is disabled because OPENAI_API_KEY is not configured."
+            key_name = "GEMINI_API_KEY" if provider == "gemini" else "OPENAI_API_KEY"
+            return False, f"{provider.title()} vision is disabled because {key_name} is not configured."
 
         vision_model = str(OLLAMA_VISION_MODEL or "").strip() or OLLAMA_MODEL
         if not self._ollama_model_supports_vision(vision_model):
@@ -138,10 +156,12 @@ class LLMClient:
         max_tokens: int | None,
         tools: list[dict[str, Any]] | None,
     ) -> str:
-        if not self.has_openai_key or self._openai_client is None:
+        provider = self.active_provider
+        if self._openai_client is None:
+            key_name = "GEMINI_API_KEY" if provider == "gemini" else "OPENAI_API_KEY"
             return (
-                "OpenAI key is not configured. "
-                "Use OPENAI_API_KEY or switch to Ollama (LLM_PROVIDER=ollama)."
+                f"{provider.title()} key is not configured. "
+                f"Use {key_name} or switch to Ollama (LLM_PROVIDER=ollama)."
             )
 
         try:
@@ -189,7 +209,7 @@ class LLMClient:
                     "type": type(exc).__name__,
                 },
             )
-            return self._openai_user_error(exc)
+            return self._provider_user_error(exc, provider)
 
     def _chat_openai_stream(
         self,
@@ -197,10 +217,12 @@ class LLMClient:
         temperature: float | None,
         max_tokens: int | None,
     ) -> Iterator[str]:
-        if not self.has_openai_key or self._openai_client is None:
+        provider = self.active_provider
+        if self._openai_client is None:
+            key_name = "GEMINI_API_KEY" if provider == "gemini" else "OPENAI_API_KEY"
             yield (
-                "OpenAI key is not configured. "
-                "Use OPENAI_API_KEY or switch to Ollama (LLM_PROVIDER=ollama)."
+                f"{provider.title()} key is not configured. "
+                f"Use {key_name} or switch to Ollama (LLM_PROVIDER=ollama)."
             )
             return
 
@@ -232,7 +254,7 @@ class LLMClient:
                     "type": type(exc).__name__,
                 },
             )
-            yield self._openai_user_error(exc)
+            yield self._provider_user_error(exc, provider)
 
     def _analyze_image_openai(
         self,
@@ -241,11 +263,13 @@ class LLMClient:
         prompt: str,
         max_tokens: int | None,
     ) -> str | None:
-        if not self.has_openai_key or self._openai_client is None:
+        if self._openai_client is None:
             return None
 
+        vision_model = GEMINI_VISION_MODEL if self.active_provider == "gemini" else OPENAI_VISION_MODEL
+
         params: dict[str, Any] = {
-            "model": OPENAI_VISION_MODEL,
+            "model": vision_model,
             "messages": [
                 {
                     "role": "user",
@@ -272,7 +296,7 @@ class LLMClient:
             text = str(response.choices[0].message.content or "").strip()
             return text or None
         except Exception as exc:
-            log_error("LLM_OPENAI_VISION_ERROR", None, exc, {"model": OPENAI_VISION_MODEL})
+            log_error("LLM_OPENAI_VISION_ERROR", None, exc, {"model": vision_model})
             return None
 
     def _chat_ollama(

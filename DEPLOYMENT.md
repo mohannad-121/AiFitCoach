@@ -21,7 +21,7 @@ Backend:
 - `VITE_SUPABASE_ANON_KEY`
 - `OLLAMA_BASE_URL` if using Ollama
 - `OLLAMA_MODEL` if using Ollama
-- `OPENAI_API_KEY` if using OpenAI-compatible mode
+- `GEMINI_API_KEY` with `LLM_PROVIDER=gemini` (the default), or `OPENAI_API_KEY` if deliberately using OpenAI
 
 ## Render
 
