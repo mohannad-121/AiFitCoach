@@ -13,12 +13,16 @@ import { useUser } from '@/contexts/UserContext';
 import { exercises as exerciseCatalog, type Exercise } from '@/data/exercises';
 import { localizedLabel, repairMojibake } from '@/lib/text';
 import { getExerciseTrackingConfig, normalizeExerciseName, type ExerciseTrackingConfig } from '@/lib/exerciseTracking';
+import { muscleGroups, muscleLabel } from '@/lib/trainingCatalog';
+import { ReferenceVideos } from '@/components/workout/ReferenceVideos';
+import { advanceRep, emptyRepCounter } from '@/lib/repCounter';
+import './TrainingFlow.css';
 
 type CameraState = 'idle' | 'starting' | 'live' | 'error';
 type CameraIssue = 'permission-denied' | 'no-camera' | 'unsupported' | 'unknown' | null;
 type DifficultyLevel = 'normal' | 'advanced';
 type CueSeverity = 'good' | 'caution' | 'correction' | 'camera-setup';
-type CollectionExercise = 'squat' | 'push-up' | 'plank';
+type CollectionExercise = SupportedExercise;
 type CollectionLabel = 'correct' | 'incorrect' | 'uncertain' | 'setup_bad';
 type CollectionCameraAngle = 'front' | 'side' | 'front_45' | 'unknown';
 type CollectionDifficulty = 'beginner' | 'normal' | 'advanced';
@@ -145,7 +149,7 @@ const COLLECTION_SAMPLE_INTERVAL_MS = 350;
 const DATA_COLLECTION_APP_VERSION = 'live-coach-collection-v1';
 const RECENT_SESSIONS_STORAGE_KEY = 'aifitcoach_livecoach_recent_sessions';
 const RECENT_SESSIONS_LIMIT = 3;
-const COLLECTION_EXERCISES: CollectionExercise[] = ['squat', 'push-up', 'plank'];
+const COLLECTION_EXERCISES: CollectionExercise[] = ['squat', 'push-up', 'plank', 'lunge', 'curl', 'lateral-raise', 'shoulder-press', 'hip-hinge', 'bridge'];
 const LANDMARK_NAMES = [
   'nose',
   'left_eye_inner',
@@ -182,6 +186,12 @@ const LANDMARK_NAMES = [
   'right_foot_index',
 ] as const;
 const COLLECTION_MISTAKES: Record<CollectionExercise, string[]> = {
+  lunge: ['none', 'torso_lean', 'partial_range', 'setup_bad'],
+  curl: ['none', 'torso_swing', 'elbow_drift', 'partial_range', 'setup_bad'],
+  'lateral-raise': ['none', 'torso_swing', 'arms_too_high', 'setup_bad'],
+  'shoulder-press': ['none', 'torso_lean', 'partial_range', 'setup_bad'],
+  'hip-hinge': ['none', 'excess_knee_bend', 'partial_range', 'setup_bad'],
+  bridge: ['none', 'feet_too_far', 'partial_range', 'setup_bad'],
   squat: ['none', 'not_deep_enough', 'too_deep_unstable', 'chest_falling_forward', 'knees_caving_in', 'heels_lifting', 'uneven_weight_shift', 'setup_bad'],
   'push-up': ['none', 'hips_sagging', 'hips_too_high', 'partial_range', 'elbows_flared', 'head_dropping', 'uneven_arm_load', 'setup_bad'],
   plank: ['none', 'hips_sagging', 'hips_too_high', 'shoulders_not_stacked', 'knees_bent', 'head_dropping', 'unstable_hold', 'setup_bad'],
@@ -538,6 +548,14 @@ const cueCopy: Record<string, { en: string; ar: string | string[] }> = {
     en: 'Bend your back knee.',
     ar: 'اثني الركبة اللي ورا شوي',
   },
+  steady_torso: { en: 'Keep your torso steady.', ar: 'ثبّت جذعك وتجنب التأرجح.' },
+  elbows_close: { en: 'Keep the upper arms closer to your sides.', ar: 'أبقِ العضد قريبًا من جانبي الجسم.' },
+  shoulder_height: { en: 'Keep the raise near shoulder height.', ar: 'خفّض الذراعين إلى مستوى الكتف.' },
+  press_setup: { en: 'Bring the weights to shoulder level to start.', ar: 'ابدأ واليدان عند مستوى الكتف.' },
+  hinge_not_squat: { en: 'Move the hips back with a soft knee bend.', ar: 'ارجع بالورك مع ثني بسيط للركبة.' },
+  bridge_setup: { en: 'Lie down and show the side of your body.', ar: 'استلقِ وأظهر جسمك من الجانب.' },
+  bridge_feet: { en: 'Bring your feet closer and bend the knees.', ar: 'قرّب القدمين واثنِ الركبتين.' },
+  both_legs_required: { en: 'Keep both legs visible.', ar: 'أظهر الساقين كاملتين.' },
 };
 
 function cueFromKey(key: string, severity: CueSeverity, speak = true): CoachingCue {
@@ -573,7 +591,7 @@ function createCoachingCue(
     };
   }
   if (!poseQuality.usable && poseQuality.issue) return cueFromKey(poseQuality.issue, 'camera-setup');
-  if (trackingSupport === 'basic') return cueFromKey('basic_tracking', 'caution', false);
+  if (trackingSupport === 'basic' && feedback.message === 'basic_tracking') return cueFromKey('basic_tracking', 'caution', false);
   if (trackingSupport === 'unsupported') return cueFromKey('unsupported_exercise', 'camera-setup', false);
   return cueFromKey(feedback.message, severityFromFeedback(feedback));
 }
@@ -642,6 +660,14 @@ export function LiveCoachPage() {
   const [exercise, setExercise] = useState(initialExercise?.id ?? 'plank');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(initialExercise?.difficulty ?? 'normal');
   const [exerciseQuery, setExerciseQuery] = useState('');
+  const [muscleFilter, setMuscleFilter] = useState('all');
+  const [genderChoice, setGenderChoice] = useState<string | null>(null);
+  const [placeChoice, setPlaceChoice] = useState<string | null>(null);
+  const genderFilter = genderChoice ?? profile?.gender ?? 'all';
+  const placeFilter = placeChoice ?? profile?.location ?? 'all';
+  const [levelFilter, setLevelFilter] = useState('all');
+  const repCounterRef = useRef(emptyRepCounter());
+  const [completedReps, setCompletedReps] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [bodyDetected, setBodyDetected] = useState(false);
@@ -668,9 +694,9 @@ export function LiveCoachPage() {
     ? localizedLabel(selectedExercise.name, selectedExercise.nameAr, language)
     : text('Exercise', 'التمرين');
   const selectedTracking = selectedExercise?.tracking ?? null;
-  const supportedPose = selectedTracking?.support === 'full' ? selectedTracking.pose : null;
+  const supportedPose = selectedTracking?.pose ?? null;
   const canStartSession = selectedTracking?.support !== 'unsupported';
-  const collectionExercise = selectedTracking?.support === 'full' && selectedTracking.pose && COLLECTION_EXERCISES.includes(selectedTracking.pose as CollectionExercise)
+  const collectionExercise = selectedTracking?.pose && COLLECTION_EXERCISES.includes(selectedTracking.pose as CollectionExercise)
     ? selectedTracking.pose as CollectionExercise
     : null;
   const collectionMistakeOptions = collectionExercise ? COLLECTION_MISTAKES[collectionExercise] : ['none'];
@@ -678,13 +704,15 @@ export function LiveCoachPage() {
   const filteredExercises = useMemo(() => {
     const query = exerciseQuery.trim().toLowerCase();
     return liveExercises
-      .filter((item) => item.difficulty === difficulty)
+      .filter((item) => levelFilter === 'all' || item.difficulty === levelFilter)
+      .filter((item) => muscleFilter === 'all' || item.source.muscle === muscleFilter)
+      .filter((item) => genderFilter === 'all' || item.source.gender === 'all' || item.source.gender === genderFilter)
+      .filter((item) => placeFilter === 'all' || item.source.location === 'both' || item.source.location === placeFilter)
       .filter((item) => {
         if (!query) return true;
         return `${item.name} ${item.nameAr} ${item.source.muscle}`.toLowerCase().includes(query);
-      })
-      .slice(0, 42);
-  }, [difficulty, exerciseQuery, liveExercises]);
+      });
+  }, [levelFilter, muscleFilter, genderFilter, placeFilter, exerciseQuery, liveExercises]);
 
   const saveSessionSummary = useCallback(() => {
     if (cameraState !== 'live') return;
@@ -748,6 +776,8 @@ export function LiveCoachPage() {
   }, [saveSessionSummary]);
 
   const resetSession = useCallback(() => {
+    repCounterRef.current = emptyRepCounter();
+    setCompletedReps(0);
     progressRef.current = createEmptyProgress();
     liveSessionIdRef.current = createLocalId('live_session');
     feedbackCandidateRef.current = { key: '', frames: 0 };
@@ -1002,10 +1032,14 @@ export function LiveCoachPage() {
           const nextFeedback = smoothedLandmarks && !quality.usable
             ? createPoseFeedback(quality.issue ?? 'step_into_frame', estimatePoseConfidence(smoothedLandmarks), 'basic')
             : smoothedLandmarks && supportedPose
-              ? assessPose(supportedPose, smoothedLandmarks)
+              ? assessPose(supportedPose, smoothedLandmarks, video.videoWidth / video.videoHeight)
               : smoothedLandmarks && trackingSupport === 'basic'
                 ? createPoseFeedback('basic_tracking', estimatePoseConfidence(smoothedLandmarks), 'basic')
                 : createPoseFeedback(smoothedLandmarks ? 'unsupported_exercise' : 'step_into_frame', smoothedLandmarks ? estimatePoseConfidence(smoothedLandmarks) : 0, 'basic');
+          if (selectedTracking?.support === 'basic') nextFeedback.supportLevel = 'basic';
+          const nextRep = advanceRep(repCounterRef.current, nextFeedback.repPhase, now, quality.usable && nextFeedback.level !== 'waiting');
+          if (nextRep.count !== repCounterRef.current.count) setCompletedReps(nextRep.count);
+          repCounterRef.current = nextRep;
           if (nextFeedback.score !== null) {
             const progress = progressRef.current;
             progress.analyzedSamples += 1;
@@ -1075,15 +1109,11 @@ export function LiveCoachPage() {
 
   useEffect(() => {
     if (!requestedExercise) return;
+    stopCameraRef.current();
+    resetSession();
     setDifficulty(requestedExercise.difficulty);
     setExercise(requestedExercise.id);
-  }, [requestedExercise]);
-
-  useEffect(() => {
-    if (filteredExercises.length > 0 && !filteredExercises.some((item) => item.id === exercise)) {
-      setExercise(filteredExercises[0].id);
-    }
-  }, [exercise, filteredExercises]);
+  }, [requestedExercise, resetSession]);
 
   const liveReady = cameraState === 'live';
   const trackingReady = modelState === 'ready';
@@ -1102,9 +1132,9 @@ export function LiveCoachPage() {
       : text('Basic tracking', 'تتبع أساسي')
     : text('Preview only', 'عرض فقط');
   const trackingSupportLabel = selectedTracking?.support === 'full'
-    ? text('Full tracking', 'تحليل كامل')
+    ? text('Angle checks', 'فحص الزوايا')
     : selectedTracking?.support === 'basic'
-      ? text('Basic tracking', 'تتبع أساسي')
+      ? selectedTracking.pose ? text('Movement cues (beta)', 'توجيه الحركة (تجريبي)') : text('Visibility only', 'تتبع الظهور فقط')
       : text('Not supported', 'غير مدعوم');
   const trackedRatio = progressRef.current.analyzedSamples
     ? `${Math.round((progressRef.current.goodSamples / progressRef.current.analyzedSamples) * 100)}%`
@@ -1112,9 +1142,7 @@ export function LiveCoachPage() {
   const sessionProgress = progressRef.current;
   const formScoreValue = clampPercent(poseFeedback.score ?? 0);
   const confidenceValue = clampPercent(liveReady ? (poseFeedback.confidence || poseQuality.averageVisibility) : 0);
-  const rangeOfMotionValue = clampPercent(!liveReady ? 0 : poseFeedback.score !== null ? Math.max(45, Math.min(96, poseFeedback.score + 6)) : poseQuality.usable ? 68 : 28);
   const stabilityValue = clampPercent(!liveReady ? 0 : poseQuality.stable ? Math.max(82, poseQuality.averageVisibility) : Math.min(74, poseQuality.averageVisibility));
-  const tempoValue = clampPercent(!liveReady ? 0 : isPaused ? 38 : poseQuality.stable ? 76 : 52);
   const averageFormScoreValue = clampPercent(sessionProgress.analyzedSamples
     ? (sessionProgress.goodSamples / sessionProgress.analyzedSamples) * 100
     : formScoreValue);
@@ -1122,65 +1150,32 @@ export function LiveCoachPage() {
   const consistencyValue = clampPercent(sessionProgress.analyzedSamples
     ? (sessionProgress.goodSamples / sessionProgress.analyzedSamples) * 100
     : stabilityValue);
-  const completedReps = 0;
   const completionValue = clampPercent(Math.min(100, Math.max(completedReps * 8, sessionProgress.analyzedSamples ? averageFormScoreValue : 0)));
   const currentStreakValue = sessionProgress.goodSamples;
   const analyticsCards = [
     {
-      label: text('Form Score', 'نتيجة الأداء'),
-      value: formScoreValue > 0 ? `${formScoreValue}` : text('Ready', 'جاهز'),
-      suffix: formScoreValue > 0 ? '/100' : '',
-      trend: formScoreValue >= 88 ? text('↑ New best', '↑ أفضل نتيجة') : formScoreValue >= 74 ? text('↑ +6%', '↑ +6%') : liveReady ? text('→ Calibrating', '→ معايرة') : text('Ready', 'جاهز'),
-      status: formScoreValue >= 88 ? text('Excellent form', 'أداء ممتاز') : formScoreValue >= 74 ? text('Great form', 'أداء رائع') : liveReady ? text('Building signal', 'جاري القياس') : text('Waiting for camera', 'بانتظار الكاميرا'),
-      progress: formScoreValue,
-      tone: metricToneFor(formScoreValue, liveReady),
+      label: text('Angle score', 'نتيجة الزوايا'),
+      value: liveReady && poseFeedback.score !== null ? String(formScoreValue) : '—',
+      suffix: liveReady && poseFeedback.score !== null ? '/100' : '',
+      trend: text('Rule-based estimate', 'تقدير مبني على قواعد'),
+      status: text('Not a complete form assessment', 'ليس تقييمًا شاملًا للأداء'),
+      progress: formScoreValue, tone: metricToneFor(formScoreValue, liveReady),
       icon: <ShieldCheck className="h-4 w-4" />,
     },
     {
-      label: text('Confidence', 'الثقة'),
-      value: confidenceValue > 0 ? `${confidenceValue}%` : text('Idle', 'انتظار'),
-      trend: confidenceValue >= 88 ? text('↑ Stable', '↑ ثابت') : liveReady ? text('→ Tracking', '→ تتبع') : text('Ready', 'جاهز'),
-      status: bodyDetected ? text('Body visible', 'الجسم ظاهر') : liveReady ? text('Searching', 'جاري البحث') : text('Pose model ready', 'نموذج الحركة جاهز'),
-      progress: confidenceValue,
-      tone: metricToneFor(confidenceValue, liveReady),
+      label: text('Pose confidence', 'ثقة رصد المفاصل'),
+      value: confidenceValue > 0 ? `${confidenceValue}%` : '—',
+      trend: text('Visible landmarks', 'المفاصل الظاهرة'),
+      status: bodyDetected ? text('Body visible', 'الجسم ظاهر') : text('Waiting for body', 'بانتظار الجسم'),
+      progress: confidenceValue, tone: metricToneFor(confidenceValue, liveReady),
       icon: <Radar className="h-4 w-4" />,
     },
     {
       label: text('Reps', 'التكرارات'),
-      value: `${completedReps}`,
-      suffix: text(' reps', ' تكرار'),
-      trend: completedReps > 0 ? text('⭐ Consistency +1', '⭐ ثبات +1') : text('Ready', 'جاهز'),
-      status: text('Rep counter pending', 'عد التكرارات لاحقاً'),
-      progress: completedReps > 0 ? Math.min(100, completedReps * 10) : 0,
-      tone: 'purple',
-      icon: <Dumbbell className="h-4 w-4" />,
-    },
-    {
-      label: text('Range of Motion', 'مدى الحركة'),
-      value: rangeOfMotionValue > 0 ? `${rangeOfMotionValue}%` : text('Ready', 'جاهز'),
-      trend: rangeOfMotionValue >= 82 ? text('🎯 Full range', '🎯 مدى كامل') : liveReady ? text('→ Needs depth', '→ يحتاج عمق') : text('Ready', 'جاهز'),
-      status: rangeOfMotionValue >= 82 ? text('Excellent range', 'مدى ممتاز') : rangeOfMotionValue >= 68 ? text('Good depth', 'مدى جيد') : liveReady ? text('Needs depth', 'يحتاج عمق') : text('Waiting for camera', 'بانتظار الكاميرا'),
-      progress: rangeOfMotionValue,
-      tone: metricToneFor(rangeOfMotionValue, liveReady),
-      icon: <Target className="h-4 w-4" />,
-    },
-    {
-      label: text('Stability', 'الثبات'),
-      value: stabilityValue > 0 ? `${stabilityValue}%` : text('Ready', 'جاهز'),
-      trend: stabilityValue >= 90 ? text('✅ Very stable', '✅ ثابت جداً') : liveReady ? text('→ Center body', '→ ثبت جسمك') : text('Ready', 'جاهز'),
-      status: poseQuality.stable ? text('Very stable', 'ثابت جداً') : liveReady ? text('Hold steady', 'اثبت شوي') : text('Waiting for camera', 'بانتظار الكاميرا'),
-      progress: stabilityValue,
-      tone: metricToneFor(stabilityValue, liveReady),
-      icon: <Gauge className="h-4 w-4" />,
-    },
-    {
-      label: text('Tempo', 'الإيقاع'),
-      value: liveReady ? (isPaused ? text('Paused', 'متوقف') : '2.3s') : text('Ready', 'جاهز'),
-      trend: tempoValue >= 70 ? text('↑ Improving', '↑ يتحسن') : liveReady ? text('→ Controlled', '→ متحكم') : text('Ready', 'جاهز'),
-      status: liveReady ? text('Control each rep', 'تحكم بكل تكرار') : text('Waiting for camera', 'بانتظار الكاميرا'),
-      progress: tempoValue,
-      tone: metricToneFor(tempoValue, liveReady),
-      icon: <Timer className="h-4 w-4" />,
+      value: supportedPose && supportedPose !== 'plank' ? String(completedReps) : '—',
+      trend: text('Complete movement cycles', 'دورات حركة كاملة'),
+      status: supportedPose === 'plank' ? text('Hold exercise', 'تمرين ثبات') : supportedPose ? text('Experimental counter', 'عدّاد تجريبي') : text('Not available for this movement', 'غير متاح لهذه الحركة'),
+      progress: 0, tone: 'purple', icon: <Dumbbell className="h-4 w-4" />,
     },
   ] as const;
   const collectionReady = canCollectCurrentExercise && cameraState === 'live' && modelState === 'ready';
@@ -1240,7 +1235,7 @@ export function LiveCoachPage() {
   }, [coachingCue, isArabic, language, voiceEnabled]);
 
   return (
-    <div dir={isArabic ? 'rtl' : 'ltr'} className="live-coach-shell relative min-h-screen overflow-hidden bg-[#060816] pb-24 text-foreground md:pb-10">
+    <div dir={isArabic ? 'rtl' : 'ltr'} className="live-coach-shell training-simple relative min-h-screen overflow-hidden bg-[#060816] pb-24 text-foreground md:pb-10">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(129,92,255,0.18),_transparent_28%),radial-gradient(circle_at_82%_18%,_rgba(34,211,238,0.12),_transparent_24%),radial-gradient(circle_at_50%_100%,_rgba(236,72,153,0.1),_transparent_34%)]" />
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:54px_54px]" />
@@ -1515,7 +1510,7 @@ export function LiveCoachPage() {
               </div>
             </div>
 
-            <CurrentCuePanel cue={coachingCue} isArabic={isArabic} poseQuality={poseQuality} text={text} />
+            {liveReady && <CurrentCuePanel cue={coachingCue} isArabic={isArabic} poseQuality={poseQuality} text={text} />}
 
             <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,14,28,0.95),rgba(5,7,16,0.98))] shadow-[0_28px_90px_rgba(0,0,0,0.4)]">
               <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5">
@@ -1523,7 +1518,7 @@ export function LiveCoachPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-red-400/30 bg-red-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-red-200">
                       <span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                      {text('LIVE', 'مباشر')}
+                      {liveReady ? text('LIVE', 'مباشر') : text('CAMERA OFF', 'الكاميرا متوقفة')}
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-muted-foreground">
                       {text('Private live view', 'عرض مباشر خاص')}
@@ -1650,7 +1645,8 @@ export function LiveCoachPage() {
               </div>
             </section>
 
-            <section className="mt-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,34,0.88),rgba(7,9,18,0.94))] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:p-5">
+            <details className="live-session-details mt-5 rounded-[28px] border border-white/10 p-4">
+              <summary>{text('Session measurements', 'قياسات الجلسة')}</summary>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-100/70">{text('Real-time Analytics', 'تحليلات مباشرة')}</div>
@@ -1668,9 +1664,9 @@ export function LiveCoachPage() {
                   <AnalyticsCard key={card.label} {...card} />
                 ))}
               </div>
-            </section>
+            </details>
 
-            <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+            <div className="live-extra-panels mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
               <SessionProgressCard
                 text={text}
                 elapsed={elapsed}
@@ -1702,7 +1698,7 @@ export function LiveCoachPage() {
           </div>
 
           <aside className="flex flex-col gap-5 xl:sticky xl:top-24">
-            <div className="order-3"><FeedbackPanel feedback={poseFeedback} modelState={modelState} isCameraLive={liveReady} text={text} /></div>
+            <div className="live-feedback-wrap order-3"><FeedbackPanel feedback={poseFeedback} modelState={modelState} isCameraLive={liveReady} text={text} /></div>
             {collectionModeEnabled && (
               <div className="order-6 rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(8,24,34,0.92),rgba(8,10,22,0.94))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
                 <div className="mb-4 flex items-start justify-between gap-3">
@@ -1803,7 +1799,8 @@ export function LiveCoachPage() {
               </div>
             )}
 
-            <div className="order-1 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+            <details className="live-exercise-picker order-1 rounded-[24px] border border-white/10 p-5">
+              <summary><span>{selectedExerciseLabel}</span><small>{trackingSupportLabel} · {text('Change exercise', 'تغيير التمرين')}</small></summary>
               <div className="mb-2 text-xs font-semibold uppercase tracking-[0.26em] text-cyan-100/70">{text('Exercise', 'Exercise')}</div>
               <Label htmlFor="exercise" className="text-sm font-semibold text-white">{text('Exercise', 'التمرين')}</Label>
               <p className="mt-1 text-xs leading-6 text-muted-foreground">
@@ -1822,21 +1819,27 @@ export function LiveCoachPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-xs leading-6 text-muted-foreground">
-                  {selectedTracking?.reason ?? text('Select an exercise to see tracking support.', 'اختر تمريناً لعرض دعم التتبع.')}
+                  {isArabic ? (selectedTracking?.reasonAr ?? (selectedTracking?.pose ? 'توجيه مفاصل تجريبي، وليس حكمًا شاملًا على الأداء.' : 'تتبع الظهور فقط؛ لا يتوفر تصحيح الأداء لهذا التمرين بعد.')) : selectedTracking?.reason}
                 </p>
+                {selectedTracking?.cameraAngle && <p className="mt-2 text-xs text-primary">{selectedTracking.cameraAngle === 'side' ? text('Camera: side view', 'الكاميرا: من الجانب') : text('Camera: front view', 'الكاميرا: من الأمام')}</p>}
+              </div>
+              <div className="live-catalog-filters">
+                <label>{text('Muscle', 'العضلة')}<select value={muscleFilter} onChange={event => setMuscleFilter(event.target.value)}><option value="all">{text('All muscles', 'كل العضلات')}</option>{Object.keys(muscleGroups).map(muscle => <option key={muscle} value={muscle}>{muscleLabel(muscle, language)}</option>)}</select></label>
+                <label>{text('Profile', 'الجنس')}<select value={genderFilter} onChange={event => setGenderChoice(event.target.value)}><option value="all">{text('All', 'الكل')}</option><option value="male">{text('Male', 'ذكر')}</option><option value="female">{text('Female', 'أنثى')}</option></select></label>
+                <label>{text('Location', 'المكان')}<select value={placeFilter} onChange={event => setPlaceChoice(event.target.value)}><option value="all">{text('All', 'الكل')}</option><option value="home">{text('Home', 'البيت')}</option><option value="gym">{text('Gym', 'الجيم')}</option></select></label>
               </div>
               <div className="mt-3 grid grid-cols-2 rounded-2xl border border-white/10 bg-black/20 p-1">
-                {(['normal', 'advanced'] as const).map((level) => (
+                {(['all', 'normal', 'advanced'] as const).map((level) => (
                   <button
                     key={level}
                     type="button"
-                    onClick={() => setDifficulty(level)}
+                    onClick={() => setLevelFilter(level)}
                     className={cn(
                       'rounded-xl px-3 py-2 text-sm font-semibold transition',
-                      difficulty === level ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      levelFilter === level ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
-                    {level === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')}
+                    {level === 'all' ? text('All levels', 'كل المستويات') : level === 'advanced' ? text('Advanced', 'متقدم') : text('Normal', 'عادي')}
                   </button>
                 ))}
               </div>
@@ -1844,6 +1847,8 @@ export function LiveCoachPage() {
               <div className="relative mt-3">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
+                  id="exercise"
+                  aria-label={text('Search exercises', 'ابحث عن تمرين')}
                   value={exerciseQuery}
                   onChange={(event) => setExerciseQuery(event.target.value)}
                   placeholder={text('Search exercises', 'ابحث عن تمرين')}
@@ -1856,15 +1861,16 @@ export function LiveCoachPage() {
                   const active = item.id === exercise;
                   const label = localizedLabel(item.name, item.nameAr, language);
                   const itemSupportLabel = item.tracking.support === 'full'
-                    ? text('Full tracking', 'تحليل كامل')
+                    ? text('Angle checks', 'فحص الزوايا')
                     : item.tracking.support === 'basic'
-                      ? text('Basic tracking', 'تتبع أساسي')
+                      ? item.tracking.pose ? text('Movement cues (beta)', 'توجيه الحركة (تجريبي)') : text('Visibility only', 'تتبع الظهور فقط')
                       : text('Not supported', 'غير مدعوم');
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setExercise(item.id)}
+                      aria-pressed={active}
+                      onClick={() => { stopCamera(); resetSession(); setExercise(item.id); setDifficulty(item.difficulty); }}
                       className={cn(
                                 'w-full rounded-2xl border px-3 py-3 text-start transition',
                         active ? 'border-cyan-300/35 bg-cyan-400/10' : 'border-white/8 bg-white/[0.03] hover:border-white/16 hover:bg-white/[0.06]'
@@ -1874,7 +1880,7 @@ export function LiveCoachPage() {
                         <div className="min-w-0">
                           <div className="truncate text-sm font-semibold text-white">{label}</div>
                           <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-                            <span>{item.source.muscle}</span>
+                            <span>{muscleLabel(item.source.muscle, language)}</span>
                             <span>•</span>
                             <span>{item.source.location}</span>
                             <span>•</span>
@@ -1897,7 +1903,8 @@ export function LiveCoachPage() {
                   </div>
                 )}
               </div>
-            </div>
+              {selectedExercise && <ReferenceVideos key={`${selectedExercise.id}-${genderFilter}-${placeFilter}`} muscle={selectedExercise.source.muscle} gender={genderFilter} location={placeFilter} />}
+            </details>
 
             <div className="hidden">
               <div className="flex items-center gap-3" dir="ltr">
@@ -2011,6 +2018,7 @@ export function LiveCoachPage() {
 }
 
 const feedbackCopy: Record<string, [string, string]> = {
+  ...Object.fromEntries(Object.entries(cueCopy).map(([key, value]) => [key, [value.en, Array.isArray(value.ar) ? value.ar[0] : value.ar] as [string, string]])),
   basic_tracking: ['Pose tracking is active. Keep your body visible and move with control.', 'تتبع الوضعية فعّال. أبقِ جسمك ظاهراً وتحرك بتحكم.'],
   low_pose_confidence: ['Improve lighting and keep the working joints visible', 'حسّن الإضاءة وأظهر المفاصل المطلوبة'],
   unsupported_exercise: ['Pose visibility is active. Detailed scoring is not available for this exercise yet.', 'رؤية الوضعية فعالة. التقييم التفصيلي غير متاح لهذا التمرين حالياً.'],
@@ -2179,92 +2187,10 @@ const metricToneClasses: Record<MetricTone, {
   },
 };
 
-function createSparklinePoints(progress: number) {
-  const safe = clampPercent(progress);
-  const seed = safe || 42;
-  return Array.from({ length: 10 }, (_, index) => {
-    const x = (index / 9) * 120;
-    const drift = (index / 9) * (safe * 0.22);
-    const wave = Math.sin((index + seed / 17) * 1.35) * 5;
-    const value = Math.max(10, Math.min(92, seed * 0.58 + drift + wave));
-    const y = 30 - (value / 100) * 24;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-}
-
-function AnalyticsCard({ icon, label, value, suffix, status, trend, progress, tone }: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  suffix?: string;
-  status: string;
-  trend: string;
-  progress: number;
-  tone: MetricTone;
+function AnalyticsCard({ icon, label, value, suffix, status, trend }: {
+  icon: ReactNode; label: string; value: string; suffix?: string; status: string; trend: string; progress: number; tone: MetricTone;
 }) {
-  const styles = metricToneClasses[tone];
-  const safeProgress = clampPercent(progress);
-  const ringDash = `${safeProgress}, 100`;
-  const sparkPoints = createSparklinePoints(safeProgress);
-
-  return (
-    <div className={cn(
-      'group rounded-3xl border bg-white/[0.035] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.055] hover:shadow-[0_24px_70px_rgba(0,0,0,0.34)]',
-      styles.border,
-      styles.glow
-    )}>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <div className={cn('mb-2 flex h-9 w-9 items-center justify-center rounded-2xl border transition-transform duration-300 group-hover:scale-105', styles.border, styles.bg, styles.text)}>
-            {icon}
-          </div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-        </div>
-        <div className="relative h-16 w-16 shrink-0">
-          <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
-            <path d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8" fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="3.2" />
-            <path
-              d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3.2"
-              strokeDasharray={ringDash}
-              strokeLinecap="round"
-              className={cn('transition-all duration-700 ease-out', styles.text)}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-white/80">
-            {safeProgress > 0 ? safeProgress : '--'}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-end gap-1">
-        <span className="text-3xl font-semibold tracking-tight text-white transition-all duration-300">{value}</span>
-        {suffix && <span className="pb-1 text-xs text-muted-foreground">{suffix}</span>}
-      </div>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <div className="text-xs leading-5 text-muted-foreground">{status}</div>
-        <span className={cn('shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold', styles.bg, styles.text)}>{trend}</span>
-      </div>
-      <svg viewBox="0 0 120 34" preserveAspectRatio="none" className="mt-4 h-9 w-full overflow-visible">
-        <defs>
-          <linearGradient id={`spark-${label.replace(/\W/g, '')}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.95" />
-          </linearGradient>
-        </defs>
-        <polyline
-          points={sparkPoints}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={cn('opacity-90 transition-all duration-700', styles.text)}
-        />
-      </svg>
-    </div>
-  );
+  return <div className="live-measurement"><header>{icon}<span>{label}</span></header><strong>{value}<small>{suffix}</small></strong><p>{status}</p><small>{trend}</small></div>;
 }
 
 function SessionProgressCard({ text, elapsed, completedReps, averageFormScore, bestFormScore, consistency, completion, currentStreak, liveReady }: {
@@ -2364,108 +2290,18 @@ function PremiumStatusTile({ icon, label, value, tone }: {
 }
 
 function FeedbackPanel({ feedback, modelState, isCameraLive, text }: {
-  feedback: PoseFeedback;
-  modelState: 'loading' | 'ready' | 'error';
-  isCameraLive: boolean;
-  text: (en: string, ar: string) => string;
+  feedback: PoseFeedback; modelState: 'loading' | 'ready' | 'error'; isCameraLive: boolean; text: (en:string,ar:string)=>string;
 }) {
   const copy = feedbackCopy[feedback.message] ?? feedbackCopy.step_into_frame;
-  const level = modelState === 'error' ? 'adjust' : feedback.level;
-  const idleBeforeCamera = !isCameraLive && modelState !== 'error';
-  const message = modelState === 'loading'
-    ? text('Preparing pose analysis...', 'جارٍ تجهيز تحليل الحركة...')
-    : modelState === 'error'
-      ? text('Pose analysis could not start', 'تعذر تشغيل تحليل الحركة')
-      : idleBeforeCamera
-        ? text('Start the camera when you are ready. The coach will watch movement once your body is visible.', 'شغل الكاميرا لما تكون جاهز. المدرب رح يبدأ يتابع الحركة لما جسمك يبين.')
-        : text(copy[0], copy[1]);
-  const phaseLabel = feedback.repPhase
-    ? feedback.repPhase === 'hold'
-      ? text('Hold', 'ثبات')
-      : feedback.repPhase === 'top'
-        ? text('Top', 'الأعلى')
-        : feedback.repPhase === 'bottom'
-          ? text('Bottom', 'الأسفل')
-          : text('Transition', 'انتقال')
-    : text('Pending', 'لاحقاً');
-  const supportLabel = feedback.supportLevel === 'full'
-    ? text('Full tracking', 'تحليل كامل')
-    : text('Basic tracking', 'تتبع أساسي');
-  const scoreValue = clampPercent(feedback.score ?? (isCameraLive ? feedback.confidence : 0));
-  const heroTone = level === 'good' ? 'green' : level === 'adjust' ? 'amber' : isCameraLive ? 'cyan' : 'purple';
-  const heroStyles = metricToneClasses[heroTone];
-  const phaseTone = feedback.repPhase ? 'cyan' : 'purple';
-  const recommendation = level === 'good'
-    ? text('Keep this rhythm and stay controlled.', 'كمل بنفس الإيقاع وخليك متحكم.')
-    : level === 'adjust'
-      ? message
-      : idleBeforeCamera
-        ? text('Start camera to unlock live recommendations.', 'شغل الكاميرا عشان تظهر التوصيات المباشرة.')
-        : text('Keep your full body visible for cleaner feedback.', 'خلي جسمك كامل واضح عشان تكون الملاحظات أدق.');
-  const alignmentLabel = level === 'good'
-    ? text('Aligned', 'متوازن')
-    : level === 'adjust'
-      ? text('Needs correction', 'يحتاج تعديل')
-      : isCameraLive
-        ? text('Calibrating', 'معايرة')
-        : text('Ready', 'جاهز');
-  return (
-    <div className={cn(
-      'rounded-[30px] border p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_30px_90px_rgba(0,0,0,0.4)]',
-      level === 'good' && 'border-emerald-500/30 bg-emerald-500/10',
-      level === 'adjust' && 'border-amber-500/30 bg-amber-500/10',
-      level === 'waiting' && 'border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.9),rgba(10,12,24,0.92))]'
-    )}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className={cn('h-4 w-4', heroStyles.text)} />
-          <span className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">{text('AI Coach', 'المدرب الذكي')}</span>
-        </div>
-        <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', heroStyles.bg, heroStyles.text)}>
-          {isCameraLive ? text('Live', 'مباشر') : text('Ready', 'جاهز')}
-        </span>
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-[7rem_minmax(0,1fr)] xl:grid-cols-1 2xl:grid-cols-[7rem_minmax(0,1fr)]">
-        <div className="relative mx-auto h-28 w-28">
-          <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
-            <path d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8" fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="3" />
-            <path d="M18 2.6a15.4 15.4 0 1 1 0 30.8a15.4 15.4 0 0 1 0-30.8" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray={`${scoreValue}, 100`} strokeLinecap="round" className={cn('transition-all duration-700', heroStyles.text)} />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-semibold text-white">{scoreValue || '--'}</span>
-            <span className="text-[10px] text-muted-foreground">/100</span>
-          </div>
-        </div>
-        <div className="min-w-0">
-          <div className="text-xl font-semibold text-white">
-            {level === 'good'
-              ? text('Great Form', 'أداء رائع')
-              : level === 'adjust'
-                ? text('Correction Needed', 'يحتاج تعديل')
-                : idleBeforeCamera
-                  ? text('Ready to Watch', 'جاهز للتتبع')
-                  : text('Tracking Movement', 'يتابع الحركة')}
-          </div>
-          <p className="mt-2 text-sm leading-7 text-muted-foreground">{recommendation}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {level === 'good' && <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">✅ {text('Great Form', 'أداء رائع')}</span>}
-            {scoreValue >= 90 && <span className="rounded-full bg-yellow-400/10 px-2.5 py-1 text-[11px] font-semibold text-yellow-200">🏆 {text('Personal Best', 'أفضل أداء')}</span>}
-            {scoreValue >= 84 && <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-[11px] font-semibold text-violet-100">🔥 {text('New Best', 'أفضل جديد')}</span>}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
-        <PremiumStatusTile icon={<TriangleAlert className="h-4 w-4" />} label={text('Current correction', 'التصحيح الحالي')} value={level === 'adjust' ? message : text('No major correction', 'لا يوجد تعديل كبير')} tone={level === 'adjust' ? 'amber' : 'green'} />
-        <PremiumStatusTile icon={<Zap className="h-4 w-4" />} label={text('Recommendation', 'التوصية')} value={recommendation} tone={heroTone} />
-        <PremiumStatusTile icon={<Radar className="h-4 w-4" />} label={text('Confidence', 'الثقة')} value={idleBeforeCamera ? text('Waiting for camera', 'بانتظار الكاميرا') : `${feedback.confidence}%`} tone={heroTone} />
-        <PremiumStatusTile icon={<Activity className="h-4 w-4" />} label={text('Movement phase', 'مرحلة الحركة')} value={phaseLabel} tone={phaseTone} />
-        <PremiumStatusTile icon={<ShieldCheck className="h-4 w-4" />} label={text('Body alignment', 'محاذاة الجسم')} value={alignmentLabel} tone={level === 'adjust' ? 'amber' : level === 'good' ? 'green' : 'purple'} />
-        <PremiumStatusTile icon={<Cpu className="h-4 w-4" />} label={text('Support', 'الدعم')} value={supportLabel} tone="purple" />
-      </div>
-    </div>
-  );
+  const message = modelState === 'error' ? text('Analysis could not load. Refresh to retry.', 'تعذر تحميل التحليل. حدّث الصفحة للمحاولة.')
+    : !isCameraLive ? text('Start the camera when you are ready.', 'شغّل الكاميرا لما تكون جاهز.')
+    : modelState === 'loading' ? text('Preparing pose analysis…', 'تجهيز تحليل الحركة…') : text(copy[0],copy[1]);
+  return <section className="live-feedback-compact" aria-live="polite">
+    <header><ScanLine size={17}/><strong>{text('Movement feedback','ملاحظات الحركة')}</strong><span>{isCameraLive?text('Live','مباشر'):text('Ready','جاهز')}</span></header>
+    <p>{message}</p>
+    {isCameraLive && <div><span>{text('Pose confidence','ثقة الرصد')}: {feedback.confidence}%</span>{feedback.score!==null&&<span>{text('Angle estimate','تقدير الزوايا')}: {feedback.score}/100</span>}</div>}
+    <small>{text('Guidance is limited to visible joints. Stop if movement causes pain.', 'التوجيه محدود بالمفاصل الظاهرة. توقّف إذا سببت الحركة ألمًا.')}</small>
+  </section>;
 }
 
 function StatusRow({ label, value, active }: { label: string; value: string; active: boolean }) {

@@ -15,8 +15,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './Schedule.css';
+import { DayMuscleMap } from '@/components/workout/DayMuscleMap';
+import { resolveScheduledExercise, workoutDayLink } from '@/lib/trainingCatalog';
+import { Link } from 'react-router-dom';
+import './TrainingFlow.css';
 
 interface WorkoutExercise {
+  id?: string;
+  exerciseId?: string;
+  muscle?: string;
   name: string;
   nameAr: string;
   sets: string;
@@ -1040,7 +1047,7 @@ export function SchedulePage() {
   }
 
   return (
-    <div className="schedule-page min-h-screen pb-24 md:pb-8">
+    <div className="schedule-page training-simple min-h-screen pb-24 md:pb-8">
       <Navbar />
       <main className="schedule-container container mx-auto px-4 pt-24 max-w-6xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="schedule-header mb-6 space-y-5">
@@ -1055,7 +1062,7 @@ export function SchedulePage() {
               </h1>
               <p className="text-muted-foreground max-w-2xl">
                 {language === 'ar'
-                  ? 'رتب أسبوعك بوضوح: راقب اليوم المختار، العناصر المكتملة، ملاحظاتك، والخطط النشطة في مكان واحد.'
+                  ? 'تمارينك وعضلاتك المستهدفة، يومًا بيوم.'
                   : 'Your plan for the day.'}
               </p>
             </div>
@@ -1456,6 +1463,12 @@ export function SchedulePage() {
                               </div>
                               {ex.sets && <p className="text-xs text-muted-foreground mt-0.5">{ex.sets} × {ex.reps}</p>}
                             </div>
+                            {resolveScheduledExercise(ex) && <Link
+                              className="schedule-exercise-link"
+                              to={workoutDayLink([ex], selectedLogDate)}
+                              onClick={event => event.stopPropagation()}
+                              onKeyDown={event => event.stopPropagation()}
+                            >{language === 'ar' ? 'شاهد التمرين' : 'View exercise'}</Link>}
                           </div>
                         );
                       })}
@@ -1547,6 +1560,11 @@ export function SchedulePage() {
           </section>
 
           <aside className="schedule-side space-y-6">
+            {viewTab === 'workout' && <DayMuscleMap
+              items={matchingDay?.day.exercises ?? []}
+              pending={(matchingDay?.day.exercises ?? []).filter((_, index) => !currentPlan || !matchingDay || !isCompleted(matchingDay.index, index, currentPlan.id))}
+              date={selectedLogDate}
+            />}
             <div className={`schedule-next-panel glass-card rounded-2xl p-6 schedule-status-${statusTone}`}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">

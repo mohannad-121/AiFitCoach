@@ -58,4 +58,38 @@ describe('assessPose', () => {
   it('keeps lunge available as basic tracking', () => {
     expect(getPoseFeedbackSupport('lunge')).toBe('basic');
   });
+
+  it('recognizes the standing squat endpoint without asking for extra depth', () => {
+    expect(assessPose('squat',pose({11:[.3,.2],23:[.3,.5],25:[.3,.7],27:[.3,.9]}))).toMatchObject({level:'good',repPhase:'top'});
+  });
+
+  it('requires individually visible joints on both legs for lunges', () => {
+    const landmarks=pose({11:[.3,.2],23:[.3,.5],25:[.3,.7],27:[.3,.9],12:[.6,.2],24:[.6,.5],26:[.6,.7],28:[.6,.9]});
+    landmarks[28].visibility=0;
+    expect(assessPose('lunge',landmarks).score).toBeNull();
+  });
+
+  it('checks curls without treating a hidden wrist as good form', () => {
+    const landmarks = pose({ 11:[.4,.2], 13:[.4,.45], 15:[.4,.7], 23:[.4,.6] });
+    expect(assessPose('curl', landmarks)).toMatchObject({ level: 'good', repPhase: 'bottom', supportLevel: 'basic' });
+    landmarks[15].visibility = 0;
+    expect(assessPose('curl', landmarks).score).toBeNull();
+  });
+  it('does not score nonfinite or collapsed skeletons', () => {
+    const landmarks = pose({ 11:[.3,.2], 23:[.4,.5], 27:[.6,.7] });
+    landmarks[23].x = NaN;
+    expect(assessPose('plank', landmarks).score).toBeNull();
+    expect(assessPose('plank', pose({11:[.5,.5],23:[.5,.5],27:[.5,.5]})).score).toBeNull();
+  });
+  it('corrects rectangular image proportions before measuring a squat', () => {
+    const square = pose({ 11:[.3,.3],23:[.3,.7],25:[.5,.7],27:[.55,.9] });
+    const widescreen = square.map(item => ({ ...item, x: item.x / (16/9) }));
+    expect(assessPose('squat', widescreen, 16/9)).toEqual(assessPose('squat', square));
+  });
+  it('returns specific experimental cues for new movement families', () => {
+    expect(assessPose('lateral-raise', pose({11:[.4,.2],13:[.7,.05],23:[.4,.7]})).message).toBe('shoulder_height');
+    expect(assessPose('shoulder-press', pose({11:[.4,.2],13:[.6,.3],15:[.6,.7],23:[.4,.6]})).message).toBe('press_setup');
+    expect(assessPose('bridge', pose({11:[.4,.2],23:[.4,.5],25:[.5,.7],27:[.5,.9]})).message).toBe('bridge_setup');
+    expect(assessPose('hip-hinge', pose({11:[.3,.2],23:[.3,.5],25:[.3,.7],27:[.3,.9]})).repPhase).toBe('top');
+  });
 });

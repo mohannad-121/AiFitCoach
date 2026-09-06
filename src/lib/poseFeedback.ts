@@ -1,6 +1,6 @@
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision';
 
-export type SupportedExercise = 'plank' | 'squat' | 'push-up' | 'lunge';
+export type SupportedExercise = 'plank' | 'squat' | 'push-up' | 'lunge' | 'curl' | 'lateral-raise' | 'shoulder-press' | 'hip-hinge' | 'bridge';
 export type ReliableExercise = 'plank' | 'squat' | 'push-up';
 export type FeedbackLevel = 'waiting' | 'good' | 'adjust';
 export type FeedbackStatus = 'waiting_for_body' | 'tracking_basic' | 'analyzing' | 'needs_adjustment' | 'good_form';
@@ -179,6 +179,7 @@ function assessSquat(landmarks: NormalizedLandmark[], context: AnalysisContext):
   const repPhase = estimateRepPhase('squat', { knee: kneeAngle });
 
   if (torsoTilt > 48) return adjust('chest_up', 58, context, repPhase);
+  if (kneeAngle > 155) return good(88, context, 'top');
   if (kneeAngle > 145) return adjust('lower_squat', 62, context, repPhase);
   if (kneeAngle < 62) return adjust('squat_too_deep', 72, context, repPhase);
   if (kneeAngle > 125) return adjust('lower_squat', 76, context, repPhase);
@@ -187,7 +188,8 @@ function assessSquat(landmarks: NormalizedLandmark[], context: AnalysisContext):
 
 function assessLunge(landmarks: NormalizedLandmark[], context: AnalysisContext): PoseFeedback {
   const joints: Joint[] = ['shoulder', 'hip', 'knee', 'ankle'];
-  if (sideVisibility(landmarks, 'left', joints) < MIN_BASIC_CONFIDENCE || sideVisibility(landmarks, 'right', joints) < MIN_BASIC_CONFIDENCE) {
+  if (sideVisibility(landmarks, 'left', joints) < MIN_BASIC_CONFIDENCE || sideVisibility(landmarks, 'right', joints) < MIN_BASIC_CONFIDENCE ||
+    !(['left','right'] as const).every(side => joints.every(joint => { const p = point(landmarks,joint,side); return Number.isFinite(p?.x) && Number.isFinite(p?.y) && visibility(p) >= .45; }))) {
     return waiting('both_legs_required', context.confidence, context.supportLevel);
   }
   const leftKnee = angle(point(landmarks, 'hip', 'left'), point(landmarks, 'knee', 'left'), point(landmarks, 'ankle', 'left'));
@@ -197,14 +199,80 @@ function assessLunge(landmarks: NormalizedLandmark[], context: AnalysisContext):
   const backAngle = Math.max(leftKnee, rightKnee);
   const torsoTilt = torsoTiltFromVertical(point(landmarks, 'shoulder', front), point(landmarks, 'hip', front));
 
+  if (frontAngle > 150 && backAngle > 150) return good(88, context, 'top');
   if (torsoTilt > 38) return adjust('chest_up', 60, context);
   if (frontAngle > 135) return adjust('lower_lunge', 64, context);
   if (frontAngle < 62) return adjust('shorten_lunge', 70, context);
   if (backAngle > 165) return adjust('bend_back_knee', 74, context);
-  return good(92, context);
+  return good(92, context, frontAngle < 105 ? 'bottom' : 'transition');
+}
+
+// These are conservative 2D movement checks, not a trained correct/incorrect classifier.
+function assessCurl(landmarks: NormalizedLandmark[], context: AnalysisContext): PoseFeedback {
+  const shoulder = point(landmarks, 'shoulder', context.side);
+  const elbow = point(landmarks, 'elbow', context.side);
+  const wrist = point(landmarks, 'wrist', context.side);
+  const hip = point(landmarks, 'hip', context.side);
+  const bend = angle(shoulder, elbow, wrist);
+  const upperArm = angle(hip, shoulder, elbow);
+  const phase = bend > 145 ? 'bottom' : bend < 65 ? 'top' : 'transition';
+  if (torsoTiltFromVertical(shoulder, hip) > 25) return adjust('steady_torso', 64, context, phase);
+  if (upperArm > 40) return adjust('elbows_close', 68, context, phase);
+  return good(90, context, phase);
+}
+
+function assessRaise(landmarks: NormalizedLandmark[], context: AnalysisContext): PoseFeedback {
+  const shoulder = point(landmarks, 'shoulder', context.side);
+  const hip = point(landmarks, 'hip', context.side);
+  const elbow = point(landmarks, 'elbow', context.side);
+  const elevation = angle(hip, shoulder, elbow);
+  const phase = elevation < 25 ? 'bottom' : elevation > 70 ? 'top' : 'transition';
+  if (torsoTiltFromVertical(shoulder, hip) > 25) return adjust('steady_torso', 65, context, phase);
+  if (elevation > 110) return adjust('shoulder_height', 70, context, phase);
+  return good(88, context, phase);
+}
+
+function assessPress(landmarks: NormalizedLandmark[], context: AnalysisContext): PoseFeedback {
+  const shoulder = point(landmarks, 'shoulder', context.side);
+  const hip = point(landmarks, 'hip', context.side);
+  const elbow = point(landmarks, 'elbow', context.side);
+  const wrist = point(landmarks, 'wrist', context.side);
+  if (torsoTiltFromVertical(shoulder, hip) > 25) return adjust('steady_torso', 64, context);
+  if (wrist.y > shoulder.y + Math.abs(shoulder.y - hip.y) * .2) return waiting('press_setup', context.confidence, context.supportLevel);
+  const bend = angle(shoulder, elbow, wrist);
+  return good(88, context, bend > 150 ? 'top' : bend < 100 ? 'bottom' : 'transition');
+}
+
+function assessHinge(landmarks: NormalizedLandmark[], context: AnalysisContext): PoseFeedback {
+  const shoulder = point(landmarks, 'shoulder', context.side);
+  const hip = point(landmarks, 'hip', context.side);
+  const knee = point(landmarks, 'knee', context.side);
+  const ankle = point(landmarks, 'ankle', context.side);
+  const hinge = angle(shoulder, hip, knee);
+  const bend = angle(hip, knee, ankle);
+  const phase = hinge > 155 ? 'top' : hinge < 110 ? 'bottom' : 'transition';
+  if (bend < 115) return adjust('hinge_not_squat', 65, context, phase);
+  return good(86, context, phase);
+}
+
+function assessBridge(landmarks: NormalizedLandmark[], context: AnalysisContext): PoseFeedback {
+  const shoulder = point(landmarks, 'shoulder', context.side);
+  const hip = point(landmarks, 'hip', context.side);
+  const knee = point(landmarks, 'knee', context.side);
+  const ankle = point(landmarks, 'ankle', context.side);
+  if (Math.abs(shoulder.x - hip.x) < Math.abs(shoulder.y - hip.y)) return waiting('bridge_setup', context.confidence, context.supportLevel);
+  const kneeBend = angle(hip, knee, ankle);
+  if (kneeBend > 145) return adjust('bridge_feet', 65, context);
+  const extension = angle(shoulder, hip, knee);
+  return good(88, context, extension > 155 ? 'top' : extension < 125 ? 'bottom' : 'transition');
 }
 
 const poseFeedbackRegistry: Record<SupportedExercise, ExerciseAnalysis> = {
+  curl: { supportLevel: 'basic', requiredJoints: ['shoulder', 'elbow', 'wrist', 'hip'], analyze: assessCurl },
+  'lateral-raise': { supportLevel: 'basic', requiredJoints: ['shoulder', 'elbow', 'hip'], analyze: assessRaise },
+  'shoulder-press': { supportLevel: 'basic', requiredJoints: ['shoulder', 'elbow', 'wrist', 'hip'], analyze: assessPress },
+  'hip-hinge': { supportLevel: 'basic', requiredJoints: ['shoulder', 'hip', 'knee', 'ankle'], analyze: assessHinge },
+  bridge: { supportLevel: 'basic', requiredJoints: ['shoulder', 'hip', 'knee', 'ankle'], analyze: assessBridge },
   plank: {
     supportLevel: 'full',
     requiredJoints: ['shoulder', 'hip', 'ankle'],
@@ -227,17 +295,29 @@ const poseFeedbackRegistry: Record<SupportedExercise, ExerciseAnalysis> = {
   },
 };
 
-export function assessPose(exercise: SupportedExercise, landmarks: NormalizedLandmark[]): PoseFeedback {
+export function assessPose(exercise: SupportedExercise, landmarks: NormalizedLandmark[], aspectRatio = 1): PoseFeedback {
   const analysis = poseFeedbackRegistry[exercise];
   if (landmarks.length < MIN_REQUIRED_LANDMARKS) return waiting('step_into_frame', 0, analysis.supportLevel);
+
+  // MediaPipe normalizes x/y independently; correct image aspect before measuring angles.
+  const ratio = Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 1;
+  landmarks = landmarks.map(landmark => ({ ...landmark, x: landmark.x * ratio }));
 
   const side = bestSide(landmarks, analysis.requiredJoints);
   const confidence = sideVisibility(landmarks, side, analysis.requiredJoints);
   const minimumConfidence = analysis.supportLevel === 'full' ? MIN_FULL_CONFIDENCE : MIN_BASIC_CONFIDENCE;
 
-  if (confidence < minimumConfidence) {
+  const jointsUsable = analysis.requiredJoints.every(joint => {
+    const landmark = point(landmarks, joint, side);
+    return landmark && Number.isFinite(landmark.x) && Number.isFinite(landmark.y) && visibility(landmark) >= .45;
+  });
+  if (confidence < minimumConfidence || !jointsUsable) {
     return waiting(confidence < 0.35 ? 'step_into_frame' : 'low_pose_confidence', confidence, analysis.supportLevel);
   }
+
+  const shoulder = point(landmarks, 'shoulder', side);
+  const hip = point(landmarks, 'hip', side);
+  if (Math.hypot(shoulder.x - hip.x, shoulder.y - hip.y) < .03) return waiting('step_into_frame', confidence, analysis.supportLevel);
 
   return analysis.analyze(landmarks, { side, confidence, supportLevel: analysis.supportLevel });
 }

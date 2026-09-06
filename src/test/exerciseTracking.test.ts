@@ -19,10 +19,15 @@ describe('exercise tracking mapping', () => {
     expect(getExerciseTrackingConfig(exerciseById('plank'))).toMatchObject({ support: 'full', pose: 'plank' });
   });
 
-  it('keeps variants and other visible exercises on basic tracking', () => {
-    expect(getExerciseTrackingConfig(exerciseById('diamond-push-ups'))).toMatchObject({ support: 'basic', pose: null });
-    expect(getExerciseTrackingConfig(exerciseById('goblet-squats'))).toMatchObject({ support: 'basic', pose: null });
-    expect(getExerciseTrackingConfig(exerciseById('lunges'))).toMatchObject({ support: 'basic', pose: null });
-    expect(getExerciseTrackingConfig(exerciseById('bicep-curls'))).toMatchObject({ support: 'basic', pose: null });
+  it('routes supported variants to explicit experimental movement checks', () => {
+    expect(getExerciseTrackingConfig(exerciseById('diamond-push-ups'))).toMatchObject({ support: 'basic', pose: 'push-up' });
+    expect(getExerciseTrackingConfig(exerciseById('goblet-squats'))).toMatchObject({ support: 'basic', pose: 'squat' });
+    expect(getExerciseTrackingConfig(exerciseById('lunges'))).toMatchObject({ support: 'basic', pose: 'lunge' });
+    expect(getExerciseTrackingConfig(exerciseById('bicep-curls'))).toMatchObject({ support: 'basic', pose: 'curl' });
+    expect(getExerciseTrackingConfig(exerciseById('bench-press'))).toMatchObject({ support: 'basic', pose: null });
+    expect(getExerciseTrackingConfig(exerciseById('pike-push-ups'))).toMatchObject({ support: 'basic', pose: null });
+  });
+  it('never treats the muscle name alone as a recognized movement', () => {
+    expect(getExerciseTrackingConfig({ ...exerciseById('squats'), id: 'unknown', name: 'Unknown', description: 'squat muscles' }).pose).toBeNull();
   });
 });
