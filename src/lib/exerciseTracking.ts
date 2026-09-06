@@ -7,9 +7,11 @@ export interface ExerciseTrackingConfig {
   support: TrackingSupport;
   pose: SupportedExercise | null;
   reason: string;
+  reasonAr?: string;
+  cameraAngle?: 'side' | 'front';
 }
 
-const fullAnalysisAliases: Record<SupportedExercise, string[]> = {
+const fullAnalysisAliases: Partial<Record<SupportedExercise, string[]>> = {
   plank: ['plank'],
   squat: ['squat', 'squats'],
   'push-up': ['push up', 'push ups', 'push-up', 'push-ups', 'pushup', 'pushups'],
@@ -98,6 +100,23 @@ export function getExerciseTrackingConfig(exercise: Exercise): ExerciseTrackingC
   const searchable = exerciseSearchText(exercise);
   const exactNames = [normalizeExerciseName(exercise.id), normalizeExerciseName(exercise.name)];
 
+  const movementProfiles: Array<{ ids: string[]; pose: SupportedExercise; cameraAngle: 'side' | 'front' }> = [
+    { ids: ['lunges', 'reverse-lunges', 'walking-lunges', 'split-squat'], pose: 'lunge', cameraAngle: 'side' },
+    { ids: ['bicep-curls', 'hammer-curls', 'light-bicep-curls', 'band-curls', 'alternating-curls'], pose: 'curl', cameraAngle: 'side' },
+    { ids: ['lateral-raises', 'light-lateral-raises', 'band-lateral-raises'], pose: 'lateral-raise', cameraAngle: 'front' },
+    { ids: ['shoulder-press', 'dumbbell-shoulder-press', 'seated-dumbbell-press'], pose: 'shoulder-press', cameraAngle: 'front' },
+    { ids: ['romanian-deadlift', 'dumbbell-rdl', 'bodyweight-hip-hinge', 'cable-pull-through'], pose: 'hip-hinge', cameraAngle: 'side' },
+    { ids: ['glute-bridge', 'hip-thrust', 'banded-glute-bridge'], pose: 'bridge', cameraAngle: 'side' },
+    { ids: ['goblet-squats', 'sumo-squats', 'bodyweight-squat', 'dumbbell-squat'], pose: 'squat', cameraAngle: 'side' },
+    { ids: ['diamond-push-ups', 'incline-push-ups', 'wall-push-ups'], pose: 'push-up', cameraAngle: 'side' },
+  ];
+  const profile = movementProfiles.find(item => item.ids.includes(exercise.id));
+  if (profile) return {
+    support: 'basic', pose: profile.pose, cameraAngle: profile.cameraAngle,
+    reason: 'Movement cues (beta). Checks visible joint alignment; does not assess load, pain, or every form error.',
+    reasonAr: 'توجيه الحركة (تجريبي): يفحص محاذاة المفاصل الظاهرة، ولا يقيّم الوزن أو الألم أو جميع أخطاء الأداء.',
+  };
+
   if (unsupportedTerms.some((term) => hasWholeTerm(searchable, term))) {
     return {
       support: 'unsupported',
@@ -112,6 +131,8 @@ export function getExerciseTrackingConfig(exercise: Exercise): ExerciseTrackingC
         support: 'full',
         pose,
         reason: 'Full form analysis is available for this movement pattern.',
+        reasonAr: 'تحليل زوايا ووضعية الحركة. ضع الكاميرا من الجانب وأظهر المفاصل كاملة.',
+        cameraAngle: 'side',
       };
     }
   }

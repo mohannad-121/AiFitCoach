@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Camera, Dumbbell, Sparkles, X } from 'lucide-react';
+import { Camera, Dumbbell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { type Exercise } from '@/data/exercises';
@@ -65,34 +65,29 @@ export function ExerciseCard({
 
   return (
     <motion.article
-      whileHover={isExpanded ? undefined : { y: -6 }}
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-      className="group overflow-hidden rounded-2xl border border-white/12 bg-[#070b18] shadow-[0_24px_80px_rgba(0,0,0,0.36)]"
+      className="group overflow-hidden rounded-2xl border border-border bg-[#070b18] shadow-[0_24px_80px_rgba(0,0,0,0.36)]"
     >
-      <div className="border-b border-white/10 bg-[linear-gradient(145deg,rgba(32,25,65,0.88),rgba(7,11,24,0.96)_55%,rgba(8,43,54,0.76))] p-5 sm:p-6">
+      <div className="border-b border-border bg-[linear-gradient(145deg,rgba(32,25,65,0.88),rgba(7,11,24,0.96)_55%,rgba(8,43,54,0.76))] p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-primary">
               <Dumbbell className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/72">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
                 {localizedLabel('Targeted exercise', 'تمرين مستهدف', language)}
               </p>
-              <h3 className="mt-2 text-2xl font-semibold text-white">{name}</h3>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{name}</h3>
             </div>
           </div>
-          <span className="hidden shrink-0 items-center rounded-full border border-fuchsia-400/18 bg-fuchsia-400/10 px-3 py-1.5 text-xs font-medium text-fuchsia-100/80 sm:inline-flex">
-            <Sparkles className="me-2 h-3.5 w-3.5" />
-            {localizedLabel('AI Match', 'تطابق ذكي', language)}
-          </span>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
           {tags.map((tag) => (
             <span
               key={`${exercise.id}-${tag}`}
-              className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-white/72"
+              className="rounded-full border border-border bg-muted/50 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
             >
               {tag}
             </span>
@@ -101,7 +96,7 @@ export function ExerciseCard({
       </div>
 
       <div className="flex flex-col gap-4 px-5 py-5 sm:px-6 sm:py-6">
-        <p className="text-sm leading-7 text-white/68">
+        <p className="text-sm leading-7 text-muted-foreground">
           {localizedLabel(repairMojibake(exercise.description), repairMojibake(exercise.descriptionAr), language)}
         </p>
 
@@ -120,7 +115,7 @@ export function ExerciseCard({
                 type="button"
                 variant="secondary"
                 onClick={() => onTrainWithCamera(exercise)}
-                className="w-full border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15 hover:text-white sm:w-auto"
+                className="w-full border border-cyan-300/20 bg-cyan-400/10 text-primary hover:bg-cyan-400/15 hover:text-foreground sm:w-auto"
               >
                 <Camera className="me-2 h-4 w-4" />
                 {localizedLabel('Train with camera', 'تدرب بالكاميرا', language)}
@@ -135,18 +130,18 @@ export function ExerciseCard({
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="border-t border-white/10 bg-white/[0.03]"
+          className="border-t border-border bg-white/[0.03]"
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-6">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-6">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/70">{instructionsTitle}</p>
-              <h4 className="mt-2 text-lg font-semibold text-white">{name}</h4>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{instructionsTitle}</p>
+              <h4 className="mt-2 text-lg font-semibold text-foreground">{name}</h4>
             </div>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="shrink-0 border border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
+              className="shrink-0 border border-border bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
               onClick={onCollapse}
               aria-label={localizedLabel('Close instructions', 'إغلاق التعليمات', language)}
             >
@@ -154,10 +149,10 @@ export function ExerciseCard({
             </Button>
           </div>
 
-          <ol className="space-y-3 p-5 text-sm leading-7 text-white/68 sm:p-6">
+          <ol className="space-y-3 p-5 text-sm leading-7 text-muted-foreground sm:p-6">
             {descriptionPoints.map((point, index) => (
-              <li key={`${exercise.id}-point-${index + 1}`} className="rounded-xl border border-white/10 bg-black/20 p-4">
-                <p className={language === 'ar' ? 'text-right font-medium text-white' : 'font-medium text-white'} dir={language === 'ar' ? 'rtl' : undefined}>
+              <li key={`${exercise.id}-point-${index + 1}`} className="rounded-xl border border-border bg-muted/50 p-4">
+                <p className={language === 'ar' ? 'text-right font-medium text-foreground' : 'font-medium text-foreground'} dir={language === 'ar' ? 'rtl' : undefined}>
                   {index + 1}. {language === 'ar' ? point.ar : point.en}
                 </p>
               </li>
@@ -171,8 +166,8 @@ export function ExerciseCard({
 
 function InfoBadge({ label, value }: { label: string; value: string }) {
   return (
-    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/72">
-      {label}: <span className="text-white">{value}</span>
+    <span className="rounded-full border border-border bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-muted-foreground">
+      {label}: <span className="text-foreground">{value}</span>
     </span>
   );
 }

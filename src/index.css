@@ -11,6 +11,15 @@
 
 @layer base {
   :root {
+    --fit-bg: #07070a;
+    --fit-surface: #111015;
+    --fit-surface-strong: #17141a;
+    --fit-ink: #f4f1f3;
+    --fit-muted: #aaa4aa;
+    --fit-accent: #e18acb;
+    --fit-accent-strong: #c95bb6;
+    --fit-line: rgba(255, 255, 255, 0.1);
+
     /* Core Background - soft daylight surface */
     --background: 220 24% 96%;
     --foreground: 224 24% 14%;
@@ -53,19 +62,19 @@
     --input: 220 16% 82%;
     --ring: 318 65% 72%;
 
-    --radius: 1.5rem;
+    --radius: 0.75rem;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(110deg, #e78ac8 0%, #d96cdb 48%, #9b62f4 100%);
-    --gradient-accent: linear-gradient(110deg, #e78ac8 0%, #d96cdb 48%, #9b62f4 100%);
+    --gradient-primary: linear-gradient(110deg, #ef9bd7 0%, #e18acb 52%, #c95bb6 100%);
+    --gradient-accent: linear-gradient(110deg, #ef9bd7 0%, #e18acb 52%, #c95bb6 100%);
     --gradient-dark: linear-gradient(180deg, hsl(220, 20%, 8%) 0%, hsl(220, 25%, 5%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(220, 30%, 97%) 100%);
     --gradient-hero: linear-gradient(180deg, hsla(220, 20%, 8%, 0) 0%, hsl(220, 20%, 8%) 100%);
 
     /* Shadows */
-    --shadow-glow: 0 0 40px rgba(217, 108, 219, 0.24);
+    --shadow-glow: 0 0 40px rgba(225, 138, 203, 0.18);
     --shadow-card: 0 14px 35px hsla(224, 35%, 18%, 0.08);
-    --shadow-button: 0 4px 18px rgba(217, 108, 219, 0.32);
+    --shadow-button: 0 4px 18px rgba(225, 138, 203, 0.22);
 
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
@@ -98,26 +107,25 @@
   }
 
   .dark {
-    /* Already dark theme by default */
-    --background: 240 5% 10%;
-    --foreground: 0 0% 98%;
-    --card: 240 3% 15%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 5% 26%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 318 65% 72%;
-    --primary-foreground: 270 32% 12%;
-    --secondary: 240 3% 46%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3% 46%;
-    --muted-foreground: 0 0% 98%;
-    --accent: 343 87% 15%;
-    --accent-foreground: 351 94% 71%;
+    --background: 240 18% 3%;
+    --foreground: 330 10% 95%;
+    --card: 250 13% 7%;
+    --card-foreground: 330 10% 95%;
+    --popover: 250 13% 6%;
+    --popover-foreground: 330 10% 95%;
+    --primary: 318 58% 71%;
+    --primary-foreground: 240 18% 5%;
+    --secondary: 250 10% 11%;
+    --secondary-foreground: 330 10% 95%;
+    --muted: 250 8% 15%;
+    --muted-foreground: 320 5% 65%;
+    --accent: 318 30% 14%;
+    --accent-foreground: 318 63% 78%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 85% 97%;
-    --border: 240 5% 33%;
-    --input: 240 5% 33%;
-    --ring: 318 65% 72%;
+    --border: 250 7% 19%;
+    --input: 250 7% 19%;
+    --ring: 318 58% 71%;
     --chart-1: 327 87% 81%;
     --chart-2: 352 95% 81%;
     --chart-3: 328 85% 70%;
@@ -241,7 +249,37 @@
 
   .bg-primary {
     background-color: hsl(var(--primary));
-    background-image: var(--gradient-primary);
+    background-image: none;
+  }
+
+  .site-nav-more-menu,
+  .mobile-app-menu {
+    border-color: var(--fit-line) !important;
+    border-radius: 6px !important;
+    color: var(--fit-ink) !important;
+    background: rgba(10, 9, 13, 0.97) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.44) !important;
+    backdrop-filter: blur(20px) saturate(110%) !important;
+  }
+
+  .site-nav-more-item.is-active,
+  .site-drawer-link.is-active {
+    color: var(--fit-accent) !important;
+    background: rgba(225, 138, 203, 0.1) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .site-mobile-nav {
+    border-color: var(--fit-line) !important;
+    background: rgba(7, 7, 10, 0.94) !important;
+    box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.34) !important;
+    backdrop-filter: blur(18px) !important;
+  }
+
+  .site-mobile-nav .mobile-nav-item.is-active {
+    color: var(--fit-accent) !important;
+    background: rgba(225, 138, 203, 0.08) !important;
   }
 
   .shadow-button {

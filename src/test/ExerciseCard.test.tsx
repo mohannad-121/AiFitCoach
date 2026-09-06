@@ -19,7 +19,7 @@ describe('ExerciseCard', () => {
 
     const { rerender } = render(
       <ExerciseCard
-        exercise={exercises[0]}
+        exercise={exercises.find(item => item.id === 'push-ups')!}
         isExpanded={false}
         onToggleExpanded={onToggleExpanded}
         onCollapse={onCollapse}
@@ -32,7 +32,7 @@ describe('ExerciseCard', () => {
 
     rerender(
       <ExerciseCard
-        exercise={exercises[0]}
+        exercise={exercises.find(item => item.id === 'push-ups')!}
         isExpanded={true}
         onToggleExpanded={onToggleExpanded}
         onCollapse={onCollapse}

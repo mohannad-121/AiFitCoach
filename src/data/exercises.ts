@@ -8,13 +8,31 @@ export interface Exercise {
   goal: 'bulking' | 'cutting' | 'fitness' | 'all';
   location: 'home' | 'gym' | 'both';
   gender: 'male' | 'female' | 'all';
-  sets: number;
+  sets: number | string;
   reps: string;
   description: string;
   descriptionAr: string;
 }
 
 const rawExercises: Exercise[] = [
+  { id: 'reverse-lunges', name: 'Reverse Lunges', nameAr: 'لانج خلفي', muscle: 'quads', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '10 each', description: 'Step back into a controlled split stance.', descriptionAr: 'ارجع خطوة للخلف وانزل بتحكم.' },
+  { id: 'walking-lunges', name: 'Walking Lunges', nameAr: 'لانج بالمشي', muscle: 'quads', goal: 'all', location: 'gym', gender: 'all', sets: 3, reps: '10 each', description: 'Alternate forward steps with a controlled lunge.', descriptionAr: 'تقدم بخطوات متبادلة وانزل بتحكم.' },
+  { id: 'split-squat', name: 'Split Squat', nameAr: 'سكوات منقسم', muscle: 'quads', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '10 each', description: 'Lower and rise with feet in a fixed split stance.', descriptionAr: 'انزل واصعد مع بقاء القدمين في وضعية منقسمة.' },
+  { id: 'dumbbell-squat', name: 'Dumbbell Squat', nameAr: 'سكوات بالدمبل', muscle: 'quads', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '10-12', description: 'Squat with dumbbells held at your sides.', descriptionAr: 'سكوات مع دمبل على جانبي الجسم.' },
+  { id: 'band-curls', name: 'Band Curls', nameAr: 'كيرل بالمطاط', muscle: 'biceps', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '12-15', description: 'Curl a resistance band with stable upper arms.', descriptionAr: 'اثنِ الذراعين بالمطاط مع تثبيت العضد.' },
+  { id: 'alternating-curls', name: 'Alternating Dumbbell Curls', nameAr: 'كيرل دمبل بالتبادل', muscle: 'biceps', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '10 each', description: 'Alternate arms without swinging your torso.', descriptionAr: 'بدّل بين الذراعين دون تأرجح الجذع.' },
+  { id: 'band-lateral-raises', name: 'Band Lateral Raises', nameAr: 'رفع جانبي بالمطاط', muscle: 'shoulders', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '12-15', description: 'Raise arms sideways to shoulder height with light resistance.', descriptionAr: 'ارفع الذراعين جانبياً إلى مستوى الكتف بمقاومة خفيفة.' },
+  { id: 'dumbbell-shoulder-press', name: 'Dumbbell Shoulder Press', nameAr: 'ضغط كتف بالدمبل', muscle: 'shoulders', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '10-12', description: 'Press overhead while keeping the torso stable.', descriptionAr: 'اضغط للأعلى مع تثبيت الجذع.' },
+  { id: 'seated-dumbbell-press', name: 'Seated Dumbbell Press', nameAr: 'ضغط دمبل جالس', muscle: 'shoulders', goal: 'all', location: 'gym', gender: 'all', sets: 3, reps: '10-12', description: 'Seated overhead press on a supported bench.', descriptionAr: 'ضغط علوي جالس على مقعد داعم.' },
+  { id: 'dumbbell-rdl', name: 'Dumbbell Romanian Deadlift', nameAr: 'رفعة رومانية بالدمبل', muscle: 'hamstrings', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '10-12', description: 'Hinge at the hips with dumbbells close to your legs.', descriptionAr: 'اثنِ الورك مع إبقاء الدمبل قريباً من الساقين.' },
+  { id: 'bodyweight-hip-hinge', name: 'Bodyweight Hip Hinge', nameAr: 'ثني الورك بوزن الجسم', muscle: 'hamstrings', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '12', description: 'Practice moving the hips back with a soft knee bend.', descriptionAr: 'تدرّب على إرجاع الورك مع ثني بسيط للركبتين.' },
+  { id: 'banded-glute-bridge', name: 'Banded Glute Bridge', nameAr: 'جسر المؤخرة بالمطاط', muscle: 'glutes', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '12-15', description: 'Bridge with a light resistance band above the knees.', descriptionAr: 'جسر بمطاط خفيف فوق الركبتين.' },
+  { id: 'wall-push-ups', name: 'Wall Push-Ups', nameAr: 'ضغط على الحائط', muscle: 'chest', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '12', description: 'A standing push-up against a stable wall.', descriptionAr: 'ضغط واقف على حائط ثابت.' },
+  { id: 'floor-press', name: 'Dumbbell Floor Press', nameAr: 'ضغط دمبل أرضي', muscle: 'chest', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '10-12', description: 'Press dumbbells while lying on the floor.', descriptionAr: 'اضغط الدمبل وأنت مستلقٍ على الأرض.' },
+  { id: 'band-triceps-extension', name: 'Band Triceps Extension', nameAr: 'تمديد تراي بالمطاط', muscle: 'triceps', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '12-15', description: 'Extend elbows against a securely anchored band.', descriptionAr: 'مدّ المرفقين بمطاط مثبت جيداً.' },
+  { id: 'reverse-fly', name: 'Reverse Dumbbell Fly', nameAr: 'رفرفة خلفية بالدمبل', muscle: 'back', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '12-15', description: 'Open the arms with light weights and a stable torso.', descriptionAr: 'افتح الذراعين بوزن خفيف وجذع ثابت.' },
+  { id: 'heel-taps', name: 'Heel Taps', nameAr: 'لمس الكعبين', muscle: 'abs', goal: 'all', location: 'home', gender: 'all', sets: 3, reps: '12 each', description: 'Alternate reaching toward each heel from a supported floor position.', descriptionAr: 'المس الكعبين بالتبادل وأنت على الأرض.' },
+  { id: 'standing-dumbbell-calf-raise', name: 'Standing Dumbbell Calf Raise', nameAr: 'رفع سمانة واقف بالدمبل', muscle: 'calves', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '15', description: 'Raise heels with light dumbbells and balance support.', descriptionAr: 'ارفع الكعبين بدمبل خفيف مع دعم للتوازن.' },
   // ===== CHEST =====
   { id: 'push-ups', name: 'Push-Ups', nameAr: 'تمرين الضغط', muscle: 'chest', goal: 'all', location: 'both', gender: 'all', sets: 3, reps: '12-15', description: 'Classic bodyweight exercise targeting chest, shoulders, and triceps.', descriptionAr: 'تمرين كلاسيكي بوزن الجسم يستهدف الصدر والأكتاف والتراي.' },
   { id: 'bench-press', name: 'Bench Press', nameAr: 'ضغط البنش', muscle: 'chest', goal: 'bulking', location: 'gym', gender: 'all', sets: 4, reps: '8-10', description: 'Compound exercise for building chest mass and strength.', descriptionAr: 'تمرين مركب لبناء كتلة الصدر وقوته.' },
@@ -120,4 +138,3 @@ export function getExercisesByFilters(
     return muscleMatch && goalMatch && locationMatch && genderMatch;
   });
 }
-

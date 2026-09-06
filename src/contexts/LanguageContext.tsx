@@ -303,7 +303,7 @@ function getInitialLanguage(): Language {
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
-  const dir = language === 'ar' ? 'rtl' : 'ltr';
+  const dir: LanguageContextType['dir'] = language === 'ar' ? 'rtl' : 'ltr';
 
   const setLanguage = useCallback((nextLanguage: Language) => {
     setLanguageState(nextLanguage === 'ar' ? 'ar' : 'en');

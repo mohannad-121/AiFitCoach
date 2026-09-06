@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '@/contexts/UserContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -254,6 +254,9 @@ interface AnatomyBodyProps {
   selectedMuscles: string[];
   onMuscleToggle: (muscleId: string) => void;
   muscleNames: Record<string, string>;
+  genderOverride?: 'male' | 'female';
+  compact?: boolean;
+  highlightGroups?: boolean;
 }
 
 type BodyView = 'front' | 'back';
@@ -1151,16 +1154,18 @@ const arabicMuscleFallback: Record<string, string> = {
 
 export { advancedToGroupMap };
 
-export function AnatomyBody({ selectedMuscles, onMuscleToggle, muscleNames }: AnatomyBodyProps) {
+export function AnatomyBody({ selectedMuscles, onMuscleToggle, muscleNames, genderOverride, compact = false, highlightGroups = false }: AnatomyBodyProps) {
+  const bodyClipId = `body-clip-${useId().replace(/:/g, '')}`;
   const { profile } = useUser();
   const { language } = useLanguage();
   const [view, setView] = useState<BodyView>('front');
-  const [gender, setGender] = useState<BodyGender>(profile?.gender === 'female' ? 'female' : 'male');
+  const [genderChoice, setGender] = useState<BodyGender | null>(null);
+  const gender = genderOverride ?? genderChoice ?? (profile?.gender === 'female' ? 'female' : 'male');
   const [level, setLevel] = useState<BodyLevel>('normal');
   const [hoveredMuscle, setHoveredMuscle] = useState<{ id: string; label: string; x: number; y: number } | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
 
-  const isActive = (muscle: string) => selectedMuscles.includes(muscle);
+  const isActive = (muscle: string) => selectedMuscles.includes(muscle) || (highlightGroups && selectedMuscles.includes(advancedToGroupMap[muscle] || muscle));
   const isHovered = (muscle: string) => hoveredMuscle?.id === muscle;
 
   const setHoverPosition = (muscle: string, event: React.MouseEvent<SVGElement | SVGPathElement>) => {
@@ -1286,7 +1291,15 @@ export function AnatomyBody({ selectedMuscles, onMuscleToggle, muscleNames }: An
           viewBox={`0 0 ${assetConfig.canvas.width} ${assetConfig.canvas.height}`}
           className="h-full w-auto max-w-full drop-shadow-[0_26px_55px_rgba(0,0,0,0.42)]"
         >
+          {compact && <defs><clipPath id={bodyClipId}>
+            {/* Keep the original body; clip stray guide marks outside its silhouette. */}
+            <ellipse cx={assetConfig.canvas.width * .5} cy={assetConfig.canvas.height * .083} rx={assetConfig.canvas.width * .066} ry={assetConfig.canvas.height * .079} />
+            <rect x={assetConfig.canvas.width * .461} y={assetConfig.canvas.height * .12} width={assetConfig.canvas.width * .078} height={assetConfig.canvas.height * .08} />
+            {assetConfig.layers.flatMap(layer => layer.pathDs.map((pathD,index) => <path key={`${layer.id}-clip-${index}`} d={pathD} transform={`translate(${layer.x - layer.sourceOffsetX * layer.width / layer.sourceWidth} ${layer.y - layer.sourceOffsetY * layer.height / layer.sourceHeight}) scale(${layer.width / layer.sourceWidth} ${layer.height / layer.sourceHeight})`} />))}
+          </clipPath></defs>}
           <image
+            clipPath={compact ? `url(#${bodyClipId})` : undefined}
+            style={compact ? { filter: 'grayscale(1)', opacity: 0.85 } : undefined}
             href={assetConfig.base}
             x="0"
             y="0"
@@ -1309,15 +1322,16 @@ export function AnatomyBody({ selectedMuscles, onMuscleToggle, muscleNames }: An
                 key={`${layer.id}-${index}`}
                 d={pathD}
                 transform={`translate(${translateX} ${translateY}) scale(${scaleX} ${scaleY})`}
-                fill={active ? 'hsl(318, 65%, 72%)' : 'hsl(0, 65%, 55%)'}
-                stroke={active ? 'hsl(267, 86%, 72%)' : 'hsl(0, 50%, 35%)'}
+                data-active={active}
+                fill={compact ? active ? 'hsl(var(--primary))' : '#57535c' : active ? 'hsl(318, 65%, 72%)' : 'hsl(0, 65%, 55%)'}
+                stroke={compact ? active ? 'hsl(var(--primary))' : '#27252b' : active ? 'hsl(267, 86%, 72%)' : 'hsl(0, 50%, 35%)'}
                 strokeWidth={(active ? 1.4 : 0.8) / strokeScale}
                 vectorEffect="non-scaling-stroke"
                 opacity={active ? 1 : 0.92}
                 style={{
                   cursor: 'pointer',
                   transition: 'all 0.28s ease',
-                  filter: active
+                  filter: compact ? 'none' : active
                     ? 'drop-shadow(0 0 14px rgba(233, 84, 255, 0.88)) brightness(1.18)'
                     : isHovered(layer.muscleId)
                       ? 'drop-shadow(0 0 9px rgba(92, 241, 255, 0.44)) brightness(1.08)'
@@ -1724,11 +1738,11 @@ const renderMaleBackAdvanced = () => (
     : getMuscleList();
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className={`anatomy-body flex w-full flex-col gap-6 ${compact ? 'anatomy-compact' : ''}`} data-gender={gender}>
       {/* Controls Row */}
       <div className="grid gap-3 md:grid-cols-3">
         {/* View Toggle */}
-        <div className="flex gap-1.5 rounded-[1.35rem] border border-white/10 bg-black/25 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="anatomy-view-control flex gap-1.5 rounded-[1.35rem] border border-white/10 bg-black/25 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
           <button onClick={() => setView('front')}
             className={`px-5 py-2.5 rounded-[0.95rem] text-sm font-semibold transition-all duration-300 ${
               view === 'front' ? 'bg-[linear-gradient(135deg,rgba(247,76,197,0.92),rgba(117,90,255,0.96),rgba(63,228,222,0.68))] text-white shadow-[0_12px_28px_rgba(117,90,255,0.32)]' : 'text-white/62 hover:bg-white/[0.05] hover:text-white'
@@ -1859,7 +1873,7 @@ const renderMaleBackAdvanced = () => (
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.97 }}
               className={`group relative overflow-hidden rounded-[1.15rem] border px-4 py-3 text-left transition duration-300 ${
-                selectedMuscles.includes(muscleId)
+                isActive(muscleId)
                   ? 'border-fuchsia-300/30 bg-[linear-gradient(135deg,rgba(242,78,201,0.2),rgba(111,90,255,0.22),rgba(66,232,225,0.12))] text-white shadow-[0_14px_32px_rgba(120,82,255,0.22)]'
                   : 'border-white/10 bg-white/[0.04] text-white/74 hover:border-cyan-300/22 hover:bg-white/[0.07] hover:text-white'
               }`}
@@ -1867,7 +1881,7 @@ const renderMaleBackAdvanced = () => (
               <span className="absolute inset-y-0 left-0 w-1 bg-[linear-gradient(180deg,rgba(255,86,200,0),rgba(255,86,200,0.95),rgba(88,240,255,0.85),rgba(88,240,255,0))] opacity-0 transition duration-300 group-hover:opacity-100" />
               <span className="flex items-center gap-3">
                 <span className={`h-2.5 w-2.5 rounded-full transition duration-300 ${
-                  selectedMuscles.includes(muscleId) ? 'bg-cyan-200 shadow-[0_0_16px_rgba(93,241,255,0.9)]' : 'bg-white/28 group-hover:bg-cyan-200/80'
+                  isActive(muscleId) ? 'bg-cyan-200 shadow-[0_0_16px_rgba(93,241,255,0.9)]' : 'bg-white/28 group-hover:bg-cyan-200/80'
                 }`} />
                 <span className="text-sm font-semibold">{getMuscleLabel(muscleId)}</span>
               </span>

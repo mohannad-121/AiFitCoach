@@ -1,19 +1,51 @@
-import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { Home, Dumbbell, MessageCircle, User, Globe, Calendar, LogOut, LogIn, Shield, BellRing, Moon, Sun, ScanLine, Menu, Crown } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  BellRing,
+  Calendar,
+  ChevronDown,
+  Crown,
+  Dumbbell,
+  Globe,
+  Home,
+  LogIn,
+  LogOut,
+  Menu,
+  MessageCircle,
+  ScanLine,
+  Shield,
+  User,
+} from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/contexts/ThemeContext';
 import { buttonVariants, Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 
-export function Navbar() {
+type NavbarVariant = 'default' | 'home';
+
+interface NavbarProps {
+  variant?: NavbarVariant;
+}
+
+const primaryNavPaths = new Set(['/', '/workouts', '/live-coach', '/coach']);
+const mobileNavPaths = new Set(['/', '/workouts', '/live-coach', '/coach', '/schedule']);
+
+export function Navbar({ variant = 'default' }: NavbarProps) {
   const { t, language, setLanguage } = useLanguage();
   const { user, signOut } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isArabic = language === 'ar';
   const navItems = [
     { path: '/', icon: Home, label: t('nav.home') },
     { path: '/workouts', icon: Dumbbell, label: t('nav.workouts') },
@@ -24,120 +56,196 @@ export function Navbar() {
     { path: '/profile', icon: User, label: t('nav.profile') },
     { path: '/subscription', icon: Crown, label: t('nav.subscription') },
   ];
+  const adminItem = { path: '/admin', icon: Shield, label: t('nav.admin') };
 
-  const mobileNavItems = navItems.filter((item) => ['/', '/workouts', '/live-coach', '/coach', '/schedule'].includes(item.path));
+  const desktopNavItems = navItems.filter((item) => primaryNavPaths.has(item.path));
+  const moreNavItems = [...navItems.filter((item) => !primaryNavPaths.has(item.path)), adminItem];
+  const mobileNavItems = navItems.filter((item) => mobileNavPaths.has(item.path));
+  const isMoreActive = moreNavItems.some((item) => item.path === location.pathname);
+
   const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'ar' : 'en');
+    setLanguage(isArabic ? 'en' : 'ar');
   };
 
+  /* theme toggle owns its accessible label */
+  /* const themeLabel = isArabic
+    ? theme === 'dark'
+      ? 'التبديل إلى الوضع الفاتح'
+      : 'التبديل إلى الوضع الداكن'
+    : theme === 'dark'
+      ? 'Switch to light mode'
+      : 'Switch to dark mode'; */
+  const languageLabel = isArabic ? 'التبديل إلى الإنجليزية' : 'Switch to Arabic';
+  const primaryNavigationLabel = isArabic ? 'التنقل الرئيسي' : 'Primary navigation';
+  const quickNavigationLabel = isArabic ? 'التنقل السريع' : 'Quick navigation';
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[9999] pointer-events-auto glass-card border-b border-border/50">
+    <>
+      <nav
+        aria-label={primaryNavigationLabel}
+        data-variant={variant}
+        className={cn(
+          'site-navbar fixed left-0 right-0 top-0 pointer-events-auto border-b border-border/50 glass-card',
+          mobileMenuOpen ? 'z-40' : 'z-[100]',
+          variant === 'home' && 'is-home',
+        )}
+      >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Dumbbell className="w-6 h-6 text-primary-foreground" />
+        <div className="site-navbar-inner flex h-16 items-center justify-between gap-3">
+          <Link to="/" className="site-logo flex min-h-11 shrink-0 items-center gap-2" aria-label="FitCoach AI">
+            <div className="site-logo-mark flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary" aria-hidden="true">
+              <Dumbbell className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display text-2xl tracking-wide text-foreground">
-              FITCOACH
+            <span className="site-logo-word font-display text-2xl tracking-wide text-foreground">
+              FITCOACH <small className="font-sans text-[0.55em] font-bold tracking-[0.14em]">AI</small>
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden xl:flex items-center gap-1">
-            {navItems.map((item) => {
+          <div className="site-nav-links hidden items-center gap-1 xl:flex">
+            {desktopNavItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     buttonVariants({ variant: isActive ? 'default' : 'ghost' }),
-                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                    'site-nav-link min-h-11 px-3',
+                    isActive ? 'is-active bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
-                  <item.icon className="w-4 h-4 me-2" />
                   {item.label}
                 </Link>
               );
             })}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant={isMoreActive ? 'default' : 'ghost'}
+                  className={cn(
+                    'site-nav-link min-h-11 px-3',
+                    isMoreActive ? 'is-active bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {t('nav.menu')}
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={10}
+                collisionPadding={12}
+                className="site-nav-more-menu z-[120] min-w-[230px] border-border/60 bg-background/95 p-2 backdrop-blur-xl"
+              >
+                {moreNavItems.map((item, index) => {
+                  const isActive = location.pathname === item.path;
+                  const isAdmin = item.path === adminItem.path;
+                  return (
+                    <React.Fragment key={item.path}>
+                      {isAdmin && index > 0 ? <DropdownMenuSeparator /> : null}
+                      <DropdownMenuItem
+                        asChild
+                        className={cn(
+                          'site-nav-more-item min-h-11 cursor-pointer gap-3 rounded-md px-3',
+                          isActive && 'is-active bg-primary/10 text-primary',
+                        )}
+                      >
+                        <Link to={item.path} aria-current={isActive ? 'page' : undefined}>
+                          <item.icon className="h-4 w-4" />
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    </React.Fragment>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          {/* Right section */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleTheme}
-              className="border-border/50 text-muted-foreground hover:text-foreground"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
+          <div className="site-nav-actions flex shrink-0 items-center gap-2">
+            <ThemeToggle />
 
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={toggleLanguage}
-              className="border-border/50 text-muted-foreground hover:text-foreground"
-              aria-label={language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
-              aria-pressed={language === 'ar'}
+              className="site-nav-utility min-h-11 border-border/50 px-3 text-muted-foreground hover:text-foreground"
+              aria-label={languageLabel}
+              aria-pressed={isArabic}
             >
-              <Globe className="w-4 h-4 me-1" />
-              {language === 'en' ? 'عربي' : 'EN'}
+              <Globe className="h-4 w-4" />
+              {isArabic ? 'EN' : 'عربي'}
             </Button>
 
-            <Link
-              to="/admin"
-              className={cn(
-                buttonVariants({ variant: location.pathname === '/admin' ? 'default' : 'outline', size: 'sm' }),
-                'hidden xl:inline-flex',
-                location.pathname === '/admin'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border-border/50 text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <Shield className="w-4 h-4 md:me-1" />
-              <span className="hidden md:inline">{t('nav.admin')}</span>
-            </Link>
-
-            <Sheet>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="xl:hidden border-border/50" aria-label={t('nav.menu')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="site-nav-utility min-h-11 min-w-11 border-border/50 xl:hidden"
+                  aria-label={t('nav.menu')}
+                >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side={language === 'ar' ? 'left' : 'right'} className="mobile-app-menu border-border/60 bg-background/95 pt-14 backdrop-blur-xl">
+              <SheetContent
+                side={isArabic ? 'left' : 'right'}
+                className="mobile-app-menu z-[120] overflow-y-auto overscroll-contain border-border/60 bg-background/95 pb-8 pt-14 backdrop-blur-xl"
+              >
                 <SheetHeader className="text-start">
                   <SheetTitle>{t('nav.menu')}</SheetTitle>
                 </SheetHeader>
                 <div className="mt-6 grid gap-2">
-                  {navItems.map((item) => (
-                    <SheetClose asChild key={item.path}>
-                      <Link to={item.path} className={cn(buttonVariants({ variant: location.pathname === item.path ? 'default' : 'ghost' }), 'h-12 justify-start gap-3')}>
-                        <item.icon className="h-5 w-5" />
-                        {item.label}
-                      </Link>
-                    </SheetClose>
-                  ))}
+                  {navItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <SheetClose asChild key={item.path}>
+                        <Link
+                          to={item.path}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={cn(
+                            buttonVariants({ variant: isActive ? 'default' : 'ghost' }),
+                            'site-drawer-link h-12 justify-start gap-3',
+                            isActive && 'is-active',
+                          )}
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {item.label}
+                        </Link>
+                      </SheetClose>
+                    );
+                  })}
                   <SheetClose asChild>
-                    <Link to="/admin" className={cn(buttonVariants({ variant: location.pathname === '/admin' ? 'default' : 'ghost' }), 'h-12 justify-start gap-3')}>
+                    <Link
+                      to={adminItem.path}
+                      aria-current={location.pathname === adminItem.path ? 'page' : undefined}
+                      className={cn(
+                        buttonVariants({ variant: location.pathname === adminItem.path ? 'default' : 'ghost' }),
+                        'site-drawer-link h-12 justify-start gap-3',
+                        location.pathname === adminItem.path && 'is-active',
+                      )}
+                    >
                       <Shield className="h-5 w-5" />
-                      {t('nav.admin')}
+                      {adminItem.label}
                     </Link>
                   </SheetClose>
                   {user ? (
                     <SheetClose asChild>
-                      <Button variant="ghost" onClick={signOut} className="h-12 justify-start gap-3">
+                      <Button type="button" variant="ghost" onClick={signOut} className="site-nav-utility h-12 justify-start gap-3">
                         <LogOut className="h-5 w-5" />
                         {t('nav.logout')}
                       </Button>
                     </SheetClose>
                   ) : (
                     <SheetClose asChild>
-                      <Link to="/auth?force=1" className={cn(buttonVariants({ variant: 'ghost' }), 'h-12 justify-start gap-3')}>
+                      <Link
+                        to="/auth?force=1"
+                        className={cn(buttonVariants({ variant: 'default' }), 'site-nav-launch h-12 justify-start gap-3')}
+                      >
                         <LogIn className="h-5 w-5" />
                         {t('nav.login')}
                       </Link>
@@ -148,19 +256,24 @@ export function Navbar() {
             </Sheet>
 
             {user ? (
-              <Button variant="ghost" size="sm" onClick={signOut} className="hidden xl:flex text-muted-foreground hover:text-foreground">
-                <LogOut className="w-4 h-4 me-1" />
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={signOut}
+                className="site-nav-utility hidden min-h-11 text-muted-foreground hover:text-foreground xl:inline-flex"
+              >
+                <LogOut className="h-4 w-4" />
                 {t('nav.logout')}
               </Button>
             ) : (
               <Link
                 to="/auth?force=1"
                 className={cn(
-                  buttonVariants({ variant: 'ghost', size: 'sm' }),
-                  'hidden xl:flex text-muted-foreground hover:text-foreground'
+                  buttonVariants({ variant: 'default', size: 'sm' }),
+                  'site-nav-launch hidden min-h-11 bg-primary text-primary-foreground xl:inline-flex',
                 )}
               >
-                <LogIn className="w-4 h-4 me-1" />
+                <LogIn className="h-4 w-4" />
                 {t('nav.login')}
               </Link>
             )}
@@ -168,8 +281,9 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-border/50 px-2 py-1.5">
+      </nav>
+
+      <nav aria-label={quickNavigationLabel} className="site-mobile-nav fixed bottom-0 left-0 right-0 z-[100] border-t border-border/50 px-2 py-1.5 glass-card md:hidden">
         <div className="flex justify-around overflow-x-auto">
           {mobileNavItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -177,19 +291,20 @@ export function Navbar() {
               <Link
                 key={item.path}
                 to={item.path}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   buttonVariants({ variant: 'ghost', size: 'sm' }),
-                  'mobile-nav-item flex min-w-0 flex-1 flex-col items-center gap-1 h-auto py-1.5 px-1',
-                  isActive ? 'text-primary' : 'text-muted-foreground'
+                  'mobile-nav-item flex min-h-[52px] min-w-0 flex-1 flex-col items-center gap-1 px-1 py-1.5',
+                  isActive ? 'is-active text-primary' : 'text-muted-foreground',
                 )}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="text-[10px] leading-tight">{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[10px] leading-tight">{item.label}</span>
               </Link>
             );
           })}
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }

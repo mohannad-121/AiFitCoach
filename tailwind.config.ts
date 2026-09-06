@@ -149,9 +149,9 @@ export default {
   			'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
   			'fade-in-up': 'fade-in-up 0.6s ease-out forwards'
   		},
-  		backgroundImage: {
-			'gradient-primary': 'linear-gradient(110deg, #e78ac8 0%, #d96cdb 48%, #9b62f4 100%)',
-			'gradient-accent': 'linear-gradient(110deg, #e78ac8 0%, #d96cdb 48%, #9b62f4 100%)',
+		backgroundImage: {
+			'gradient-primary': 'var(--gradient-primary)',
+			'gradient-accent': 'var(--gradient-accent)',
   			'gradient-dark': 'linear-gradient(180deg, hsl(220, 20%, 8%) 0%, hsl(220, 25%, 5%) 100%)',
   			'gradient-card': 'linear-gradient(145deg, hsl(220, 18%, 14%) 0%, hsl(220, 18%, 10%) 100%)'
   		},

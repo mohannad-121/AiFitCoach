@@ -39,6 +39,8 @@ ai_backend/ai_backend/logs/
 /ai_backend/datasets/programs_detailed_boostcamp_kaggle.csv
 /ai_backend/model_*.pkl
 /public/videos/
+# Imported exercise reference videos are kept local/external (large binary assets).
+/public/exercise-references/*.mp4
 
 # Audio cache files
 ai_backend/*.wav
