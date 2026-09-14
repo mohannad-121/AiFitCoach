@@ -41,6 +41,9 @@ DROP POLICY IF EXISTS "Users can update own workout evidence"
 CREATE POLICY "Users can update own workout evidence"
   ON public.workout_evidence FOR UPDATE USING (auth.uid() = user_id);
 
+DROP TRIGGER IF EXISTS update_workout_evidence_updated_at
+  ON public.workout_evidence;
+
 CREATE TRIGGER update_workout_evidence_updated_at
   BEFORE UPDATE ON public.workout_evidence
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
