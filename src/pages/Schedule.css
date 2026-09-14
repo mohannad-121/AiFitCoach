@@ -542,6 +542,57 @@
   }
 }
 
+/* Final overrides follow the legacy planner stylesheet, which intentionally shipped dark. */
+.schedule-page { background:radial-gradient(circle at 8% 12%,rgb(38 135 232 / .10),transparent 28%),radial-gradient(circle at 92% 30%,rgb(53 169 106 / .08),transparent 24%),var(--bg-page); }
+.schedule-page::before { opacity:.24; }.schedule-page::after { background:linear-gradient(180deg,transparent,rgb(23 59 99 / .025)); }
+.schedule-page .schedule-focus-bar { background:var(--border-soft); border-color:var(--border-brand); box-shadow:var(--shadow-card); }
+.schedule-page .schedule-focus-bar > div { background:var(--bg-card-blue); }.schedule-page .schedule-focus-bar > div:nth-child(2) { background:var(--bg-card-green); }
+.schedule-page .schedule-focus-bar :is(strong,span),.schedule-page .schedule-calendar :is(h1,h2,h3,h4,p,span),.schedule-page .schedule-plan-panel :is(h1,h2,h3,h4,p,span),.schedule-page .schedule-log-panel :is(h1,h2,h3,h4,p,span) { color:var(--text-primary); }
+.schedule-page .schedule-focus-bar span,.schedule-page .schedule-calendar p,.schedule-page .schedule-plan-panel p,.schedule-page .schedule-log-panel p { color:var(--text-secondary); }
+.schedule-page .schedule-calendar,.schedule-page .schedule-plan-panel,.schedule-page .schedule-next-panel,.schedule-page .schedule-log-panel,.schedule-page .schedule-insight-panel,.schedule-page .schedule-empty-state { background:var(--bg-card); border-color:var(--border-soft); box-shadow:var(--shadow-card); }
+.schedule-page .schedule-task-row { background:var(--bg-card-blue); border-color:var(--border-soft); }.schedule-page .schedule-task-row:hover { border-color:var(--border-brand); box-shadow:var(--shadow-card-hover); }
+.schedule-page .schedule-summary-grid > div,.schedule-page .schedule-insight-grid > div { background:var(--bg-card-blue); border-color:var(--border-soft); }
+.schedule-page .schedule-next-action { background:var(--bg-card-green); border-color:#c4ebd4; }.schedule-page .schedule-insight-badge { color:var(--brand-teal); border-color:#b9e0e1; background:#edfafa; }
+.schedule-page .schedule-log-panel textarea,.schedule-page .schedule-log-panel input { color:var(--text-primary); background:var(--bg-input); border-color:var(--border-medium); }
+
+/* NextAura FIT light planner contrast system. */
+.schedule-page {
+  --schedule-line: var(--border-soft);
+  --schedule-line-strong: var(--border-medium);
+  --schedule-surface: var(--bg-card);
+  --schedule-surface-strong: var(--bg-card-blue);
+  --schedule-panel-shadow: var(--shadow-card);
+  --schedule-glow: 0 0 0 1px rgb(38 135 232 / .08), var(--shadow-card);
+  background:
+    radial-gradient(circle at 8% 12%, rgb(38 135 232 / .10), transparent 28%),
+    radial-gradient(circle at 92% 30%, rgb(53 169 106 / .08), transparent 24%),
+    var(--bg-page);
+}
+.schedule-page::before { opacity:.24; background-image:linear-gradient(rgb(38 135 232 / .05) 1px,transparent 1px),linear-gradient(90deg,rgb(38 135 232 / .05) 1px,transparent 1px); }
+.schedule-page::after { background:linear-gradient(180deg,transparent,rgb(23 59 99 / .025)); }
+.schedule-date-badge,.schedule-mode-switcher,.schedule-calendar,.schedule-plan-panel,.schedule-next-panel,.schedule-log-panel,.schedule-insight-panel,.schedule-empty-state,.schedule-library .glass-card {
+  border-color:var(--border-soft); background:var(--bg-card); box-shadow:var(--shadow-card); color:var(--text-primary);
+}
+.schedule-date-badge { background:linear-gradient(135deg,var(--bg-card-blue),var(--bg-card)); border-color:var(--border-brand); }
+.schedule-date-badge span,.schedule-command-card span,.schedule-focus-bar span,.schedule-insight-grid span,.schedule-focus-meta,.schedule-command-card p { color:var(--text-secondary); }
+.schedule-date-badge strong,.schedule-command-card strong,.schedule-focus-bar strong,.schedule-insight-grid strong { color:var(--text-primary); }
+.schedule-mode-switcher { background:var(--bg-section); }
+.schedule-mode-switcher button.bg-primary { background:var(--brand-gradient); box-shadow:0 8px 20px rgb(38 135 232 / .22); }
+.schedule-focus-bar { border-color:var(--border-brand); background:var(--border-soft); box-shadow:var(--shadow-card); }
+.schedule-focus-bar > div { background:var(--bg-card-blue); }
+.schedule-focus-bar > div:nth-child(2) { background:var(--bg-card-green); }
+.schedule-command-card { border-color:var(--border-soft); background:var(--bg-card); box-shadow:var(--shadow-card); }
+.schedule-command-card:nth-child(2) { background:var(--bg-card-blue); border-color:var(--border-brand); }
+.schedule-command-card:nth-child(3) { background:var(--bg-card-green); border-color:#c4ebd4; }
+.schedule-command-card::after { background:radial-gradient(circle,rgb(38 135 232 / .13),transparent 72%); }
+.schedule-command-link:hover { color:var(--brand-blue-strong); }
+.schedule-calendar .grid-cols-7 button:hover { box-shadow:var(--shadow-card-hover); }
+.schedule-plan-panel { border-color:var(--border-brand); }
+.schedule-next-icon { background:var(--bg-card-blue); color:var(--brand-blue); }
+.schedule-summary-grid { border-color:var(--border-soft); }
+.schedule-chip.is-active { background:var(--brand-gradient); color:var(--text-inverse); }
+.schedule-log-panel textarea,.schedule-log-panel input { background:var(--bg-input); border-color:var(--border-medium); }
+
 @media (prefers-reduced-motion: reduce) {
   .schedule-calendar .grid-cols-7 button,
   .schedule-task-row,
@@ -874,3 +925,16 @@
     border-radius: 0.7rem;
   }
 }
+
+/* Keep the planner's final legacy declarations in the shared light system. */
+.schedule-page { background:radial-gradient(circle at 8% 12%,rgb(38 135 232 / .10),transparent 28%),radial-gradient(circle at 92% 30%,rgb(53 169 106 / .08),transparent 24%),var(--bg-page); }
+.schedule-page::before { opacity:.24; }.schedule-page::after { background:linear-gradient(180deg,transparent,rgb(23 59 99 / .025)); }
+.schedule-page .schedule-focus-bar { background:var(--border-soft); border-color:var(--border-brand); box-shadow:var(--shadow-card); }
+.schedule-page .schedule-focus-bar > div { background:var(--bg-card-blue); }.schedule-page .schedule-focus-bar > div:nth-child(2) { background:var(--bg-card-green); }
+.schedule-page .schedule-focus-bar :is(strong,span),.schedule-page .schedule-calendar :is(h1,h2,h3,h4,p,span),.schedule-page .schedule-plan-panel :is(h1,h2,h3,h4,p,span),.schedule-page .schedule-log-panel :is(h1,h2,h3,h4,p,span) { color:var(--text-primary); }
+.schedule-page .schedule-focus-bar span,.schedule-page .schedule-calendar p,.schedule-page .schedule-plan-panel p,.schedule-page .schedule-log-panel p { color:var(--text-secondary); }
+.schedule-page .schedule-calendar,.schedule-page .schedule-plan-panel,.schedule-page .schedule-next-panel,.schedule-page .schedule-log-panel,.schedule-page .schedule-insight-panel,.schedule-page .schedule-empty-state { background:var(--bg-card); border-color:var(--border-soft); box-shadow:var(--shadow-card); }
+.schedule-page .schedule-task-row { background:var(--bg-card-blue); border-color:var(--border-soft); }.schedule-page .schedule-task-row:hover { border-color:var(--border-brand); box-shadow:var(--shadow-card-hover); }
+.schedule-page .schedule-summary-grid > div,.schedule-page .schedule-insight-grid > div { background:var(--bg-card-blue); border-color:var(--border-soft); }
+.schedule-page .schedule-next-action { background:var(--bg-card-green); border-color:#c4ebd4; }.schedule-page .schedule-insight-badge { color:var(--brand-teal); border-color:#b9e0e1; background:#edfafa; }
+.schedule-page .schedule-log-panel textarea,.schedule-page .schedule-log-panel input { color:var(--text-primary); background:var(--bg-input); border-color:var(--border-medium); }

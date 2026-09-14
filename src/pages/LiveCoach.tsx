@@ -17,6 +17,7 @@ import { muscleGroups, muscleLabel } from '@/lib/trainingCatalog';
 import { ReferenceVideos } from '@/components/workout/ReferenceVideos';
 import { advanceRep, emptyRepCounter } from '@/lib/repCounter';
 import './TrainingFlow.css';
+import './LiveCoachContrast.css';
 
 type CameraState = 'idle' | 'starting' | 'live' | 'error';
 type CameraIssue = 'permission-denied' | 'no-camera' | 'unsupported' | 'unknown' | null;
@@ -270,10 +271,10 @@ function createEmptyProgress(): LiveCoachProgress {
 }
 
 function metricToneFor(value: number, liveReady: boolean): MetricTone {
-  if (!liveReady) return 'purple';
+  if (!liveReady) return 'blue';
   if (value >= 88) return 'green';
   if (value >= 74) return 'cyan';
-  if (value >= 56) return 'purple';
+  if (value >= 56) return 'blue';
   if (value >= 36) return 'amber';
   return 'red';
 }
@@ -1175,7 +1176,7 @@ export function LiveCoachPage() {
       value: supportedPose && supportedPose !== 'plank' ? String(completedReps) : '—',
       trend: text('Complete movement cycles', 'دورات حركة كاملة'),
       status: supportedPose === 'plank' ? text('Hold exercise', 'تمرين ثبات') : supportedPose ? text('Experimental counter', 'عدّاد تجريبي') : text('Not available for this movement', 'غير متاح لهذه الحركة'),
-      progress: 0, tone: 'purple', icon: <Dumbbell className="h-4 w-4" />,
+      progress: 0, tone: 'blue', icon: <Dumbbell className="h-4 w-4" />,
     },
   ] as const;
   const collectionReady = canCollectCurrentExercise && cameraState === 'live' && modelState === 'ready';
@@ -1235,7 +1236,7 @@ export function LiveCoachPage() {
   }, [coachingCue, isArabic, language, voiceEnabled]);
 
   return (
-    <div dir={isArabic ? 'rtl' : 'ltr'} className="live-coach-shell training-simple relative min-h-screen overflow-hidden bg-[#060816] pb-24 text-foreground md:pb-10">
+    <div dir={isArabic ? 'rtl' : 'ltr'} className="live-coach-shell training-simple relative min-h-screen overflow-hidden bg-background pb-24 text-foreground md:pb-10">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(129,92,255,0.18),_transparent_28%),radial-gradient(circle_at_82%_18%,_rgba(34,211,238,0.12),_transparent_24%),radial-gradient(circle_at_50%_100%,_rgba(236,72,153,0.1),_transparent_34%)]" />
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:54px_54px]" />
@@ -1259,7 +1260,7 @@ export function LiveCoachPage() {
             {text('Live Form Coach', 'مدرب الأداء المباشر')}
           </h1>
           <div className="relative mt-3 h-1.5 w-44 overflow-hidden rounded-full bg-white/8">
-            <div className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-gradient-to-r from-fuchsia-400 via-violet-400 to-cyan-300 blur-[1px]" />
+            <div className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-400 blur-[1px]" />
           </div>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
             {text('Live exercise form feedback.', 'تتبع فوري للوضعية، وملاحظات للحركة، وتصحيح ذكي للتمرين في الوقت الحقيقي.')}
@@ -1286,7 +1287,7 @@ export function LiveCoachPage() {
                   <h2 className="text-lg font-semibold text-foreground">{profile?.name || text('Your live session', 'جلستك المباشرة')}</h2>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {profile?.goal && (
-                      <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-3 py-1 text-[11px] font-medium text-fuchsia-100">
+                      <span className="rounded-full border border-blue-300/35 bg-blue-500/10 px-3 py-1 text-[11px] font-medium text-blue-800">
                         {profile.goal}
                       </span>
                     )}
@@ -1330,7 +1331,7 @@ export function LiveCoachPage() {
             <div className="order-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.78),rgba(10,12,24,0.86))] p-5 shadow-[0_16px_48px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Clock3 className="h-4 w-4 text-violet-200" />
+                  <Clock3 className="h-4 w-4 text-blue-700" />
                   <h3 className="text-sm font-semibold text-white">{text('Recent Sessions', 'آخر الجلسات')}</h3>
                 </div>
                 <Button
@@ -1398,7 +1399,7 @@ export function LiveCoachPage() {
             <details className="order-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.74),rgba(10,12,24,0.82))] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
               <summary className="cursor-pointer list-none text-sm font-semibold text-white outline-none marker:hidden">
                 <span className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-200" />{text('Advanced details', 'تفاصيل متقدمة')}</span>
+                  <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-blue-700" />{text('Advanced details', 'تفاصيل متقدمة')}</span>
                   <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{text('Optional', 'اختياري')}</span>
                 </span>
               </summary>
@@ -1420,7 +1421,7 @@ export function LiveCoachPage() {
                   <div className="truncate text-sm font-semibold text-white">{profile?.name || text('Your live session', 'جلستك المباشرة')}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {profile?.goal && (
-                      <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-100">
+                      <span className="rounded-full border border-blue-300/35 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-800">
                         {profile.goal}
                       </span>
                     )}
@@ -1469,7 +1470,7 @@ export function LiveCoachPage() {
                   <div className="truncate text-sm font-semibold text-white">{profile?.name || text('Your live session', 'جلستك المباشرة')}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {profile?.goal && (
-                      <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-100">
+                      <span className="rounded-full border border-blue-300/35 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-800">
                         {profile.goal}
                       </span>
                     )}
@@ -1542,7 +1543,7 @@ export function LiveCoachPage() {
                 </div>
               </div>
 
-              <div className="relative h-[58svh] min-h-[360px] max-h-[660px] w-full overflow-hidden bg-black sm:h-[64vh] sm:min-h-[480px] sm:max-h-[720px] lg:h-[68vh] lg:min-h-[540px] lg:max-h-[760px] xl:h-[calc(100vh-18rem)] xl:min-h-[560px] xl:max-h-[720px]">
+              <div className="live-camera-stage relative h-[58svh] min-h-[360px] max-h-[660px] w-full overflow-hidden bg-black sm:h-[64vh] sm:min-h-[480px] sm:max-h-[720px] lg:h-[68vh] lg:min-h-[540px] lg:max-h-[760px] xl:h-[calc(100vh-18rem)] xl:min-h-[560px] xl:max-h-[720px]">
                 <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_center,_rgba(56,189,248,0.08),_transparent_55%)]" />
                 <div className="pointer-events-none absolute inset-0 z-[1] opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:32px_32px]" />
                 <video ref={videoRef} muted playsInline className={cn(
@@ -1557,8 +1558,8 @@ export function LiveCoachPage() {
                 )} />
                 <div className="pointer-events-none absolute inset-[7%] z-[3] rounded-[28px] border border-white/15 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]">
                   <span className="absolute -left-px -top-px h-10 w-10 border-l-2 border-t-2 border-cyan-300/80" />
-                  <span className="absolute -right-px -top-px h-10 w-10 border-r-2 border-t-2 border-fuchsia-300/80" />
-                  <span className="absolute -bottom-px -left-px h-10 w-10 border-b-2 border-l-2 border-fuchsia-300/80" />
+                  <span className="absolute -right-px -top-px h-10 w-10 border-r-2 border-t-2 border-teal-300/80" />
+                  <span className="absolute -bottom-px -left-px h-10 w-10 border-b-2 border-l-2 border-teal-300/80" />
                   <span className="absolute -bottom-px -right-px h-10 w-10 border-b-2 border-r-2 border-cyan-300/80" />
                 </div>
                 {cameraState === 'live' && (
@@ -1572,7 +1573,7 @@ export function LiveCoachPage() {
 
                 {cameraState !== 'live' && (
                   <div className="absolute inset-0 z-[4] flex flex-col items-center justify-center gap-4 bg-zinc-950/95 px-6 text-center backdrop-blur-sm">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full border border-fuchsia-300/15 bg-white/[0.03] shadow-[0_0_60px_rgba(168,85,247,0.14)]">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full border border-teal-300/25 bg-white/[0.03] shadow-[0_0_60px_rgba(63,168,174,0.18)]">
                       {cameraState === 'error'
                         ? <TriangleAlert className="h-8 w-8 text-amber-400" />
                         : <Camera className="h-8 w-8 text-zinc-300" />}
@@ -1614,7 +1615,7 @@ export function LiveCoachPage() {
                     <Radar className="mr-1 inline h-3.5 w-3.5" />
                     {text('Pose tracking', 'تتبع الحركة')}: {trackingReady ? text('Ready', 'جاهز') : text('Loading', 'تحميل')}
                   </div>
-                  <div className={cn('rounded-full border px-3 py-1.5 text-xs', analysisActive ? 'border-fuchsia-300/20 bg-fuchsia-500/10 text-fuchsia-100' : 'border-white/10 bg-white/[0.04] text-muted-foreground')}>
+                  <div className={cn('rounded-full border px-3 py-1.5 text-xs', analysisActive ? 'border-blue-300/35 bg-blue-500/10 text-blue-800' : 'border-white/10 bg-white/[0.04] text-muted-foreground')}>
                     <Activity className="mr-1 inline h-3.5 w-3.5" />
                     {text('Form analysis', 'تحليل الأداء')}: {analysisActive ? text('Analyzing', 'جارٍ التحليل') : text('Stand by', 'انتظار')}
                   </div>
@@ -1654,7 +1655,7 @@ export function LiveCoachPage() {
                 </div>
                 <span className={cn(
                   'rounded-full border px-3 py-1 text-xs font-medium',
-                  liveReady ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-200' : 'border-violet-300/25 bg-violet-400/10 text-violet-100'
+                  liveReady ? 'border-emerald-300/35 bg-emerald-400/10 text-emerald-800' : 'border-blue-300/35 bg-blue-500/10 text-blue-800'
                 )}>
                   {liveReady ? text('Live metrics', 'مؤشرات مباشرة') : text('Ready to watch', 'جاهز للتتبع')}
                 </span>
@@ -1924,7 +1925,7 @@ export function LiveCoachPage() {
                   <div className="truncate text-sm font-semibold text-white">{profile?.name || text('Your live session', 'جلستك المباشرة')}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {profile?.goal && (
-                      <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-100">
+                      <span className="rounded-full border border-blue-300/35 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-800">
                         {profile.goal}
                       </span>
                     )}
@@ -1989,7 +1990,7 @@ export function LiveCoachPage() {
             <details className="order-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,20,37,0.74),rgba(10,12,24,0.82))] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
               <summary className="cursor-pointer list-none text-sm font-semibold text-white outline-none marker:hidden">
                 <span className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-200" />{text('Advanced details', 'تفاصيل متقدمة')}</span>
+                  <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-blue-700" />{text('Advanced details', 'تفاصيل متقدمة')}</span>
                   <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{text('Optional', 'اختياري')}</span>
                 </span>
               </summary>
@@ -2141,7 +2142,7 @@ function CoachingCueOverlay({ cue, isArabic, poseQuality, text }: {
   );
 }
 
-type MetricTone = 'green' | 'cyan' | 'amber' | 'red' | 'purple';
+type MetricTone = 'green' | 'cyan' | 'amber' | 'red' | 'blue';
 
 const metricToneClasses: Record<MetricTone, {
   border: string;
@@ -2178,12 +2179,12 @@ const metricToneClasses: Record<MetricTone, {
     bar: 'from-red-400 to-rose-300',
     glow: 'shadow-[0_0_30px_rgba(248,113,113,0.14)]',
   },
-  purple: {
-    border: 'border-violet-300/25',
-    bg: 'bg-violet-400/10',
-    text: 'text-violet-100',
-    bar: 'from-violet-400 to-fuchsia-300',
-    glow: 'shadow-[0_0_30px_rgba(168,85,247,0.16)]',
+  blue: {
+    border: 'border-blue-300/35',
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-800',
+    bar: 'from-blue-500 to-teal-400',
+    glow: 'shadow-[0_0_30px_rgba(38,135,232,0.16)]',
   },
 };
 
@@ -2208,11 +2209,11 @@ function SessionProgressCard({ text, elapsed, completedReps, averageFormScore, b
     <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,34,0.84),rgba(7,9,18,0.92))] p-5 shadow-[0_22px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-100">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-blue-300/35 bg-blue-500/10 text-blue-800">
             <Award className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-100/70">{text('Session Progress', 'تقدم الجلسة')}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-800/70">{text('Session Progress', 'تقدم الجلسة')}</div>
             <h3 className="text-lg font-semibold text-white">{liveReady ? text('Live set summary', 'ملخص الجولة المباشر') : text('Ready for your set', 'جاهز للجولة')}</h3>
           </div>
         </div>
@@ -2221,10 +2222,10 @@ function SessionProgressCard({ text, elapsed, completedReps, averageFormScore, b
 
       <div className="grid grid-cols-2 gap-3">
         <ProgressMetric label={text('Completion', 'الإنجاز')} value={completion > 0 ? `${completion}%` : text('Ready', 'جاهز')} progress={completion} tone={metricToneFor(completion, liveReady)} />
-        <ProgressMetric label={text('Completed reps', 'التكرارات المكتملة')} value={`${completedReps}`} progress={Math.min(100, completedReps * 10)} tone="purple" />
-        <ProgressMetric label={text('Average form score', 'متوسط الأداء')} value={averageFormScore > 0 ? `${averageFormScore}%` : text('Pending', 'لاحقاً')} progress={averageFormScore} tone={averageFormScore >= 75 ? 'green' : averageFormScore >= 45 ? 'amber' : 'purple'} />
-        <ProgressMetric label={text('Best form score', 'أفضل نتيجة')} value={bestFormScore > 0 ? `${bestFormScore}%` : text('Pending', 'لاحقاً')} progress={bestFormScore} tone={bestFormScore >= 75 ? 'green' : bestFormScore >= 45 ? 'amber' : 'purple'} />
-        <ProgressMetric label={text('Consistency', 'الثبات')} value={consistency > 0 ? `${consistency}%` : text('Pending', 'لاحقاً')} progress={consistency} tone={consistency >= 75 ? 'green' : consistency >= 45 ? 'amber' : 'purple'} />
+        <ProgressMetric label={text('Completed reps', 'التكرارات المكتملة')} value={`${completedReps}`} progress={Math.min(100, completedReps * 10)} tone="blue" />
+        <ProgressMetric label={text('Average form score', 'متوسط الأداء')} value={averageFormScore > 0 ? `${averageFormScore}%` : text('Pending', 'لاحقاً')} progress={averageFormScore} tone={averageFormScore >= 75 ? 'green' : averageFormScore >= 45 ? 'amber' : 'blue'} />
+        <ProgressMetric label={text('Best form score', 'أفضل نتيجة')} value={bestFormScore > 0 ? `${bestFormScore}%` : text('Pending', 'لاحقاً')} progress={bestFormScore} tone={bestFormScore >= 75 ? 'green' : bestFormScore >= 45 ? 'amber' : 'blue'} />
+        <ProgressMetric label={text('Consistency', 'الثبات')} value={consistency > 0 ? `${consistency}%` : text('Pending', 'لاحقاً')} progress={consistency} tone={consistency >= 75 ? 'green' : consistency >= 45 ? 'amber' : 'blue'} />
         <ProgressMetric label={text('Current streak', 'السلسلة الحالية')} value={currentStreak > 0 ? `${currentStreak}` : text('Ready', 'جاهز')} progress={Math.min(100, currentStreak * 12)} tone={currentStreak > 3 ? 'green' : 'cyan'} />
       </div>
     </section>

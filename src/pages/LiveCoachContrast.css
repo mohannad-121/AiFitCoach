@@ -1,0 +1,24 @@
+/* Keep the camera dark; make every surrounding Live Coach surface part of the light app. */
+.live-coach-shell { background:var(--bg-page) !important; color:var(--text-primary); }
+.live-coach-shell :is(section, aside, details)[class*='border-white'] { border-color:var(--border-soft) !important; }
+.live-coach-shell :is(section, aside, details)[class*='bg-[linear-gradient'] { background:var(--bg-card) !important; box-shadow:var(--shadow-card) !important; }
+.live-coach-shell :is(section, aside, details)[class*='bg-white/'] { background:var(--bg-card) !important; }
+.live-coach-shell :is(section, aside, details) [class*='bg-black/'] { background:var(--bg-input) !important; border-color:var(--border-medium) !important; }
+.live-coach-shell :is(section, aside, details) [class*='text-white'],
+.live-coach-shell :is(section, aside, details) [class*='text-cyan-100'],
+.live-coach-shell :is(section, aside, details) [class*='text-emerald-200'],
+.live-coach-shell :is(section, aside, details) [class*='text-white'] { color:var(--text-primary) !important; }
+.live-coach-shell :is(section, aside, details) [class*='border-white/'] { border-color:var(--border-soft) !important; }
+.live-coach-shell .live-feedback-compact { background:var(--bg-card-green); border-color:#c4ebd4; }
+.live-coach-shell .live-measurement { background:var(--bg-card-blue); border-color:var(--border-brand); box-shadow:none; }
+.live-coach-shell .live-exercise-picker { background:var(--bg-card) !important; border-color:var(--border-soft) !important; }
+.live-coach-shell .live-camera-stage { background:#08131f !important; }
+.live-coach-shell .live-camera-stage [class*='bg-black'],
+.live-coach-shell .live-camera-stage [class*='text-white'],
+.live-coach-shell .live-camera-stage [class*='text-cyan'],
+.live-coach-shell .live-camera-stage [class*='text-emerald'] { color:inherit; }
+.live-coach-shell .live-camera-stage [class*='bg-black'] { background:rgb(0 0 0 / .45) !important; }
+.live-coach-shell .live-camera-stage [class*='border-white'] { border-color:rgb(255 255 255 / .18) !important; }
+.live-coach-shell .live-camera-stage [class*='text-white'],
+.live-coach-shell .live-camera-stage [class*='text-cyan'],
+.live-coach-shell .live-camera-stage [class*='text-emerald'] { color:#fff !important; }
