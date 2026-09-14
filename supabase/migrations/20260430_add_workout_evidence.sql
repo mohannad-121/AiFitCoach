@@ -23,11 +23,20 @@ CREATE INDEX IF NOT EXISTS idx_workout_evidence_user_date
 
 ALTER TABLE public.workout_evidence ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own workout evidence"
+  ON public.workout_evidence;
+
 CREATE POLICY "Users can view own workout evidence"
   ON public.workout_evidence FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own workout evidence"
+  ON public.workout_evidence;
+
 CREATE POLICY "Users can insert own workout evidence"
   ON public.workout_evidence FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own workout evidence"
+  ON public.workout_evidence;
 
 CREATE POLICY "Users can update own workout evidence"
   ON public.workout_evidence FOR UPDATE USING (auth.uid() = user_id);
