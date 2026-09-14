@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dumbbell, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { isPublicAppOrigin } from '@/lib/backendUrl';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -38,74 +39,12 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const forceAuth = new URLSearchParams(location.search).get('force') === '1';
-
-  const clearMockAuthStorage = () => {
-    try {
-      localStorage.removeItem('fitcoach_mock_user');
-    } catch {
-      // ignore storage cleanup failures
-    }
-    delete (globalThis as any).__fitcoach_mock_user;
-  };
+  const clearMockAuthStorage = () => { localStorage.removeItem('fitcoach_mock_user'); };
 
   useEffect(() => {
-    // ???????????? ???????????? ???? ???????????? ?????????????? (Supabase ???? Mock)
-    let isMounted = true;
-    const markSession = (exists: boolean) => {
-      if (!isMounted) return;
-      setHasSession(exists);
-      if (exists && !forceAuth) {
-        navigate('/', { replace: true });
-      }
-    };
-    const readMockUser = () => {
-      const memoryUser = (globalThis as any).__fitcoach_mock_user;
-      const storedUser = localStorage.getItem('fitcoach_mock_user');
-      if (!storedUser) return memoryUser || null;
-      try {
-        return JSON.parse(storedUser);
-      } catch {
-        localStorage.removeItem('fitcoach_mock_user');
-        return memoryUser || null;
-      }
-    };
-
-    try {
-      // ???????? ???? Supabase availability
-      if (supabase && supabase.auth && supabase.auth.onAuthStateChange) {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          if (session?.user) {
-            markSession(true);
-          }
-        });
-
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session?.user) {
-            clearMockAuthStorage();
-            markSession(true);
-          } else {
-            markSession(false);
-          }
-        }).catch(() => {
-          markSession(false);
-        });
-
-        return () => {
-          isMounted = false;
-          subscription?.unsubscribe?.();
-        };
-      } else {
-        // Supabase not configured, just check localStorage
-        const storedUser = readMockUser();
-        markSession(Boolean(storedUser));
-      }
-    } catch {
-      // ?????????? ??????????????
-    }
-    return () => {
-      isMounted = false;
-    };
-  }, [navigate, forceAuth]);
+    setHasSession(Boolean(user));
+    if (user && !forceAuth) navigate('/workouts', { replace: true });
+  }, [user, forceAuth, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -128,7 +67,8 @@ export function AuthPage() {
     try {
       localStorage.setItem('fitcoach_mock_user', JSON.stringify(mockUser));
     } catch {
-      (globalThis as any).__fitcoach_mock_user = mockUser;
+      toast({ variant: 'destructive', title: language === 'ar' ? 'التخزين غير متاح' : 'Browser storage is unavailable' });
+      return;
     }
 
     // Trigger storage event for other listeners
@@ -137,10 +77,10 @@ export function AuthPage() {
     toast({ title: language === 'ar' ? 'نجاح!' : 'Success!', description: language === 'ar' ? 'تم تسجيل الدخول بنجاح' : 'Signed in successfully' });
 
     // انتظر لضمان تحديث الـ user state
-    await new Promise(resolve => setTimeout(resolve, 300));
+
     
     // استدعي الانتقال
-    navigate(isSigningUp ? '/onboarding' : '/', { replace: true });
+    navigate(isSigningUp ? '/onboarding' : '/workouts', { replace: true });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,7 +119,7 @@ export function AuthPage() {
             title: language === 'ar' ? 'نجاح!' : 'Success!',
             description: language === 'ar' ? 'تم تسجيل الدخول بنجاح' : 'Signed in successfully',
           });
-          navigate('/', { replace: true });
+          navigate('/workouts', { replace: true });
           return;
         }
 
@@ -238,10 +178,8 @@ export function AuthPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
-            <Dumbbell className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h1 className="font-display text-4xl text-foreground">FITCOACH</h1>
+          <BrandLogo className="mx-auto mb-6" />
+          <h1 className="text-2xl font-semibold text-foreground">NextAura FIT</h1>
           <p className="text-muted-foreground mt-2">
             {isLogin
               ? (language === 'ar' ? 'سجل دخولك للمتابعة' : 'Sign in to continue your journey')
@@ -344,6 +282,7 @@ export function AuthPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? (language === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (language === 'ar' ? 'إظهار كلمة المرور' : 'Show password')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

@@ -85,6 +85,7 @@ export function CoachNotificationsPage() {
   const [role, setRole] = useState<RoleFilter>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [query, setQuery] = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const text = useCallback((en: string, ar: string) => (language === 'ar' ? ar : en), [language]);
@@ -106,7 +107,7 @@ export function CoachNotificationsPage() {
 
       const latest = [...response.notifications].sort((a, b) => timestamp(b.created_at) - timestamp(a.created_at))[0];
       if (latest?.created_at) setLastCoachNotificationTimestamp(user.id, latest.created_at);
-      markCoachNotificationsRead(user.id, response.notifications.map((notification) => notification.id));
+
     } catch (error) {
       if (showErrorToast) {
         toast({
@@ -139,6 +140,7 @@ export function CoachNotificationsPage() {
   const visibleNotifications = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return notifications
+      .filter(item => !unreadOnly || newThisVisit.has(item.id))
       .filter((item) => category === 'all' || item.note_category === category)
       .filter((item) => role === 'all' || item.author_role === role)
       .filter((item) => {
@@ -151,7 +153,7 @@ export function CoachNotificationsPage() {
       .sort((a, b) => sortOrder === 'newest'
         ? timestamp(b.created_at) - timestamp(a.created_at)
         : timestamp(a.created_at) - timestamp(b.created_at));
-  }, [category, notifications, query, role, sortOrder]);
+  }, [category, notifications, query, role, sortOrder, unreadOnly, newThisVisit]);
 
   return (
     <div className="coach-notes-page min-h-screen pb-24 md:pb-10">
@@ -173,7 +175,7 @@ export function CoachNotificationsPage() {
           </div>
           <div className="coach-notes-summary" aria-label={text('Notification summary', 'ملخص الإشعارات')}>
             <div><span>{text('Total notes', 'كل الملاحظات')}</span><strong>{notifications.length}</strong></div>
-            <div><span>{text('New this visit', 'جديد في هذه الزيارة')}</span><strong>{newThisVisit.size}</strong></div>
+            <div><span>{text('Unread', 'غير مقروء')}</span><strong>{newThisVisit.size}</strong></div>
             <Button variant="outline" onClick={() => void loadNotifications(true)} disabled={loading}>
               <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
               {text('Refresh', 'تحديث')}
@@ -183,7 +185,7 @@ export function CoachNotificationsPage() {
 
         {!storageReady && (
           <div className="coach-notes-warning">
-            {text('The admin notes table is not ready yet. Run the admin_user_notes Supabase migration first.', 'جدول ملاحظات الإدارة غير جاهز. شغّل ترحيل admin_user_notes في Supabase أولاً.')}
+            {text('Notes are temporarily unavailable. Please try again later.', 'الملاحظات غير متاحة حالياً. حاول لاحقاً.')}
           </div>
         )}
 
@@ -196,7 +198,7 @@ export function CoachNotificationsPage() {
         >
           <div className="coach-notes-search">
             <Search />
-            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={text('Search notes or exercises', 'ابحث في الملاحظات أو التمارين')} />
+            <Input aria-label={text('Search notes', 'البحث في الملاحظات')} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={text('Search notes or exercises', 'ابحث في الملاحظات أو التمارين')} />
           </div>
 
           <div className="coach-notes-category-tabs">
@@ -204,14 +206,14 @@ export function CoachNotificationsPage() {
               const Icon = item.icon;
               const count = item.value === 'all' ? notifications.length : categoryCounts[item.value] || 0;
               return (
-                <button key={item.value} type="button" onClick={() => setCategory(item.value)} className={cn(category === item.value && 'is-active')}>
+                <button key={item.value} type="button" aria-pressed={category === item.value} onClick={() => setCategory(item.value)} className={cn(category === item.value && 'is-active')}>
                   <Icon /><span>{getCategoryLabel(item.value, language)}</span><small>{count}</small>
                 </button>
               );
             })}
           </div>
 
-          <div className="coach-notes-selects">
+          <div className="coach-notes-selects"><Button variant={unreadOnly ? "default" : "outline"} aria-pressed={unreadOnly} onClick={() => setUnreadOnly(value => !value)}>{text('Unread', 'غير مقروء')}</Button>
             <Select value={role} onValueChange={(value) => setRole(value as RoleFilter)}>
               <SelectTrigger aria-label={text('Filter by sender', 'تصفية حسب المرسل')}><UserRound /><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -250,11 +252,10 @@ export function CoachNotificationsPage() {
                 <motion.article
                   layout
                   key={notification.id}
-                  initial={{ opacity: 0, y: 22, rotateX: 3 }}
-                  animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ delay: Math.min(index * 0.045, 0.3), duration: 0.4 }}
-                  whileHover={{ y: -4, rotateX: 1, rotateY: index % 2 ? -0.7 : 0.7 }}
                   className={cn('coach-note-card', `is-${notification.note_category}`, isNew && 'is-new')}
                 >
                   <div className="coach-note-accent" aria-hidden="true" />
@@ -279,8 +280,10 @@ export function CoachNotificationsPage() {
                       </div>
                     </div>
 
+                    {notification.pinned_exercise && <span className="coach-note-target">{text('Pinned to exercise', 'مثبت على تمرين')}: {notification.pinned_exercise.name}</span>}
                     <p className="coach-note-message">{parsedNotification.clean_text}</p>
 
+                    {isNew && <Button variant="ghost" onClick={() => { if (!user) return; markCoachNotificationsRead(user.id,[notification.id]); setNewThisVisit(value => { const next = new Set(value); next.delete(notification.id); return next; }); }}>{text('Mark as read', 'تحديد كمقروء')}</Button>}
                     {parsedNotification.schedule_target && (
                       <div className="coach-note-actions">
                         {parsedNotification.schedule_target.itemName && (

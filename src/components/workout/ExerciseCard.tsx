@@ -1,4 +1,5 @@
 import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import { Camera, Dumbbell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -66,9 +67,9 @@ export function ExerciseCard({
   return (
     <motion.article
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-      className="group overflow-hidden rounded-2xl border border-border bg-[#070b18] shadow-[0_24px_80px_rgba(0,0,0,0.36)]"
+      className="group overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
     >
-      <div className="border-b border-border bg-[linear-gradient(145deg,rgba(32,25,65,0.88),rgba(7,11,24,0.96)_55%,rgba(8,43,54,0.76))] p-5 sm:p-6">
+      <div className="border-b border-border bg-card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-primary">
@@ -125,13 +126,9 @@ export function ExerciseCard({
         </div>
       </div>
 
-      {isExpanded && (
-        <motion.section
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="border-t border-border bg-white/[0.03]"
-        >
+      <Dialog open={isExpanded} onOpenChange={open => { if (!open) onCollapse?.(); }}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+          <DialogHeader><DialogTitle>{name}</DialogTitle><DialogDescription>{localizedLabel('Move at your own pace. Stop if you feel pain.', 'تحرك بوتيرتك. توقف إذا شعرت بألم.', language)}</DialogDescription></DialogHeader>
           <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{instructionsTitle}</p>
@@ -141,7 +138,7 @@ export function ExerciseCard({
               type="button"
               variant="ghost"
               size="icon"
-              className="shrink-0 border border-border bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+              className="shrink-0 border border-border bg-muted/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
               onClick={onCollapse}
               aria-label={localizedLabel('Close instructions', 'إغلاق التعليمات', language)}
             >
@@ -158,15 +155,16 @@ export function ExerciseCard({
               </li>
             ))}
           </ol>
-        </motion.section>
-      )}
+          {onTrainWithCamera && <Button onClick={() => onTrainWithCamera(exercise)}><Camera className="me-2 h-4 w-4" />{localizedLabel('Train with camera', 'تدرب بالكاميرا', language)}</Button>}
+        </DialogContent>
+      </Dialog>
     </motion.article>
   );
 }
 
 function InfoBadge({ label, value }: { label: string; value: string }) {
   return (
-    <span className="rounded-full border border-border bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-muted-foreground">
+    <span className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
       {label}: <span className="text-foreground">{value}</span>
     </span>
   );

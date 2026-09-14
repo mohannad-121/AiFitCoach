@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { ThemeToggle } from '@/components/layout/ThemeToggle';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 type NavbarVariant = 'default' | 'home';
 
@@ -92,13 +92,8 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
       >
       <div className="container mx-auto px-4">
         <div className="site-navbar-inner flex h-16 items-center justify-between gap-3">
-          <Link to="/" className="site-logo flex min-h-11 shrink-0 items-center gap-2" aria-label="FitCoach AI">
-            <div className="site-logo-mark flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary" aria-hidden="true">
-              <Dumbbell className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="site-logo-word font-display text-2xl tracking-wide text-foreground">
-              FITCOACH <small className="font-sans text-[0.55em] font-bold tracking-[0.14em]">AI</small>
-            </span>
+          <Link to="/" className="site-logo flex min-h-11 shrink-0 items-center gap-2" aria-label="NextAura FIT">
+            <BrandLogo className="hidden sm:block" /><BrandLogo mark className="sm:hidden" />
           </Link>
 
           <div className="site-nav-links hidden items-center gap-1 xl:flex">
@@ -138,7 +133,7 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
                 align="end"
                 sideOffset={10}
                 collisionPadding={12}
-                className="site-nav-more-menu z-[120] min-w-[230px] border-border/60 bg-background/95 p-2 backdrop-blur-xl"
+                className="site-nav-more-menu z-[120] min-w-[230px] border-border/60 bg-background/95 p-2 "
               >
                 {moreNavItems.map((item, index) => {
                   const isActive = location.pathname === item.path;
@@ -166,7 +161,6 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
           </div>
 
           <div className="site-nav-actions flex shrink-0 items-center gap-2">
-            <ThemeToggle />
 
             <Button
               type="button"
@@ -194,7 +188,7 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
               </SheetTrigger>
               <SheetContent
                 side={isArabic ? 'left' : 'right'}
-                className="mobile-app-menu z-[120] overflow-y-auto overscroll-contain border-border/60 bg-background/95 pb-8 pt-14 backdrop-blur-xl"
+                className="mobile-app-menu z-[120] overflow-y-auto overscroll-contain border-border/60 bg-background/95 pb-8 pt-14 "
               >
                 <SheetHeader className="text-start">
                   <SheetTitle>{t('nav.menu')}</SheetTitle>

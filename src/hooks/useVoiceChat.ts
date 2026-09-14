@@ -101,15 +101,16 @@ export function useVoiceChat({
 
         const payload = (await response.json()) as VoiceChatApiResponse;
         await onResponse(payload);
-      } catch (err: any) {
-        if (err?.name === 'AbortError') {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
           return;
         }
         console.error('Voice upload error:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         setError(
           language === 'ar'
-            ? `فشل إرسال الصوت: ${err?.message || 'خطأ غير معروف'}`
-            : `Voice request failed: ${err?.message || 'Unknown error'}`
+            ? `فشل إرسال الصوت: ${errorMessage}`
+            : `Voice request failed: ${errorMessage}`
         );
       } finally {
         setIsProcessing(false);

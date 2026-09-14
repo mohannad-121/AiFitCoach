@@ -2,7 +2,7 @@ const MOJIBAKE_PATTERN = /(?:\u00c3.|\u00d8.|\u00d9.|\u00f0\u0178|\u00e2\u20ac|\
 const ARABIC_CHAR_PATTERN = /[\u0600-\u06FF]/g;
 const ARABIC_CHAR_DETECTION_PATTERN = /[\u0600-\u06FF]/;
 const MOJIBAKE_MARKERS = ['\u00d8', '\u00d9', '\u00c3', '\u00c2', '\u00d0', '\u00e2', '\u00ef\u00bb\u00bf'] as const;
-const BIDI_LTR_RUN_PATTERN = /\d[\d.,/%:+\-]*(?:\s+(?:[A-Za-z\u0600-\u06FF][A-Za-z0-9\u0600-\u06FF/%:+\-]*)){0,2}/g;
+const BIDI_LTR_RUN_PATTERN = /\d[\d.,/%:+-]*(?:\s+(?:[A-Za-z\u0600-\u06FF][A-Za-z0-9\u0600-\u06FF/%:+-]*)){0,2}/g;
 const LTR_ISOLATE = '\u2066';
 const POP_DIRECTIONAL_ISOLATE = '\u2069';
 

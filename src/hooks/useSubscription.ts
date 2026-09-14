@@ -20,6 +20,7 @@ const normalizeSubscription = (value: unknown): Subscription => {
     status: typeof candidate.status === 'string' && candidate.status.trim() ? candidate.status : 'offline',
     currentPeriodStart: typeof candidate.currentPeriodStart === 'string' ? candidate.currentPeriodStart : null,
     currentPeriodEnd: typeof candidate.currentPeriodEnd === 'string' ? candidate.currentPeriodEnd : null,
+    billingCycle: candidate.billingCycle === 'yearly' ? 'yearly' : 'monthly',
     isUnlimited: typeof candidate.isUnlimited === 'boolean' ? candidate.isUnlimited : true,
     usage: {
       uploadsUsed: toUsageCount(usage.uploadsUsed),

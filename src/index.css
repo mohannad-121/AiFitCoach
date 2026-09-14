@@ -1,152 +1,37 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap");
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* FitCoach Design System - Athletic Dark Theme */
-
+/* NextAura FIT semantic tokens. HSL channels support Tailwind opacity utilities. */
 @layer base {
   :root {
-    --fit-bg: #07070a;
-    --fit-surface: #111015;
-    --fit-surface-strong: #17141a;
-    --fit-ink: #f4f1f3;
-    --fit-muted: #aaa4aa;
-    --fit-accent: #e18acb;
-    --fit-accent-strong: #c95bb6;
-    --fit-line: rgba(255, 255, 255, 0.1);
-
-    /* Core Background - soft daylight surface */
-    --background: 220 24% 96%;
-    --foreground: 224 24% 14%;
-
-    /* Card surfaces */
-    --card: 0 0% 100%;
-    --card-foreground: 224 24% 14%;
-
-    /* Popover/Modal */
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 24% 14%;
-
-    /* Primary - Electric Cyan */
-    --primary: 318 65% 72%;
-    --primary-foreground: 270 32% 12%;
-    --primary-glow: 267 86% 67%;
-
-    /* Secondary - quiet light UI fill */
-    --secondary: 220 18% 91%;
-    --secondary-foreground: 224 24% 14%;
-
-    /* Muted elements */
-    --muted: 220 16% 88%;
-    --muted-foreground: 224 12% 38%;
-
-    /* Accent - Energetic Orange */
-    --accent: 355 100% 97%;
-    --accent-foreground: 349 89% 60%;
-
-    /* Success Green */
-    --success: 142 70% 45%;
-    --success-foreground: 220 20% 8%;
-
-    /* Destructive */
-    --destructive: 0 72% 50%;
-    --destructive-foreground: 0 85% 97%;
-
-    /* Borders */
-    --border: 220 16% 82%;
-    --input: 220 16% 82%;
-    --ring: 318 65% 72%;
-
-    --radius: 0.75rem;
-
-    /* Gradients */
-    --gradient-primary: linear-gradient(110deg, #ef9bd7 0%, #e18acb 52%, #c95bb6 100%);
-    --gradient-accent: linear-gradient(110deg, #ef9bd7 0%, #e18acb 52%, #c95bb6 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(220, 20%, 8%) 0%, hsl(220, 25%, 5%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(220, 30%, 97%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsla(220, 20%, 8%, 0) 0%, hsl(220, 20%, 8%) 100%);
-
-    /* Shadows */
-    --shadow-glow: 0 0 40px rgba(225, 138, 203, 0.18);
-    --shadow-card: 0 14px 35px hsla(224, 35%, 18%, 0.08);
-    --shadow-button: 0 4px 18px rgba(225, 138, 203, 0.22);
-
-    /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 224 24% 14%;
-    --sidebar-primary: 318 65% 72%;
-    --sidebar-primary-foreground: 270 32% 12%;
-    --sidebar-accent: 220 18% 91%;
-    --sidebar-accent-foreground: 224 24% 14%;
-    --sidebar-border: 220 16% 82%;
-    --sidebar-ring: 333 71% 50%;
-    --chart-1: 328 85% 70%;
-    --chart-2: 351 94% 71%;
-    --chart-3: 327 87% 81%;
-    --chart-4: 352 95% 81%;
-    --chart-5: 240 3% 46%;
-    --sidebar: 0 0% 98%;
-    --font-sans: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-    --font-serif: 'Merriweather', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
-    --tracking-normal: 0em;
-    --spacing: 0.25rem;
-  }
-
-  .dark {
-    --background: 240 18% 3%;
-    --foreground: 330 10% 95%;
-    --card: 250 13% 7%;
-    --card-foreground: 330 10% 95%;
-    --popover: 250 13% 6%;
-    --popover-foreground: 330 10% 95%;
-    --primary: 318 58% 71%;
-    --primary-foreground: 240 18% 5%;
-    --secondary: 250 10% 11%;
-    --secondary-foreground: 330 10% 95%;
-    --muted: 250 8% 15%;
-    --muted-foreground: 320 5% 65%;
-    --accent: 318 30% 14%;
-    --accent-foreground: 318 63% 78%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 85% 97%;
-    --border: 250 7% 19%;
-    --input: 250 7% 19%;
-    --ring: 318 58% 71%;
-    --chart-1: 327 87% 81%;
-    --chart-2: 352 95% 81%;
-    --chart-3: 328 85% 70%;
-    --chart-4: 351 94% 71%;
-    --chart-5: 240 5% 33%;
-    --sidebar: 240 3% 15%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 318 65% 72%;
-    --sidebar-primary-foreground: 270 32% 12%;
-    --sidebar-accent: 351 94% 71%;
-    --sidebar-accent-foreground: 343 87% 15%;
-    --sidebar-border: 240 5% 33%;
-    --sidebar-ring: 328 85% 70%;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25)
+    color-scheme: light;
+    --background: 204 45% 98%; --foreground: 212 61% 24%;
+    --surface: #ffffff; --surface-soft: #eef5f9; --surface-elevated: #ffffff;
+    --text-primary: #1a416c; --text-secondary: #456078; --text-muted: #586e80;
+    --primary-blue: #288beb; --primary-green: #36a967; --brand-teal: #44a3ad; --brand-navy: #1a416c;
+    --border-soft: #dce7ef; --focus-ring: #1672cf;
+    --success: 146 53% 31%; --success-foreground: 0 0% 100%; --warning: #9c6500; --danger: #c43c3c;
+    --brand-gradient: linear-gradient(115deg, var(--primary-blue), var(--brand-teal) 55%, var(--primary-green));
+    --card: 0 0% 100%; --card-foreground: var(--foreground);
+    --popover: 0 0% 100%; --popover-foreground: var(--foreground);
+    --primary: 211 79% 41%; --primary-foreground: 0 0% 100%; --primary-glow: 211 83% 54%;
+    --secondary: 204 40% 94%; --secondary-foreground: var(--foreground);
+    --muted: 204 30% 93%; --muted-foreground: 207 19% 39%;
+    --accent: 145 37% 94%; --accent-foreground: 146 53% 31%;
+    --destructive: 0 54% 45%; --destructive-foreground: 0 0% 100%;
+    --border: 207 33% 88%; --input: 207 27% 78%; --ring: 211 79% 41%; --radius: 1rem;
+    --gradient-primary: var(--brand-gradient); --gradient-accent: var(--brand-gradient);
+    --gradient-dark: linear-gradient(180deg, #f7fafc, #eef5f9); --gradient-card: linear-gradient(145deg, #fff, #f7fafc);
+    --gradient-hero: linear-gradient(180deg, transparent, #f7fafc);
+    --shadow-card: 0 8px 32px rgb(26 65 108 / .06); --shadow-glow: 0 4px 20px rgb(40 139 235 / .12); --shadow-button: 0 4px 12px rgb(26 65 108 / .12);
+    --fit-bg: hsl(var(--background)); --fit-surface: var(--surface); --fit-surface-strong: var(--surface-soft);
+    --fit-ink: var(--text-primary); --fit-muted: var(--text-muted); --fit-accent: var(--primary-blue); --fit-accent-strong: var(--primary-green); --fit-line: var(--border-soft);
+    --sidebar-background: 0 0% 100%; --sidebar-foreground: var(--foreground); --sidebar-primary: var(--primary); --sidebar-primary-foreground: var(--primary-foreground); --sidebar-accent: var(--secondary); --sidebar-accent-foreground: var(--foreground); --sidebar-border: var(--border); --sidebar-ring: var(--ring);
+    --chart-1: 211 83% 54%; --chart-2: 146 52% 44%; --chart-3: 186 44% 41%; --chart-4: 37 85% 40%; --chart-5: 212 61% 24%;
+    --font-sans: 'Inter', 'Noto Sans Arabic', sans-serif; --font-serif: Georgia, serif; --font-mono: ui-monospace, monospace;
+    --shadow-2xs: 0 1px 2px rgb(26 65 108 / .03); --shadow-xs: 0 1px 3px rgb(26 65 108 / .04); --shadow-sm: 0 2px 6px rgb(26 65 108 / .05); --shadow-md: 0 4px 16px rgb(26 65 108 / .06); --shadow-lg: var(--shadow-card); --shadow-xl: 0 16px 48px rgb(26 65 108 / .1); --shadow-2xl: 0 24px 64px rgb(26 65 108 / .12);
   }
 }
 
@@ -161,7 +46,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Poppins', 'Inter', 'Noto Sans Arabic', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-family: 'Inter', 'Noto Sans Arabic', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -170,17 +55,15 @@
       linear-gradient(180deg, hsl(var(--background)) 0%, hsl(220 24% 94%) 100%);
   }
 
-  .dark body {
-    background: hsl(var(--background));
-  }
+
 
   html[lang="en"] body {
-    font-family: 'Poppins', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-family: 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
   }
 
   html[lang="ar"] body {
     direction: rtl;
-    font-family: 'Noto Sans Arabic', 'Cairo', 'Tajawal', 'Poppins', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-family: 'Noto Sans Arabic', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
   }
 
   html[dir="rtl"] {
@@ -224,7 +107,7 @@
 @layer components {
   /* Hero Typography */
   .font-display {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', 'Noto Sans Arabic', sans-serif;
     letter-spacing: 0.02em;
   }
 
@@ -236,11 +119,7 @@
     box-shadow: var(--shadow-card);
   }
 
-  .dark .glass-card {
-    background: linear-gradient(145deg, hsla(220, 18%, 14%, 0.8) 0%, hsla(220, 18%, 10%, 0.6) 100%);
-    border: 1px solid hsla(220, 15%, 25%, 0.5);
-    box-shadow: 0 4px 24px hsla(0, 0%, 0%, 0.4);
-  }
+
 
   /* Global FitCoach signature accent */
   .bg-gradient-primary {
@@ -252,35 +131,9 @@
     background-image: none;
   }
 
-  .site-nav-more-menu,
-  .mobile-app-menu {
-    border-color: var(--fit-line) !important;
-    border-radius: 6px !important;
-    color: var(--fit-ink) !important;
-    background: rgba(10, 9, 13, 0.97) !important;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.44) !important;
-    backdrop-filter: blur(20px) saturate(110%) !important;
-  }
-
-  .site-nav-more-item.is-active,
-  .site-drawer-link.is-active {
-    color: var(--fit-accent) !important;
-    background: rgba(225, 138, 203, 0.1) !important;
-    background-image: none !important;
-    box-shadow: none !important;
-  }
-
-  .site-mobile-nav {
-    border-color: var(--fit-line) !important;
-    background: rgba(7, 7, 10, 0.94) !important;
-    box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.34) !important;
-    backdrop-filter: blur(18px) !important;
-  }
-
-  .site-mobile-nav .mobile-nav-item.is-active {
-    color: var(--fit-accent) !important;
-    background: rgba(225, 138, 203, 0.08) !important;
-  }
+  .site-nav-more-menu, .mobile-app-menu { border:1px solid var(--border-soft); border-radius:16px; color:var(--text-primary); background:var(--surface); box-shadow:0 12px 36px rgb(26 65 108 / .12); }
+  .site-nav-more-item.is-active, .site-drawer-link.is-active, .site-mobile-nav .mobile-nav-item.is-active { color:hsl(var(--primary)); background:hsl(var(--primary)/.08); }
+  .site-mobile-nav { border-color:var(--border-soft); background:var(--surface); box-shadow:0 -4px 20px rgb(26 65 108 / .06); }
 
   .shadow-button {
     box-shadow: var(--shadow-button);
@@ -319,7 +172,7 @@
   .muscle-highlight:hover,
   .muscle-highlight.active {
     fill: hsl(var(--primary));
-    filter: drop-shadow(0 0 12px rgba(217, 108, 219, 0.65));
+    filter: drop-shadow(0 0 12px rgba(40, 139, 235, 0.65));
   }
 
   /* Animated gradient text */
@@ -336,29 +189,11 @@
   }
 
   /* Chat bubble styles */
-  .chat-bubble-user {
-    background:
-      linear-gradient(135deg, rgba(236, 72, 153, 0.96), rgba(139, 92, 246, 0.92) 58%, rgba(56, 189, 248, 0.78));
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 20px 60px rgba(168, 85, 247, 0.18);
-    border-radius: 1.4rem 1.4rem 0.4rem 1.4rem;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-  .chat-bubble-ai {
-    background:
-      linear-gradient(180deg, rgba(19, 23, 40, 0.94), rgba(10, 12, 24, 0.96));
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 20px 60px rgba(0, 0, 0, 0.24);
-    border-radius: 1.4rem 1.4rem 1.4rem 0.4rem;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
+  .chat-bubble-user { background:hsl(var(--primary)/.08); color:var(--text-primary); border:1px solid hsl(var(--primary)/.12); border-radius:20px 20px 4px 20px; overflow-wrap:anywhere; }
+  .chat-bubble-ai { background:var(--surface); color:var(--text-primary); border:1px solid var(--border-soft); border-radius:20px 20px 20px 4px; overflow-wrap:anywhere; }
 
   .chat-message-content {
-    font-family: 'Poppins', 'Inter', 'Noto Sans Arabic', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-family: 'Inter', 'Noto Sans Arabic', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
     font-size: 1.015rem;
     line-height: 1.82;
     letter-spacing: 0;
@@ -374,7 +209,7 @@
   }
 
   .chat-message-content-ar {
-    font-family: 'Noto Sans Arabic', 'Poppins', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-family: 'Noto Sans Arabic', 'Inter', 'Segoe UI', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
     font-size: 1.06rem;
     line-height: 2;
     font-weight: 500;
@@ -405,7 +240,7 @@
     margin-top: 1.15rem;
     margin-bottom: 0.7rem;
     line-height: 1.35;
-    color: rgba(255, 255, 255, 0.98);
+    color: var(--text-primary);
     font-weight: 700;
     letter-spacing: -0.02em;
   }
@@ -425,7 +260,7 @@
   }
 
   .chat-message-content strong {
-    color: rgba(255, 255, 255, 0.98);
+    color: var(--text-primary);
     font-weight: 700;
   }
 
@@ -493,7 +328,7 @@
     gap: 1rem;
     direction: rtl;
     text-align: right;
-    font-family: 'Noto Sans Arabic', 'Poppins', 'Inter', 'Segoe UI', sans-serif;
+    font-family: 'Noto Sans Arabic', 'Inter', 'Segoe UI', sans-serif;
     font-variant-numeric: tabular-nums;
   }
 
@@ -620,10 +455,10 @@
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(217, 108, 219, 0.3);
+    box-shadow: 0 0 20px rgba(40, 139, 235, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(155, 98, 244, 0.58);
+    box-shadow: 0 0 40px rgba(54, 169, 103, 0.58);
   }
 }
 

@@ -111,6 +111,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          fitness_level: string | null
+          training_days_per_week: number | null
+          activity_level: string | null
+          equipment: string | null
+          injuries: string | null
+          dietary_preferences: string | null
+          allergies: string | null
           age: number
           avatar_url?: string | null
           chronic_conditions: string

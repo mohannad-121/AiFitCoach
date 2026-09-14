@@ -1,4 +1,8 @@
+import { WeeklyPlanner } from '@/components/workout/WeeklyPlanner';
+import { muscleLabel } from '@/lib/trainingCatalog';
+import './Planner.css';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { toJson } from '@/lib/json';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, BellRing, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, Loader2, MessageSquareText, MoreHorizontal, Trash2, UtensilsCrossed } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -438,7 +442,7 @@ export function SchedulePage() {
           repairedRemotePlans.map((plan) =>
             supabase
               .from('workout_plans')
-              .update({ plan_data: plan.plan_data })
+              .update({ plan_data: toJson(plan.plan_data) })
               .eq('id', plan.id)
               .eq('user_id', user.id)
           )
@@ -1053,7 +1057,7 @@ export function SchedulePage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="schedule-header mb-6 space-y-5">
           <div className="schedule-header-top flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="schedule-header-copy">
-              <div className="schedule-kicker mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-100/90">
+              <div className="schedule-kicker mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-700/90">
                 <Activity className="h-4 w-4" />
                 <span>{language === 'ar' ? 'التحكم الذكي بالجدول' : 'AI SCHEDULE CONTROL'}</span>
               </div>
@@ -1163,39 +1167,13 @@ export function SchedulePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {weekDates.map((date, idx) => {
-              const today = isToday(date);
-              const selected = idx === selectedDateIdx;
-              const hasMatch = getMatchingPlanDay(currentPlan, date) !== null;
-              const hasActivity = hasDailyActivity(date);
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  aria-current={selected ? 'date' : undefined}
-                  aria-label={`${formatDayName(date)} ${formatDateShort(date)}`}
-                  onClick={() => setSelectedDateIdx(idx)}
-                  className={`flex flex-col items-center py-3 px-1 rounded-xl transition-all text-xs min-h-[84px] ${
-                    selected
-                      ? 'bg-primary text-primary-foreground shadow-glow'
-                      : today
-                        ? 'bg-primary/10 text-primary border border-primary/30'
-                        : 'bg-card/50 text-muted-foreground hover:bg-card border border-border/20'
-                  }`}
-                >
-                  <span className="font-medium">{formatDayName(date)}</span>
-                  <span className={`text-lg font-bold ${selected ? '' : 'text-foreground'}`}>{formatDateShort(date)}</span>
-                  {(hasMatch || hasActivity) && (
-                    <div className="mt-auto pt-2 flex items-center gap-1">
-                      {hasMatch && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                      {hasActivity && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <WeeklyPlanner selected={selectedDateIdx} onSelect={setSelectedDateIdx} onOpen={() => todayPlanRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })} days={weekDates.map(date => {
+            const match = getMatchingPlanDay(currentPlan, date);
+            const entries = match?.day.exercises || match?.day.meals || [];
+            const logDate = formatLogDate(date);
+            const completed = new Set(completions.filter(item => item.plan_id === currentPlan?.id && item.day_index === match?.index && item.log_date === logDate).map(item => item.exercise_index)).size;
+            return { date: logDate, label: formatDayName(date), today: isToday(date), items: entries.map(item => language === 'ar' ? item.nameAr || item.name : item.name), completed: Math.min(entries.length, completed), activity: hasDailyActivity(date), muscles: [...new Set((match?.day.exercises || []).map(item => item.muscle).filter(Boolean))].map(muscle => muscleLabel(muscle!, language)) };
+          })} />
 
           <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground" hidden>
             <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-primary" />{language === 'ar' ? 'يوجد عنصر مجدول' : 'Planned item exists'}</div>
@@ -1442,7 +1420,7 @@ export function SchedulePage() {
                             }}
                             className={`schedule-task-row w-full flex items-center gap-4 p-4 rounded-lg border transition-all text-start ${
                               isHighlighted
-                                ? 'border-primary bg-primary/10 shadow-[0_0_0_2px_hsl(var(--primary)/0.4)]'
+                                ? 'border-primary bg-primary/10 shadow-sm'
                                 : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
                             }`}
                           >
@@ -1494,7 +1472,7 @@ export function SchedulePage() {
                             }}
                             className={`schedule-task-row w-full flex items-center gap-4 p-4 rounded-lg border transition-all text-start ${
                               isHighlighted
-                                ? 'border-primary bg-primary/10 shadow-[0_0_0_2px_hsl(var(--primary)/0.4)]'
+                                ? 'border-primary bg-primary/10 shadow-sm'
                                 : done ? 'bg-primary/10 border-primary/30' : 'bg-card/30 border-border/30 hover:bg-card/50'
                             }`}
                           >

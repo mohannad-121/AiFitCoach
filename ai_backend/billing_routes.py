@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -17,11 +17,25 @@ router = APIRouter()
 
 
 class CheckoutRequest(BaseModel):
-    plan: str
+    plan: Literal["plus", "pro"]
+    billingCycle: Literal["monthly", "yearly"] = "monthly"
 
 
 def _base_url() -> str:
     return "https://api-m.paypal.com" if os.getenv("PAYPAL_ENVIRONMENT", "sandbox").lower() == "live" else "https://api-m.sandbox.paypal.com"
+
+
+def _plan_mapping() -> dict[str, tuple[str, str]]:
+    mapping = {}
+    for tier in ("plus", "pro"):
+        for cycle, suffix in (("monthly", ""), ("yearly", "_YEARLY")):
+            plan_id = os.getenv(f"PAYPAL_{tier.upper()}{suffix}_PLAN_ID", "").strip()
+            if not plan_id:
+                continue
+            if plan_id in mapping:
+                raise HTTPException(503, "Each PayPal tier and billing cycle requires a distinct plan ID.")
+            mapping[plan_id] = (tier, cycle)
+    return mapping
 
 
 def _access_token() -> str:
@@ -62,16 +76,18 @@ async def get_subscription(user=Depends(authenticated_user)):
 async def create_checkout(body: CheckoutRequest, user=Depends(authenticated_user)):
     if body.plan not in ("plus", "pro"):
         raise HTTPException(400, "Choose Plus or Pro.")
-    plan_id = os.getenv(f"PAYPAL_{body.plan.upper()}_PLAN_ID", "").strip()
+    suffix = "_YEARLY" if body.billingCycle == "yearly" else ""
+    plan_id = os.getenv(f"PAYPAL_{body.plan.upper()}{suffix}_PLAN_ID", "").strip()
     if not plan_id:
-        raise HTTPException(503, f"PayPal {body.plan.title()} plan is not configured.")
+        raise HTTPException(503, f"PayPal {body.plan.title()} {body.billingCycle} plan is not configured.")
+    _plan_mapping()
     frontend = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
     data = _paypal("POST", "/v1/billing/subscriptions", json={
         "plan_id": plan_id,
         "custom_id": user["id"],
         "subscriber": {"email_address": user["email"]},
         "application_context": {
-            "brand_name": "FitCoach AI", "user_action": "SUBSCRIBE_NOW", "shipping_preference": "NO_SHIPPING",
+            "brand_name": "NextAura FIT", "user_action": "SUBSCRIBE_NOW", "shipping_preference": "NO_SHIPPING",
             "return_url": f"{frontend}/subscription?checkout=success",
             "cancel_url": f"{frontend}/subscription?checkout=canceled",
         },
@@ -96,7 +112,7 @@ async def cancel_subscription(user=Depends(authenticated_user)):
     subscription_id = row.get("provider_subscription_id")
     if not subscription_id:
         raise HTTPException(400, "No active PayPal subscription exists.")
-    _paypal("POST", f"/v1/billing/subscriptions/{subscription_id}/cancel", json={"reason": "Canceled by the FitCoach member."})
+    _paypal("POST", f"/v1/billing/subscriptions/{subscription_id}/cancel", json={"reason": "Canceled by the NextAura FIT member."})
     return {"canceled": True, "message": "PayPal is processing the cancellation."}
 
 
@@ -119,7 +135,11 @@ def _sync_subscription(subscription: dict[str, Any]) -> None:
         logger.warning("PayPal subscription has no FitCoach user: %s", subscription_id)
         return
     plan_id = subscription.get("plan_id")
-    plan = "pro" if plan_id == os.getenv("PAYPAL_PRO_PLAN_ID") else "plus"
+    mapping = _plan_mapping()
+    if plan_id not in mapping:
+        logger.error("Ignoring unmapped PayPal plan: %s", plan_id)
+        raise HTTPException(503, "PayPal plan mapping is not configured.")
+    plan, billing_cycle = mapping[plan_id]
     paypal_status = str(subscription.get("status") or "INACTIVE").upper()
     statuses = {"ACTIVE": "active", "APPROVAL_PENDING": "inactive", "SUSPENDED": "past_due",
                 "CANCELLED": "canceled", "EXPIRED": "canceled"}
@@ -133,7 +153,7 @@ def _sync_subscription(subscription: dict[str, Any]) -> None:
     subscriber = subscription.get("subscriber") or {}
     apply_plan(user_id, plan, status, subscriber.get("payer_id"), subscription_id,
                _parse_time(billing.get("last_payment", {}).get("time")) or datetime.now(timezone.utc),
-               _parse_time(billing.get("next_billing_time")))
+               _parse_time(billing.get("next_billing_time")), billing_cycle=billing_cycle)
 
 
 async def _verified_webhook(request: Request) -> dict[str, Any]:

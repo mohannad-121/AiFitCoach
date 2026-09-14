@@ -2,6 +2,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+document.documentElement.classList.remove('dark');
+document.documentElement.style.colorScheme = 'light';
+try { localStorage.removeItem('fitcoach_theme'); } catch { /* Storage may be unavailable. */ }
+
 createRoot(document.getElementById("root")!).render(<App />);
 
 // Force navigation even if an overlay intercepts clicks
@@ -40,4 +44,3 @@ if (typeof document !== 'undefined') {
     window.location.href = href;
   }, true);
 }
-

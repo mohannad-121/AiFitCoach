@@ -1289,7 +1289,7 @@ export function AnatomyBody({ selectedMuscles, onMuscleToggle, muscleNames, gend
       <div className="flex h-[28rem] w-full items-center justify-center sm:h-[32rem] md:h-[38rem]">
         <svg
           viewBox={`0 0 ${assetConfig.canvas.width} ${assetConfig.canvas.height}`}
-          className="h-full w-auto max-w-full drop-shadow-[0_26px_55px_rgba(0,0,0,0.42)]"
+          className="h-full w-auto max-w-full drop-shadow-sm"
         >
           {compact && <defs><clipPath id={bodyClipId}>
             {/* Keep the original body; clip stray guide marks outside its silhouette. */}
@@ -1742,48 +1742,48 @@ const renderMaleBackAdvanced = () => (
       {/* Controls Row */}
       <div className="grid gap-3 md:grid-cols-3">
         {/* View Toggle */}
-        <div className="anatomy-view-control flex gap-1.5 rounded-[1.35rem] border border-white/10 bg-black/25 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="anatomy-view-control flex gap-1.5 rounded-[1.35rem] border border-border bg-muted/50 p-1.5 shadow-sm">
           <button onClick={() => setView('front')}
             className={`px-5 py-2.5 rounded-[0.95rem] text-sm font-semibold transition-all duration-300 ${
-              view === 'front' ? 'bg-[linear-gradient(135deg,rgba(247,76,197,0.92),rgba(117,90,255,0.96),rgba(63,228,222,0.68))] text-white shadow-[0_12px_28px_rgba(117,90,255,0.32)]' : 'text-white/62 hover:bg-white/[0.05] hover:text-white'
+              view === 'front' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:bg-muted/40 hover:text-foreground'
             }`}>
             {language === 'ar' ? 'أمام' : 'Front'}
           </button>
           <button onClick={() => setView('back')}
             className={`px-5 py-2.5 rounded-[0.95rem] text-sm font-semibold transition-all duration-300 ${
-              view === 'back' ? 'bg-[linear-gradient(135deg,rgba(247,76,197,0.92),rgba(117,90,255,0.96),rgba(63,228,222,0.68))] text-white shadow-[0_12px_28px_rgba(117,90,255,0.32)]' : 'text-white/62 hover:bg-white/[0.05] hover:text-white'
+              view === 'back' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:bg-muted/40 hover:text-foreground'
             }`}>
             {language === 'ar' ? 'خلف' : 'Back'}
           </button>
         </div>
 
         {/* Gender Toggle */}
-        <div className="flex gap-1.5 rounded-[1.35rem] border border-white/10 bg-black/25 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="flex gap-1.5 rounded-[1.35rem] border border-border bg-muted/50 p-1.5 shadow-sm">
           <button onClick={() => setGender('male')}
             className={`px-5 py-2.5 rounded-[0.95rem] text-sm font-semibold transition-all duration-300 ${
-              gender === 'male' ? 'bg-[linear-gradient(135deg,rgba(247,76,197,0.92),rgba(117,90,255,0.96),rgba(63,228,222,0.68))] text-white shadow-[0_12px_28px_rgba(117,90,255,0.32)]' : 'text-white/62 hover:bg-white/[0.05] hover:text-white'
+              gender === 'male' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:bg-muted/40 hover:text-foreground'
             }`}>
             {language === 'ar' ? 'ذكر' : 'Male'}
           </button>
           <button onClick={() => setGender('female')}
             className={`px-5 py-2.5 rounded-[0.95rem] text-sm font-semibold transition-all duration-300 ${
-              gender === 'female' ? 'bg-[linear-gradient(135deg,rgba(247,76,197,0.92),rgba(117,90,255,0.96),rgba(63,228,222,0.68))] text-white shadow-[0_12px_28px_rgba(117,90,255,0.32)]' : 'text-white/62 hover:bg-white/[0.05] hover:text-white'
+              gender === 'female' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:bg-muted/40 hover:text-foreground'
             }`}>
             {language === 'ar' ? 'أنثى' : 'Female'}
           </button>
         </div>
 
         {/* Level Toggle */}
-        <div className="flex gap-1.5 rounded-[1.35rem] border border-white/10 bg-black/25 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="flex gap-1.5 rounded-[1.35rem] border border-border bg-muted/50 p-1.5 shadow-sm">
           <button onClick={() => { setLevel('normal'); }}
             className={`px-5 py-2.5 rounded-[0.95rem] text-sm font-semibold transition-all duration-300 ${
-              level === 'normal' ? 'bg-[linear-gradient(135deg,rgba(247,76,197,0.92),rgba(117,90,255,0.96),rgba(63,228,222,0.68))] text-white shadow-[0_12px_28px_rgba(117,90,255,0.32)]' : 'text-white/62 hover:bg-white/[0.05] hover:text-white'
+              level === 'normal' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:bg-muted/40 hover:text-foreground'
             }`}>
             {language === 'ar' ? 'عادي' : 'Normal'}
           </button>
           <button onClick={() => { setLevel('advanced'); }}
             className={`px-5 py-2.5 rounded-[0.95rem] text-sm font-semibold transition-all duration-300 ${
-              level === 'advanced' ? 'bg-[linear-gradient(135deg,rgba(247,76,197,0.92),rgba(117,90,255,0.96),rgba(63,228,222,0.68))] text-white shadow-[0_12px_28px_rgba(117,90,255,0.32)]' : 'text-white/62 hover:bg-white/[0.05] hover:text-white'
+              level === 'advanced' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:bg-muted/40 hover:text-foreground'
             }`}>
             {language === 'ar' ? 'متقدم' : 'Advanced'}
           </button>
@@ -1794,15 +1794,15 @@ const renderMaleBackAdvanced = () => (
         {/* Anatomy SVG */}
         <div
           ref={stageRef}
-          className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,32,0.92),rgba(5,8,22,0.96))] px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.32)] sm:px-6 sm:py-6"
+          className="relative overflow-hidden rounded-[1.75rem] border border-border bg-card px-4 py-5 shadow-sm sm:px-6 sm:py-6"
           onMouseLeave={clearHoveredMuscle}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(87,90,255,0.14),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(73,224,216,0.12),transparent_30%)]" />
-          <div className="pointer-events-none absolute left-1/2 top-14 h-[70%] w-36 -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(137,214,255,0.2),rgba(137,214,255,0.02)_62%,transparent_72%)] blur-2xl" />
-          <div className="pointer-events-none absolute inset-x-8 top-8 h-[1px] bg-[linear-gradient(90deg,transparent,rgba(122,232,255,0.72),transparent)] opacity-65" />
-          <div className="pointer-events-none absolute inset-x-[14%] bottom-10 h-20 rounded-full border border-cyan-300/16 bg-[radial-gradient(ellipse_at_center,rgba(92,241,255,0.14),rgba(92,241,255,0.02)_58%,transparent_68%)] blur-sm" />
-          <div className="pointer-events-none absolute inset-x-[16%] bottom-12 h-16 rounded-full border border-fuchsia-400/18 opacity-90" />
-          <div className="pointer-events-none absolute inset-x-[12%] top-[22%] h-20 bg-[linear-gradient(180deg,transparent,rgba(96,228,255,0.18),transparent)] opacity-70 animate-[workoutScan_4.8s_linear_infinite]" />
+          <div className="pointer-events-none absolute inset-0 bg-card" />
+          <div className="pointer-events-none absolute left-1/2 top-14 h-[70%] w-36 -translate-x-1/2 rounded-full bg-card blur-2xl" />
+          <div className="pointer-events-none absolute inset-x-8 top-8 h-[1px] bg-card opacity-65" />
+          <div className="pointer-events-none absolute inset-x-[14%] bottom-10 h-20 rounded-full border border-cyan-300/16 bg-card blur-sm" />
+          <div className="pointer-events-none absolute inset-x-[16%] bottom-12 h-16 rounded-full border border-emerald-400/18 opacity-90" />
+          <div className="pointer-events-none absolute inset-x-[12%] top-[22%] h-20 bg-card opacity-70 animate-[workoutScan_4.8s_linear_infinite]" />
           {shouldUseAssetLayers ? (
             renderAssetBody()
           ) : (
@@ -1856,7 +1856,7 @@ const renderMaleBackAdvanced = () => (
           )}
           {hoveredMuscle ? (
             <div
-              className="pointer-events-none absolute z-20 rounded-full border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(7,11,25,0.96),rgba(19,26,54,0.94))] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-md"
+              className="pointer-events-none absolute z-20 rounded-full border border-cyan-300/20 bg-card px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700 shadow-sm backdrop-blur-md"
               style={{ left: hoveredMuscle.x, top: hoveredMuscle.y }}
             >
               {language === 'ar' ? `استهداف: ${hoveredMuscle.label}` : `Target: ${hoveredMuscle.label}`}
@@ -1874,14 +1874,14 @@ const renderMaleBackAdvanced = () => (
               whileTap={{ scale: 0.97 }}
               className={`group relative overflow-hidden rounded-[1.15rem] border px-4 py-3 text-left transition duration-300 ${
                 isActive(muscleId)
-                  ? 'border-fuchsia-300/30 bg-[linear-gradient(135deg,rgba(242,78,201,0.2),rgba(111,90,255,0.22),rgba(66,232,225,0.12))] text-white shadow-[0_14px_32px_rgba(120,82,255,0.22)]'
-                  : 'border-white/10 bg-white/[0.04] text-white/74 hover:border-cyan-300/22 hover:bg-white/[0.07] hover:text-white'
+                  ? 'border-emerald-300/30 bg-card text-foreground shadow-sm'
+                  : 'border-border bg-muted/40 text-foreground hover:border-cyan-300/22 hover:bg-muted/40 hover:text-foreground'
               }`}
             >
-              <span className="absolute inset-y-0 left-0 w-1 bg-[linear-gradient(180deg,rgba(255,86,200,0),rgba(255,86,200,0.95),rgba(88,240,255,0.85),rgba(88,240,255,0))] opacity-0 transition duration-300 group-hover:opacity-100" />
+              <span className="absolute inset-y-0 left-0 w-1 bg-card opacity-0 transition duration-300 group-hover:opacity-100" />
               <span className="flex items-center gap-3">
                 <span className={`h-2.5 w-2.5 rounded-full transition duration-300 ${
-                  isActive(muscleId) ? 'bg-cyan-200 shadow-[0_0_16px_rgba(93,241,255,0.9)]' : 'bg-white/28 group-hover:bg-cyan-200/80'
+                  isActive(muscleId) ? 'bg-cyan-200 shadow-sm' : 'bg-white/28 group-hover:bg-cyan-200/80'
                 }`} />
                 <span className="text-sm font-semibold">{getMuscleLabel(muscleId)}</span>
               </span>

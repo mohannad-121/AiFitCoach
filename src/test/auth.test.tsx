@@ -44,7 +44,7 @@ describe('AuthPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('FITCOACH')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'NextAura FIT' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
   });

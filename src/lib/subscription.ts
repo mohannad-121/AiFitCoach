@@ -4,6 +4,7 @@ import { AI_BACKEND_URL } from '@/lib/backendUrl';
 export type Subscription = {
   plan: 'free' | 'plus' | 'pro'; status: string; currentPeriodStart: string | null; currentPeriodEnd: string | null;
   isUnlimited: boolean;
+  billingCycle?: 'monthly' | 'yearly';
   usage: { uploadsUsed: number; uploadsLimit: number | null; chatMessagesUsed: number; chatMessagesLimit: number | null; generatedPlansUsed: number; generatedPlansLimit: number | null };
 };
 

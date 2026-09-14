@@ -1,196 +1,40 @@
-import { useState, useEffect, useRef } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { useSyncExternalStore } from 'react';
+import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const isSupabaseReady = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
+const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY));
+type AuthState = { user: User | null; session: Session | null; loading: boolean };
+let state: AuthState = { user: null, session: null, loading: true };
+const listeners = new Set<() => void>();
+let stop: (() => void) | undefined;
+function publish(next: AuthState) { state = next; listeners.forEach(listener => listener()); }
+function start() {
+  if (!configured) {
+    const read = () => {
+      try { publish({ user: JSON.parse(localStorage.getItem('fitcoach_mock_user') || 'null'), session: null, loading: false }); }
+      catch { publish({ user: null, session: null, loading: false }); }
+    };
+    read(); window.addEventListener('storage', read);
+    return () => window.removeEventListener('storage', read);
+  }
+  let active = true;
+  let received = false;
+  const accept = (session: Session | null) => { if (active) { received = true; publish({ user: session?.user ?? null, session, loading: false }); } };
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => accept(session));
+  void supabase.auth.getSession().then(({ data }) => { if (!received) accept(data.session); }).catch(() => { if (!received) accept(null); });
+  return () => { active = false; data.subscription.unsubscribe(); };
+}
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  if (listeners.size === 1) stop = start();
+  return () => { listeners.delete(listener); if (!listeners.size) { stop?.(); stop = undefined; } };
+}
+async function signOut() {
+  if (configured) { const { error } = await supabase.auth.signOut(); if (error) throw error; }
+  localStorage.removeItem('fitcoach_mock_user');
+  publish({ user: null, session: null, loading: false });
+  window.dispatchEvent(new Event('storage'));
+}
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [useMockAuth, setUseMockAuth] = useState(false);
-  const isMountedRef = useRef(true);
-
-  const clearMockAuthStorage = () => {
-    try {
-      localStorage.removeItem('fitcoach_mock_user');
-    } catch {
-      // ignore storage cleanup failures
-    }
-    delete (globalThis as any).__fitcoach_mock_user;
-  };
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // Listen to storage changes for mock auth updates
-  useEffect(() => {
-    if (!useMockAuth) return;
-
-    let isMountedLocal = true;
-    let pollInterval: NodeJS.Timeout | null = null;
-
-    const handleStorageChange = () => {
-      if (isMountedLocal) {
-        loadMockAuth();
-      }
-    };
-
-    // Check localStorage immediately
-    loadMockAuth();
-
-    // Listen to storage events from other tabs/windows
-    window.addEventListener('storage', handleStorageChange);
-
-    // Poll localStorage to catch same-tab changes more frequently
-    pollInterval = setInterval(() => {
-      if (isMountedLocal && !user) {
-        const stored = localStorage.getItem('fitcoach_mock_user');
-        if (stored) {
-          loadMockAuth();
-        }
-      }
-    }, 50); // Check every 50ms
-
-    return () => {
-      isMountedLocal = false;
-      window.removeEventListener('storage', handleStorageChange);
-      if (pollInterval) clearInterval(pollInterval);
-    };
-  }, [useMockAuth]);
-
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Prefer real Supabase auth whenever credentials are configured.
-        if (!isSupabaseReady || !supabase || !supabase.auth) {
-          console.warn('Supabase not configured, using mock auth');
-          setUseMockAuth(true);
-          setLoading(false);
-          loadMockAuth();
-          return;
-        }
-
-        // اجلب الجلسة الحالية مع timeout
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Supabase timeout')), 2000)
-        );
-        
-        try {
-          const sessionResult = await Promise.race([
-            supabase.auth.getSession(),
-            timeoutPromise
-          ]);
-          
-          const currentSession = (sessionResult as any)?.data?.session;
-          
-          if (currentSession && isMountedRef.current) {
-            clearMockAuthStorage();
-            setUseMockAuth(false);
-            setSession(currentSession);
-            setUser(currentSession.user);
-            setLoading(false);
-            return;
-          }
-        } catch (supabaseError) {
-          console.warn('Supabase session check failed:', supabaseError);
-        }
-
-        // If we get here, use mock auth
-        if (isMountedRef.current) {
-          setUseMockAuth(false);
-          setUser(null);
-          setSession(null);
-          setLoading(false);
-        }
-
-        // اسمع لتغييرات المصادقة
-        if (supabase.auth && supabase.auth.onAuthStateChange) {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (event, supabaseSession) => {
-              if (isMountedRef.current) {
-                if (supabaseSession?.user) {
-                  clearMockAuthStorage();
-                  setUseMockAuth(false);
-                }
-                setSession(supabaseSession);
-                setUser(supabaseSession?.user ?? null);
-                setLoading(false);
-              }
-            }
-          );
-
-          return () => subscription?.unsubscribe();
-        }
-      } catch (error) {
-        console.warn('Auth initialization error:', error);
-        if (isMountedRef.current) {
-          setUseMockAuth(false);
-          setUser(null);
-          setSession(null);
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-  }, []);
-
-  const loadMockAuth = () => {
-    const memoryUser = (globalThis as any).__fitcoach_mock_user;
-    try {
-      const stored = localStorage.getItem('fitcoach_mock_user');
-      if (stored && isMountedRef.current) {
-        const mockUser = JSON.parse(stored);
-        setUser(mockUser as any);
-        setUseMockAuth(true);
-        setLoading(false);
-        return;
-      }
-      if (memoryUser && isMountedRef.current) {
-        setUser(memoryUser as any);
-        setUseMockAuth(true);
-        setLoading(false);
-        return;
-      }
-      // لا توجد بيانات في localStorage، تخطي المصادقة
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    } catch (error) {
-      console.warn('Mock auth load error:', error);
-      localStorage.removeItem('fitcoach_mock_user');
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      if (useMockAuth) {
-        setUser(null);
-        setSession(null);
-        clearMockAuthStorage();
-      } else {
-        await supabase.auth.signOut();
-        setUser(null);
-        setSession(null);
-        clearMockAuthStorage();
-      }
-    } catch (error) {
-      console.error('Sign out error:', error);
-      // Force logout on error
-      setUser(null);
-      setSession(null);
-      clearMockAuthStorage();
-    }
-  };
-
-  return { user, session, loading, signOut };
+  return { ...useSyncExternalStore(subscribe, () => state, () => state), signOut };
 }

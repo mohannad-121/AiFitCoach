@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -26,13 +26,13 @@ const createMockChain = () => ({
   update: () => createMockChain(),
   upsert: () => createMockChain(),
   delete: () => createMockChain(),
-  then: (onFulfilled: any) => Promise.resolve({ data: null, error: null }).then(onFulfilled),
-  catch: (onRejected: any) => Promise.resolve({ data: null, error: null }).catch(onRejected),
+  then: <T,>(onFulfilled: (value: { data: null; error: null }) => T) => Promise.resolve({ data: null, error: null }).then(onFulfilled),
+  catch: <T,>(onRejected: (reason: unknown) => T) => Promise.resolve({ data: null, error: null }).catch(onRejected),
 });
 
 
 
-let supabase: any = null;
+let supabase: SupabaseClient<Database>;
 
 if (isSupabaseConfigured()) {
   supabase = createClient<Database>(SUPABASE_URL || '', SUPABASE_ANON_KEY || '', {
@@ -45,6 +45,8 @@ if (isSupabaseConfigured()) {
 } else {
  
   console.warn('⚠️ Supabase not configured. Using mock client.');
+  // The offline demo implements only the subset used by this app. Production
+  // always uses the generated Database types through the real client above.
   supabase = {
     auth: {
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
@@ -60,7 +62,7 @@ if (isSupabaseConfigured()) {
       }),
     },
     from: () => createMockChain(),
-  };
+  } as unknown as SupabaseClient<Database>;
 }
 
 export { supabase };

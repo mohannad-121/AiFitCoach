@@ -6,8 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { lazy, Suspense, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { UserProvider } from "@/contexts/UserContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { UserProvider, useUser } from "@/contexts/UserContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { MotionConfig } from 'framer-motion';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { useAuth } from "@/hooks/useAuth";
 import { CoachNotificationsListener } from "@/components/CoachNotificationsListener";
 import "./AppSurface.css";
@@ -25,45 +27,19 @@ const AdminPage = lazy(() => import("./pages/Admin").then((module) => ({ default
 const SubscriptionPage = lazy(() => import("./pages/Subscription").then((module) => ({ default: module.SubscriptionPage })));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-function PageLoader() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-    </div>
-  );
-}
-
-const hasConfiguredSupabase = Boolean(
-  import.meta.env.VITE_SUPABASE_URL &&
-  (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)
-);
-
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { profileLoading, profileError, retryProfile, isOnboarded } = useUser();
+  const { language } = useLanguage();
+  const location = useLocation();
   const { user, loading } = useAuth();
-  
-  // تحقق من localStorage مباشرة - هذا أسرع من الانتظار للـ user state
-  const storedMockUser = hasConfiguredSupabase ? null : localStorage.getItem('fitcoach_mock_user');
-  const hasAuth = !!user || !!storedMockUser;
-  
-  // إذا كان لدينا auth (user أو localStorage)، اسمح بالدخول
-  if (hasAuth) {
-    return <>{children}</>;
-  }
-  
-  // أثناء التحميل والذي لا نملك auth، اعود للـ Auth page
-  if (!hasAuth && !loading) {
-    return <Navigate to="/auth" replace />;
-  }
-  
-  // أثناء التحميل ولم نقرر بعد
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-      <p className="text-muted-foreground text-sm">جاري التحميل...</p>
-    </div>
-  );
+  if (loading || profileLoading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (profileError) return <div className="aura-loading" role="alert"><p>{language === 'ar' ? 'تعذر تحميل ملفك الشخصي.' : profileError}</p><button onClick={retryProfile}>{language === 'ar' ? 'إعادة المحاولة' : 'Try again'}</button></div>;
+  if (!isOnboarded && location.pathname !== '/onboarding') return <Navigate to="/onboarding" replace />;
+  if (isOnboarded && location.pathname === '/onboarding') return <Navigate to="/workouts" replace />;
+  return <>{children}</>;
 }
 
 function AppRoutes() {
@@ -84,7 +60,7 @@ function AppRoutes() {
 
   return (
     <div className={isHome ? "route-home" : `app-page-shell app-route-${routeName}`}>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<AuthPage />} />
@@ -107,7 +83,7 @@ function AppRoutes() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
+    <MotionConfig reducedMotion="user">
       <LanguageProvider>
         <UserProvider>
           <TooltipProvider>
@@ -120,7 +96,7 @@ const App = () => (
           </TooltipProvider>
         </UserProvider>
       </LanguageProvider>
-    </ThemeProvider>
+    </MotionConfig>
   </QueryClientProvider>
 );
 

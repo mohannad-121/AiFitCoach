@@ -165,7 +165,7 @@ export function WorkoutEvidenceReportSection({ userId, compact = false }: Workou
         <div className="glass-card rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold mb-3">{language === 'ar' ? 'ملخص اليوم' : 'Today Summary'}</h2>
           {!report?.storage_ready && (
-            <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+            <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
               {language === 'ar'
                 ? 'لم يتم تطبيق جدول workout_evidence في Supabase بعد. شغّل ملف الهجرة أولاً حتى يتم حفظ السجلات.'
                 : 'The workout_evidence table has not been applied in Supabase yet. Run the migration first so evidence records can be saved.'}

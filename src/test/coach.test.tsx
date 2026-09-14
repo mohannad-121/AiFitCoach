@@ -74,19 +74,13 @@ vi.mock('@/components/ai/PlanApprovalUI', () => ({
 }));
 
 const makeQuery = () => {
-  const query: any = {};
-  query.select = () => query;
-  query.eq = () => query;
-  query.order = () => query;
-  query.limit = () => query;
-  query.maybeSingle = () => Promise.resolve({ data: null });
-  query.insert = () => query;
-  query.update = () => query;
-  query.delete = () => query;
-  query.not = () => query;
-  query.like = () => query;
-  query.single = () => Promise.resolve({ data: null });
-  query.then = (resolve: (value: any) => any) => Promise.resolve({ data: [] }).then(resolve);
+  const query = {
+    select: () => query, eq: () => query, order: () => query, limit: () => query,
+    maybeSingle: () => Promise.resolve({ data: null }), insert: () => query,
+    update: () => query, delete: () => query, not: () => query, like: () => query,
+    single: () => Promise.resolve({ data: null }),
+    then: <T,>(resolve: (value: { data: unknown[] }) => T) => Promise.resolve({ data: [] }).then(resolve),
+  };
   return query;
 };
 

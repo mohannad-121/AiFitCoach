@@ -1,4 +1,9 @@
-﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import type { CoachApiResponse, CoachPlanDay, CoachPlanItem, GeneratedCoachPlan } from '@/lib/coachTypes';
+import type { UserProfile } from '@/lib/profile';
+import { toJson } from '@/lib/json';
+import { isCoachPlanDay } from '@/lib/coachTypes';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Loader2, Mic, MicOff, Volume2, Plus, MessageSquare, Trash2, Menu, X, Settings2, Paperclip, FileText, FileImage, Copy, Check, Lock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -46,7 +51,7 @@ interface Conversation {
 interface PendingPlanState {
   id: string;
   type: 'workout' | 'nutrition';
-  plan: any;
+  plan: GeneratedCoachPlan;
 }
 
 interface PlanChoiceOption {
@@ -98,7 +103,7 @@ interface StoredSchedulePlan {
   user_id: string;
   title: string;
   title_ar: string;
-  plan_data: any[];
+  plan_data: CoachPlanDay[];
   is_active: boolean;
   created_at: string;
 }
@@ -851,6 +856,15 @@ export function CoachPage() {
   const [websiteContext, setWebsiteContext] = useState<Record<string, unknown>>({});
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const sendLockRef = useRef(false);
+  const manuallyStoppedRef = useRef(false);
+  const followMessagesRef = useRef(true);
+  useEffect(() => () => { requestControllerRef.current?.abort(); }, []);
+  const stopGeneration = () => {
+    manuallyStoppedRef.current = true;
+    requestControllerRef.current?.abort();
+  };
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const selectedAttachmentsRef = useRef<PendingAttachment[]>([]);
   const currentMessagesRef = useRef<ChatMessage[]>([]);
@@ -1364,6 +1378,7 @@ export function CoachPage() {
   }, [endVoiceModeTurn, language, resolvePreferredVoice, selectedVoice, speakWithBackendTts]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    if (!followMessagesRef.current) return;
     const scrollContainer = messagesScrollRef.current;
     if (!scrollContainer) return;
     window.requestAnimationFrame(() => {
@@ -1409,8 +1424,8 @@ export function CoachPage() {
       }
       const payload = await response.json();
       setRagDebugData(payload);
-    } catch (error: any) {
-      setRagDebugError(error?.message || 'Failed to load RAG debug data.');
+    } catch (error) {
+      setRagDebugError((error instanceof Error ? error.message : '') || 'Failed to load RAG debug data.');
     } finally {
       setRagDebugLoading(false);
     }
@@ -1525,7 +1540,7 @@ export function CoachPage() {
         }
         if (rows.length > 0 && supabase && supabase.from) {
           try {
-            await supabase.from('chat_messages').insert(rows as any);
+            await supabase.from('chat_messages').insert(rows);
           } catch (error) {
             console.warn('Failed to save messages to Supabase:', error);
             // لا نوقف التطبيق - الرسائل محفوظة محلياً بالفعل
@@ -1738,7 +1753,7 @@ export function CoachPage() {
       }
     }
   };
-  const formatExercisesMessage = (exercises: any[]) => {
+  const formatExercisesMessage = (exercises: Array<{ exercise: string; muscle: string; difficulty: string; injury_safe: boolean; description: string }>) => {
     if (!Array.isArray(exercises) || exercises.length === 0) {
       return language === 'ar'
         ? 'لم أجد تمارين مناسبة في قاعدة البيانات. حاول صياغة طلبك بشكل مختلف.'
@@ -1758,17 +1773,17 @@ export function CoachPage() {
       .join('\\n\\n');
   };
 
-  const toWorkoutPlanData = (plan: any) => {
+  const toWorkoutPlanData = (plan: GeneratedCoachPlan) => {
     if (Array.isArray(plan?.days) && plan.days.length > 0) {
-      return plan.days.filter((day: any) => Array.isArray(day?.exercises) && day.exercises.length > 0);
+      return plan.days.filter((day: CoachPlanDay) => Array.isArray(day?.exercises) && day.exercises.length > 0);
     }
 
     const exercises = Array.isArray(plan?.exercises) ? plan.exercises : [];
     const requestedDays = Number(plan?.training_days_per_week ?? plan?.trainingDaysPerWeek ?? plan?.days_per_week ?? 3);
     const workoutDayNames = buildWorkoutDayNames(Number.isFinite(requestedDays) ? requestedDays : 3, plan?.created_at);
-    const grouped = workoutDayNames.map(() => [] as any[]);
+    const grouped = workoutDayNames.map(() => [] as CoachPlanItem[]);
 
-    exercises.forEach((exercise: any, index: number) => {
+    exercises.forEach((exercise: CoachPlanItem, index: number) => {
       grouped[index % workoutDayNames.length].push(exercise);
     });
 
@@ -1777,7 +1792,7 @@ export function CoachPage() {
       const dayExercises = slot >= 0 ? grouped[slot] : [];
       return {
         ...weekDay,
-        exercises: dayExercises.map((ex: any) => ({
+        exercises: dayExercises.map((ex: CoachPlanItem) => ({
           name: ex?.name || 'Exercise',
           nameAr: ex?.nameAr || ex?.name || 'تمرين',
           sets: String(ex?.sets ?? ''),
@@ -1789,13 +1804,13 @@ export function CoachPage() {
     });
   };
 
-  const toNutritionPlanData = (plan: any) => {
+  const toNutritionPlanData = (plan: GeneratedCoachPlan) => {
     if (Array.isArray(plan?.days) && plan.days.length > 0) {
       return plan.days;
     }
 
     const meals = Array.isArray(plan?.meals) ? plan.meals : [];
-    const mappedMeals = meals.map((meal: any) => ({
+    const mappedMeals = meals.map((meal: CoachPlanItem) => ({
       name: meal?.name || 'Meal',
       nameAr: meal?.nameAr || meal?.name || 'وجبة',
       description: Array.isArray(meal?.ingredients) ? meal.ingredients.join(', ') : (meal?.description || ''),
@@ -1810,7 +1825,7 @@ export function CoachPage() {
   };
 
   const extractPendingPlanFromResponse = (
-    responseData: any
+    responseData: CoachApiResponse
   ): PendingPlanState | null => {
     if (responseData?.action !== 'ask_plan' || !responseData?.data?.plan || !responseData?.data?.plan_id) {
       return null;
@@ -1824,8 +1839,8 @@ export function CoachPage() {
   };
 
   const extractApprovedPlanFromResponse = (
-    responseData: any
-  ): { type: 'workout' | 'nutrition'; plan: any } | null => {
+    responseData: CoachApiResponse
+  ): { type: 'workout' | 'nutrition'; plan: GeneratedCoachPlan } | null => {
     if (responseData?.approved_plan?.plan) {
       const approved = responseData.approved_plan;
       return {
@@ -1845,7 +1860,7 @@ export function CoachPage() {
     return null;
   };
 
-  const extractPlanOptionsFromResponse = (responseData: any): PendingPlanOptionsState | null => {
+  const extractPlanOptionsFromResponse = (responseData: CoachApiResponse): PendingPlanOptionsState | null => {
     if (responseData?.action !== 'choose_plan' || !Array.isArray(responseData?.data?.options)) {
       return null;
     }
@@ -1853,8 +1868,8 @@ export function CoachPage() {
     return {
       type: responseData.data.plan_type === 'nutrition' ? 'nutrition' : 'workout',
       options: responseData.data.options
-        .filter((option: any) => typeof option?.index === 'number')
-        .map((option: any) => ({
+        .filter((option: { index: number; title?: string; summary?: string }) => typeof option?.index === 'number')
+        .map((option: { index: number; title?: string; summary?: string }) => ({
           index: Number(option.index),
           title: String(option.title || ''),
           summary: String(option.summary || ''),
@@ -1864,7 +1879,7 @@ export function CoachPage() {
     };
   };
 
-  const extractPendingProfileConfirmation = (responseData: any): PendingProfileConfirmationState | null => {
+  const extractPendingProfileConfirmation = (responseData: CoachApiResponse): PendingProfileConfirmationState | null => {
     if (responseData?.action !== 'confirm_profile_update' || !responseData?.data?.field) {
       return null;
     }
@@ -1876,13 +1891,13 @@ export function CoachPage() {
     };
   };
 
-  const persistApprovedPlan = async (approvedPayload: any) => {
+  const persistApprovedPlan = async (approvedPayload: CoachApiResponse) => {
     if (!user) return;
     const extracted = extractApprovedPlanFromResponse(approvedPayload);
     if (!extracted) return;
 
     const { type, plan } = extracted;
-    const cleanedPlan = repairDeep(plan) as any;
+    const cleanedPlan = repairDeep(plan) as GeneratedCoachPlan;
     const planData = type === 'nutrition' ? toNutritionPlanData(cleanedPlan) : toWorkoutPlanData(cleanedPlan);
     if (!Array.isArray(planData) || planData.length === 0) return;
 
@@ -1929,7 +1944,7 @@ export function CoachPage() {
         user_id: user.id,
         title,
         title_ar,
-        plan_data: planData,
+        plan_data: toJson(planData),
         is_active: true,
       });
     } catch (error) {
@@ -1937,7 +1952,7 @@ export function CoachPage() {
     }
   };
 
-  const persistProfileUpdate = async (responseData: any) => {
+  const persistProfileUpdate = async (responseData: CoachApiResponse) => {
     if (!user) return;
     if (responseData?.action !== 'profile_updated') return;
 
@@ -1947,7 +1962,7 @@ export function CoachPage() {
 
     setPendingProfileConfirmation(null);
 
-    updateProfile(profileUpdates as any);
+    updateProfile(profileUpdates as Partial<UserProfile>);
     setProfileUpdateFeedback({
       field: String(responseData?.data?.field || ''),
       fieldLabel: String(responseData?.data?.field_label || responseData?.data?.field || ''),
@@ -2000,7 +2015,7 @@ export function CoachPage() {
     if (!user) return null;
 
     // Fallback to Supabase if context profile not available
-    const merged: Record<string, any> = {};
+    const merged: Record<string, unknown> = {};
 
     try {
       const { data: profileRows } = await supabase
@@ -2022,14 +2037,14 @@ export function CoachPage() {
         merged.height = profileData.height;
         merged.goal = profileData.goal;
         merged.location = profileData.location;
-        merged.fitnessLevel = (profileData as any).fitness_level;
-        merged.trainingDaysPerWeek = (profileData as any).training_days_per_week;
-        merged.equipment = (profileData as any).equipment || '';
-        merged.injuries = (profileData as any).injuries || '';
-        merged.activityLevel = (profileData as any).activity_level;
-        merged.dietaryPreferences = (profileData as any).dietary_preferences || '';
-        merged.chronicConditions = (profileData as any).chronic_conditions || '';
-        merged.allergies = (profileData as any).allergies || '';
+        merged.fitnessLevel = profileData.fitness_level;
+        merged.trainingDaysPerWeek = profileData.training_days_per_week;
+        merged.equipment = profileData.equipment || '';
+        merged.injuries = profileData.injuries || '';
+        merged.activityLevel = profileData.activity_level;
+        merged.dietaryPreferences = profileData.dietary_preferences || '';
+        merged.chronicConditions = profileData.chronic_conditions || '';
+        merged.allergies = profileData.allergies || '';
       }
     } catch (error) {
       console.error('Failed loading profiles table', error);
@@ -2073,7 +2088,7 @@ export function CoachPage() {
 
       const { data: plansData } = await supabase
         .from('workout_plans')
-        .select('id,title,title_ar,plan_data,is_active')
+        .select('id,user_id,created_at,title,title_ar,plan_data,is_active')
         .eq('user_id', user.id);
 
       const { data: completionsData } = await supabase
@@ -2086,7 +2101,7 @@ export function CoachPage() {
         .select('log_date,workout_notes,nutrition_notes,mood')
         .eq('user_id', user.id);
 
-      const remotePlans = (plansData || []) as Array<StoredSchedulePlan & { title_ar?: string; is_active?: boolean }>;
+      const remotePlans = (plansData || []).map(plan => ({ ...plan, plan_data: Array.isArray(plan.plan_data) ? plan.plan_data.filter(isCoachPlanDay) : [] }));
       const remoteCompletions = (completionsData || []) as CompletionRow[];
       const plans = [
         ...remotePlans,
@@ -2111,7 +2126,7 @@ export function CoachPage() {
       let totalWorkoutTasks = 0;
       let totalNutritionTasks = 0;
       for (const plan of plans) {
-        const days = Array.isArray((plan as any).plan_data) ? (plan as any).plan_data : [];
+        const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
         for (const day of days) {
           const exercises = Array.isArray(day?.exercises) ? day.exercises.length : 0;
           const meals = Array.isArray(day?.meals) ? day.meals.length : 0;
@@ -2170,7 +2185,7 @@ export function CoachPage() {
       const cadencePlans = plans.filter((plan) => plan.is_active);
       for (const plan of cadencePlans.length ? cadencePlans : plans) {
         const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
-        days.forEach((day: any, index: number) => {
+        days.forEach((day: CoachPlanDay, index: number) => {
           const dayLabel = String(day?.day || WEEK_TEMPLATE[index]?.day || index);
           if ((plan.title || '').startsWith(NUTRITION_PREFIX)) {
             if (Array.isArray(day?.meals) && day.meals.length > 0) plannedNutritionDays.add(dayLabel);
@@ -2305,14 +2320,14 @@ export function CoachPage() {
         .slice(0, 4)
         .map((plan) => {
           const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
-          const sampleExercises = days.flatMap((day: any) => Array.isArray(day?.exercises) ? day.exercises.slice(0, 2) : []).slice(0, 6);
-          const sampleMeals = days.flatMap((day: any) => Array.isArray(day?.meals) ? day.meals.slice(0, 2) : []).slice(0, 6);
+          const sampleExercises = days.flatMap((day: CoachPlanDay) => Array.isArray(day?.exercises) ? day.exercises.slice(0, 2) : []).slice(0, 6);
+          const sampleMeals = days.flatMap((day: CoachPlanDay) => Array.isArray(day?.meals) ? day.meals.slice(0, 2) : []).slice(0, 6);
           return {
             title: plan.title,
             type: (plan.title || '').startsWith(NUTRITION_PREFIX) ? 'nutrition' : 'workout',
-            weekly_days_with_items: days.filter((day: any) => (Array.isArray(day?.exercises) && day.exercises.length > 0) || (Array.isArray(day?.meals) && day.meals.length > 0)).length,
-            sample_exercises: sampleExercises.map((item: any) => item?.name || item?.nameAr).filter(Boolean),
-            sample_meals: sampleMeals.map((item: any) => item?.name || item?.nameAr).filter(Boolean),
+            weekly_days_with_items: days.filter((day: CoachPlanDay) => (Array.isArray(day?.exercises) && day.exercises.length > 0) || (Array.isArray(day?.meals) && day.meals.length > 0)).length,
+            sample_exercises: sampleExercises.map((item: CoachPlanItem) => item?.name || item?.nameAr).filter(Boolean),
+            sample_meals: sampleMeals.map((item: CoachPlanItem) => item?.name || item?.nameAr).filter(Boolean),
           };
         });
 
@@ -2407,8 +2422,13 @@ export function CoachPage() {
       const tickMs = 28;
       let cursor = 0;
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
         const timer = window.setInterval(() => {
+          if (manuallyStoppedRef.current || requestControllerRef.current?.signal.aborted) {
+            window.clearInterval(timer);
+            reject(new DOMException('Stopped', 'AbortError'));
+            return;
+          }
           cursor = Math.min(fullText.length, cursor + charsPerTick);
           const partialMessage: ChatMessage = {
             role: 'assistant',
@@ -2432,7 +2452,7 @@ export function CoachPage() {
 
   const sendMessageWithText = async (text: string, attachmentsOverride?: PendingAttachment[]) => {
     const attachments = attachmentsOverride ?? selectedAttachments;
-    if ((!text.trim() && attachments.length === 0) || isBusy || !user) return;
+    if ((!text.trim() && attachments.length === 0) || isBusy || sendLockRef.current || !user) return;
     if (isSubscriptionGateLoading) return;
     if (isPlanLimitReached && isPlanGenerationRequest(text)) {
       showLimit('plan');
@@ -2448,8 +2468,14 @@ export function CoachPage() {
       return;
     }
 
-    const activeConversationId = await ensureActiveConversation();
-    if (!activeConversationId) return;
+    sendLockRef.current = true;
+    manuallyStoppedRef.current = false;
+    followMessagesRef.current = true;
+    const startedAt = performance.now();
+    let activeConversationId: string | null;
+    try { activeConversationId = await ensureActiveConversation(); }
+    catch { sendLockRef.current = false; return; }
+    if (!activeConversationId) { sendLockRef.current = false; return; }
 
     const messageAttachments = toMessageAttachments(attachments);
     const userMessage: ChatMessage = {
@@ -2474,6 +2500,7 @@ export function CoachPage() {
     });
 
     if (isPlanRejectText(text) && (pendingPlan || pendingPlanOptions)) {
+      sendLockRef.current = false;
       clearPendingAttachments();
       if (pendingPlan) {
         try {
@@ -2500,9 +2527,11 @@ export function CoachPage() {
     let timeoutId: number | null = null;
     try {
       const useCompactPublicPayload = isPublicAppOrigin();
-      const user_profile = await buildCombinedUserProfile();
-      const tracking_summary = useCompactPublicPayload ? null : await buildTrackingSummary();
-      const plan_snapshot = useCompactPublicPayload ? null : await buildPlanSnapshot();
+      const [user_profile, tracking_summary, plan_snapshot] = await Promise.all([
+        buildCombinedUserProfile(),
+        useCompactPublicPayload ? Promise.resolve(null) : buildTrackingSummary(),
+        useCompactPublicPayload ? Promise.resolve(null) : buildPlanSnapshot(),
+      ]);
       const recent_messages = newMessages.slice(useCompactPublicPayload ? -4 : -12).map((msg) => ({
         role: msg.role,
         content: buildOutgoingUserMessage(msg, language),
@@ -2518,6 +2547,7 @@ export function CoachPage() {
         : await buildWebsiteContext();
 
       const payload = {
+        stream: true,
         message: text.trim(),
         request_id: `message-${userMessage.timestamp}`,
         user_id: user.id,
@@ -2531,6 +2561,7 @@ export function CoachPage() {
       };
 
       const fallbackPayload = {
+        stream: true,
         message: text.trim(),
         request_id: `message-${userMessage.timestamp}`,
         user_id: user.id,
@@ -2550,9 +2581,12 @@ export function CoachPage() {
       };
 
       const controller = new AbortController();
+      requestControllerRef.current = controller;
+      if (manuallyStoppedRef.current) throw new DOMException('Stopped', 'AbortError');
+      const requestAt = performance.now();
       const requestTimeoutMs = attachments.length > 0 ? ATTACHMENT_REQUEST_TIMEOUT_MS : CHAT_REQUEST_TIMEOUT_MS;
       timeoutId = window.setTimeout(() => controller.abort(), requestTimeoutMs);
-      let apiResponse = attachments.length > 0
+      const apiResponse = attachments.length > 0
         ? await (async () => {
             const formData = new FormData();
             formData.append('message', text.trim());
@@ -2593,20 +2627,7 @@ export function CoachPage() {
             signal: controller.signal,
           });
 
-      if (!attachments.length && apiResponse.status >= 500 && useCompactPublicPayload) {
-        apiResponse = await fetch(`${AI_BACKEND_URL}/chat`, {
-          method: 'POST',
-          headers: await authHeaders({
-            'Content-Type': 'application/json; charset=UTF-8',
-          }),
-          body: JSON.stringify(fallbackPayload),
-          signal: controller.signal,
-        });
-      }
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-        timeoutId = null;
-      }
+      const headersAt = performance.now();
 
       if (!apiResponse.ok) {
         const failure = await apiResponse.json().catch(() => ({}));
@@ -2623,7 +2644,23 @@ export function CoachPage() {
         throw new Error(message);
       }
 
-      const data = await apiResponse.json();
+      const streamed = apiResponse.headers.get('content-type')?.includes('text/event-stream');
+      let streamedText = '';
+      let firstTextAt: number | undefined;
+      const responseTimestamp = Date.now();
+      const data = streamed ? await readChatStream(apiResponse, (chunk) => {
+        firstTextAt ??= performance.now();
+        streamedText += chunk;
+        setCurrentMessages([...newMessages, { role: 'assistant', content: streamedText, timestamp: responseTimestamp }]);
+      }) : await apiResponse.json();
+      if (timeoutId !== null) { window.clearTimeout(timeoutId); timeoutId = null; }
+      if (import.meta.env.DEV) console.info('chat_timing_ms', {
+        prepare: Math.round(requestAt - startedAt), headers: Math.round(headersAt - requestAt),
+        firstText: firstTextAt ? Math.round(firstTextAt - startedAt) : null,
+        complete: Math.round(performance.now() - startedAt),
+      });
+      // Render before persistence and subscription refresh; neither blocks the answer.
+      if (streamed) setCurrentMessages([...newMessages, { role: 'assistant', content: repairMojibake(data.reply || streamedText), timestamp: responseTimestamp }]);
       if (supabase && supabase.from) {
         try {
           await supabase.from('chat_messages').insert({
@@ -2647,12 +2684,14 @@ export function CoachPage() {
         clearPendingAttachments();
         setAttachmentError('');
       }
-      await refreshSubscription();
+      void refreshSubscription();
 
       // prefer the textual reply from backend
       const assistantTextRaw = data?.reply || formatExercisesMessage(data?.exercises || []);
       const assistantText = repairMojibake(assistantTextRaw);
-      const updatedMessages = await typeAssistantReply(newMessages, assistantText);
+      const updatedMessages: ChatMessage[] = streamed
+        ? [...newMessages, { role: 'assistant', content: assistantText, timestamp: responseTimestamp }]
+        : await typeAssistantReply(newMessages, assistantText);
       setCurrentMessages(updatedMessages);
       setConversations(prev => prev.map(c =>
         c.id === activeConversationId ? { ...c, messages: updatedMessages, updated_at: new Date().toISOString() } : c
@@ -2710,10 +2749,20 @@ export function CoachPage() {
         void loadRagDebug(text.trim() || attachments.map((item) => item.file.name).join(' '));
       }
       if (!voiceModeRef.current) focusInput();
-    } catch (error: any) {
+    } catch (caught) {
+      const error = caught instanceof Error ? caught : new Error(String(caught));
+      if (manuallyStoppedRef.current) {
+        setCurrentMessages(previous => [...previous, { role: 'assistant', content: language === 'ar' ? 'تم إيقاف الرد. يمكنك إرسال سؤال آخر.' : 'Response stopped. You can send another question.', timestamp: Date.now() }]);
+        return;
+      }
       console.error('Error:', error);
       setIsTypingReply(false);
-      if (error?.limitReached) return;
+      if ('limitReached' in error && error.limitReached) {
+        const code = 'code' in error ? String(error.code) : 'CHAT_LIMIT_REACHED';
+        setCurrentMessages(currentMessages); setInput(text);
+        showLimit(code === 'UPLOAD_LIMIT_REACHED' ? 'upload' : code === 'PLAN_LIMIT_REACHED' ? 'plan' : 'chat');
+        void refreshSubscription(); return;
+      }
       const timeoutMessage = error?.name === 'AbortError'
         ? (attachments.length > 0
           ? (language === 'ar'
@@ -2736,6 +2785,8 @@ export function CoachPage() {
       };
       setCurrentMessages(prev => [...prev, errMsg]);
     } finally {
+      sendLockRef.current = false;
+      requestControllerRef.current = null;
       if (timeoutId !== null) {
         window.clearTimeout(timeoutId);
       }
@@ -2880,9 +2931,9 @@ export function CoachPage() {
     name: pendingPlan.plan?.title || 'AI Workout Plan',
     duration_days: pendingPlan.plan?.duration_days || 7,
     exercises: (((pendingPlan.plan?.days || [])
-      .flatMap((day: any) => day?.exercises || []))
+      .flatMap((day: CoachPlanDay) => day?.exercises || []))
       .concat(Array.isArray(pendingPlan.plan?.exercises) ? pendingPlan.plan.exercises : []))
-      .map((exercise: any) => exercise?.name)
+      .map((exercise: CoachPlanItem) => exercise?.name)
       .filter(Boolean),
     status: 'pending' as const,
     created_at: pendingPlan.plan?.created_at || new Date().toISOString(),
@@ -2891,7 +2942,7 @@ export function CoachPage() {
   const nutritionApprovalPlan = pendingPlan?.type === 'nutrition' ? {
     id: pendingPlan.id,
     daily_calories: Number(pendingPlan.plan?.daily_calories || 0),
-    meals: ((((pendingPlan.plan?.days || [])[0]?.meals || []).concat(Array.isArray(pendingPlan.plan?.meals) ? pendingPlan.plan.meals : []))).map((meal: any) => ({
+    meals: ((((pendingPlan.plan?.days || [])[0]?.meals || []).concat(Array.isArray(pendingPlan.plan?.meals) ? pendingPlan.plan.meals : []))).map((meal: CoachPlanItem) => ({
       name: meal?.name || 'Meal',
       macros: {
         protein: Number(meal?.protein || 0),
@@ -3009,7 +3060,7 @@ export function CoachPage() {
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <Bot className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <BrandLogo mark className="coach-avatar" />
             <p className="text-muted-foreground mb-4">
               {language === 'ar' ? 'سجل دخولك للتحدث مع المدرب' : 'Sign in to chat with your AI Coach'}
             </p>
@@ -3023,25 +3074,25 @@ export function CoachPage() {
   }
 
   return (
-    <div className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#060816] text-foreground">
+    <div className="aura-coach relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(129,92,255,0.18),_transparent_32%),radial-gradient(circle_at_85%_18%,_rgba(34,211,238,0.12),_transparent_24%),radial-gradient(circle_at_50%_100%,_rgba(236,72,153,0.1),_transparent_34%)]" />
+        <div className="absolute inset-0 bg-card" />
         <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:54px_54px]" />
         <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_45%,_rgba(1,3,10,0.75)_100%)]" />
+        <div className="absolute inset-0 bg-card" />
       </div>
       <Navbar />
       <UpgradeModal open={Boolean(upgradeReason)} onOpenChange={(open) => !open && setUpgradeReason('')} reason={upgradeReason} />
 
       <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden pt-16 pb-16 md:pb-0">
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-white/10 bg-[rgba(10,12,24,0.72)] backdrop-blur-2xl md:flex">
-          <div className="border-b border-white/10 p-4">
+        <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card  md:flex">
+          <div className="border-b border-border p-4">
             <div className="mb-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200/70">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-700/70">
                 {isArabic ? 'المحادثات' : 'Chats'}
               </div>
             </div>
-            <Button variant="hero" className="h-11 w-full rounded-xl shadow-[0_18px_40px_rgba(168,85,247,0.28)]" onClick={createConversation}>
+            <Button variant="hero" className="h-11 w-full rounded-xl shadow-sm" onClick={createConversation}>
               <Plus className="w-4 h-4" />
               {t('coach.newChat')}
             </Button>
@@ -3049,7 +3100,7 @@ export function CoachPage() {
           </div>
           <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
             {loadingConvs && (
-              <div className="rounded-xl border border-white/8 bg-white/[0.04] px-3 py-4 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-border bg-muted/40 px-3 py-4 text-sm text-muted-foreground">
                 {isArabic ? 'جاري تحميل الجلسات...' : 'Loading sessions...'}
               </div>
             )}
@@ -3062,12 +3113,12 @@ export function CoachPage() {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { selectConversation(conv.id); } }}
                 className={`mb-2 flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-300 group ${
                   conv.id === currentId
-                    ? 'border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/18 via-violet-500/16 to-cyan-400/16 text-white shadow-[0_16px_40px_rgba(168,85,247,0.18)]'
-                    : 'border-white/8 bg-white/[0.03] text-muted-foreground hover:-translate-y-0.5 hover:border-fuchsia-300/20 hover:bg-white/[0.06] hover:text-foreground'
+                    ? 'border-emerald-400/40 bg-gradient-to-r from-emerald-500/18 via-blue-500/16 to-cyan-400/16 text-foreground shadow-sm'
+                    : 'border-border bg-muted/40 text-muted-foreground hover:-translate-y-0.5 hover:border-emerald-300/20 hover:bg-muted/40 hover:text-foreground'
                 }`}
               >
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
-                  conv.id === currentId ? 'border-white/20 bg-white/10 text-fuchsia-200' : 'border-white/8 bg-black/20 text-muted-foreground'
+                  conv.id === currentId ? 'border-border bg-white/10 text-emerald-700' : 'border-border bg-muted/50 text-muted-foreground'
                 }`}>
                   <MessageSquare className="h-4 w-4" />
                 </div>
@@ -3100,17 +3151,17 @@ export function CoachPage() {
                 initial={{ x: language === 'ar' ? 300 : -300 }}
                 animate={{ x: 0 }}
                 exit={{ x: language === 'ar' ? 300 : -300 }}
-                className="fixed top-16 bottom-0 z-50 flex w-80 max-w-[88vw] flex-col border-r border-white/10 bg-[rgba(10,12,24,0.94)] backdrop-blur-2xl md:hidden"
+                className="fixed top-16 bottom-0 z-50 flex w-80 max-w-[88vw] flex-col border-r border-border bg-card  md:hidden"
                 style={{ [language === 'ar' ? 'right' : 'left']: 0 }}
               >
-                <div className="border-b border-white/10 p-4">
+                <div className="border-b border-border p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-700/70">
                         {isArabic ? 'المحادثات' : 'Chats'}
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="rounded-2xl border border-white/10 bg-white/[0.04]">
+                    <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="rounded-2xl border border-border bg-muted/40">
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
@@ -3126,12 +3177,12 @@ export function CoachPage() {
                       onClick={() => selectConversation(conv.id)}
                       className={`mb-2 flex w-full items-center gap-3 rounded-3xl border px-4 py-3 text-left transition-all ${
                         conv.id === currentId
-                          ? 'border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/18 via-violet-500/16 to-cyan-400/16 text-white'
-                          : 'border-white/8 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground'
+                          ? 'border-emerald-400/40 bg-gradient-to-r from-emerald-500/18 via-blue-500/16 to-cyan-400/16 text-foreground'
+                          : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground'
                       }`}
                     >
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
-                        conv.id === currentId ? 'border-white/20 bg-white/10 text-fuchsia-200' : 'border-white/8 bg-black/20 text-muted-foreground'
+                        conv.id === currentId ? 'border-border bg-white/10 text-emerald-700' : 'border-border bg-muted/50 text-muted-foreground'
                       }`}>
                         <MessageSquare className="w-4 h-4 shrink-0" />
                       </div>
@@ -3148,27 +3199,27 @@ export function CoachPage() {
         </AnimatePresence>
 
         <main className="mx-auto flex min-h-0 w-full max-w-[1680px] flex-1 overflow-hidden px-3 py-3 sm:px-4 lg:px-6">
-          <div className="grid min-h-0 w-full gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-            <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.92),rgba(8,10,22,0.94))] shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-              <div className="relative z-20 shrink-0 border-b border-white/10 bg-[linear-gradient(180deg,rgba(14,16,30,0.96),rgba(14,16,30,0.78))] px-4 py-3 backdrop-blur-xl sm:px-5 lg:px-6">
-                <div className="absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent" />
+          <div className="grid min-h-0 w-full gap-4 grid-cols-1">
+            <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm ">
+              <div className="relative z-20 shrink-0 border-b border-border bg-card px-4 py-3  sm:px-5 lg:px-6">
+                <div className="absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent" />
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="rounded-xl border border-white/10 bg-white/[0.04] md:hidden" onClick={() => setSidebarOpen(true)} aria-label={isArabic ? 'فتح المحادثات' : 'Open chats'}>
+                    <Button variant="ghost" size="icon" className="rounded-xl border border-border bg-muted/40 md:hidden" onClick={() => setSidebarOpen(true)} aria-label={isArabic ? 'فتح المحادثات' : 'Open chats'}>
                       <Menu className="w-5 h-5" />
                     </Button>
-                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/30 via-violet-500/20 to-cyan-400/20 shadow-[0_0_32px_rgba(168,85,247,0.2)]">
-                      <div className="absolute inset-1 rounded-lg border border-white/10" />
-                      <Bot className="relative z-10 w-5 h-5 text-primary-foreground" />
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/30 via-blue-500/20 to-cyan-400/20 shadow-sm">
+                      <div className="absolute inset-1 rounded-lg border border-border" />
+                      <BrandLogo mark className="coach-avatar" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h1 className="text-base font-semibold text-foreground sm:text-lg">{isArabic ? 'المدرب الذكي للياقة' : 'AI Fitness Coach'}</h1>
-                        <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                        <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
                           {isArabic ? 'جاهز' : 'Ready'}
                         </span>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setShowVoiceSettings(!showVoiceSettings)} className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]" aria-label={isArabic ? 'إعدادات الصوت' : 'Voice settings'}>
+                    <Button variant="ghost" size="icon" onClick={() => setShowVoiceSettings(!showVoiceSettings)} className="rounded-xl border border-border bg-muted/40 hover:bg-muted/40" aria-label={isArabic ? 'إعدادات الصوت' : 'Voice settings'}>
                       <Settings2 className="w-4 h-4" />
                     </Button>
                 </div>
@@ -3176,13 +3227,13 @@ export function CoachPage() {
 
               <AnimatePresence>
                 {showVoiceSettings && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-b border-white/10 bg-white/[0.03]">
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-b border-border bg-muted/40">
                     <div className="flex items-center gap-3 p-3 sm:px-5 lg:px-6">
                       <span className="whitespace-nowrap text-sm text-muted-foreground">
                         {language === 'ar' ? 'صوت المدرب:' : 'Coach voice:'}
                       </span>
                       <Select value={selectedVoice || 'default'} onValueChange={handleVoiceSelect}>
-                        <SelectTrigger className="h-10 flex-1 rounded-2xl border-white/10 bg-black/20">
+                        <SelectTrigger className="h-10 flex-1 rounded-2xl border-border bg-muted/50">
                           <SelectValue placeholder={language === 'ar' ? 'افتراضي' : 'Default'} />
                         </SelectTrigger>
                         <SelectContent className="max-h-60">
@@ -3221,13 +3272,13 @@ export function CoachPage() {
                 )}
               </AnimatePresence>
 
-              <div ref={messagesScrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto scroll-smooth scrollbar-thin [scrollbar-gutter:stable] px-4 py-5 sm:px-5 lg:px-6">
+              <div onScroll={event => { const node = event.currentTarget; followMessagesRef.current = node.scrollHeight - node.scrollTop - node.clientHeight < 100; }} ref={messagesScrollRef} className="min-h-0 flex-1 overscroll-contain overflow-y-auto scroll-smooth scrollbar-thin [scrollbar-gutter:stable] px-4 py-5 sm:px-5 lg:px-6">
                 {currentMessages.length === 0 && !isLoading && !isVoiceProcessing && (
                   <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="mx-auto flex min-h-[260px] max-w-2xl flex-col items-center justify-center py-8 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/25 via-violet-500/18 to-cyan-400/18 shadow-[0_0_36px_rgba(168,85,247,0.18)]">
-                      <Bot className="h-5 w-5 text-white" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/25 via-blue-500/18 to-cyan-400/18 shadow-sm">
+                      <BrandLogo mark className="coach-avatar" />
                     </div>
-                    <h2 className="mt-4 text-lg font-semibold text-white">
+                    <h2 className="mt-4 text-lg font-semibold text-foreground">
                       {isArabic ? 'اسأل مدربك' : 'Ask your coach'}
                     </h2>
                     <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -3236,7 +3287,7 @@ export function CoachPage() {
                             key={prompt}
                             type="button"
                             onClick={() => { setInput(prompt); focusInput(); }}
-                            className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-foreground transition-colors hover:border-fuchsia-300/30 hover:bg-white/[0.08]"
+                            className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground transition-colors hover:border-emerald-300/30 hover:bg-muted/40"
                           >
                             {prompt}
                           </button>
@@ -3265,10 +3316,10 @@ export function CoachPage() {
                         >
                           <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
                             message.role === 'user'
-                              ? 'border-fuchsia-300/20 bg-gradient-to-br from-fuchsia-500/85 to-violet-500/85 text-white'
-                              : 'border-cyan-300/20 bg-gradient-to-br from-violet-500/75 via-fuchsia-500/60 to-cyan-400/70 text-white shadow-[0_0_40px_rgba(34,211,238,0.12)]'
+                              ? 'border-emerald-300/20 bg-gradient-to-br from-emerald-500/85 to-blue-500/85 text-foreground'
+                              : 'border-cyan-300/20 bg-gradient-to-br from-blue-500/75 via-emerald-500/60 to-cyan-400/70 text-foreground shadow-sm'
                           }`}>
-                            {message.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                            {message.role === 'user' ? <User className="w-4 h-4" /> : <BrandLogo mark className="coach-avatar" />}
                           </div>
                           <div className="max-w-[92%] md:max-w-[82%]">
                             {hasAttachments && (
@@ -3280,16 +3331,16 @@ export function CoachPage() {
                               <>
                                 <div className={`mb-2 flex items-center gap-2 px-1 text-[11px] uppercase tracking-[0.22em] ${
                                   message.role === 'user'
-                                    ? 'justify-end text-fuchsia-100/75'
-                                    : 'justify-start text-cyan-100/70'
+                                    ? 'justify-end text-emerald-700/75'
+                                    : 'justify-start text-cyan-700/70'
                                 }`}>
                                   <span>{message.role === 'user' ? (isArabic ? 'أنت' : 'You') : (isArabic ? 'المدرب الذكي' : 'AI Coach')}</span>
-                                  <span className="text-white/25">•</span>
-                                  <span className="tracking-[0.16em] text-white/45 normal-case">{formatMessageTime(message.timestamp)}</span>
+                                  <span className="text-foreground">•</span>
+                                  <span className="tracking-[0.16em] text-foreground normal-case">{formatMessageTime(message.timestamp)}</span>
                                 </div>
                               <div
                                 dir={messageDir}
-                                className={`px-5 py-4.5 shadow-[0_20px_60px_rgba(0,0,0,0.18)] ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}
+                                className={`px-5 py-4.5 shadow-sm ${message.role === 'user' ? 'chat-bubble-user text-primary-foreground' : 'chat-bubble-ai text-foreground'}`}
                               >
                                 {message.role === 'assistant' && fitbitSummaryCard ? (
                                   <FitbitSummaryCard data={fitbitSummaryCard} />
@@ -3308,7 +3359,7 @@ export function CoachPage() {
                                 <button
                                   type="button"
                                   onClick={() => void copyMessage(messageKey, copyText)}
-                                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[11px] text-muted-foreground transition-all hover:border-fuchsia-300/25 hover:bg-white/[0.08] hover:text-foreground"
+                                  className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground transition-all hover:border-emerald-300/25 hover:bg-muted/40 hover:text-foreground"
                                 >
                                   {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                                   <span>{isCopied ? (language === 'ar' ? 'تم النسخ' : 'Copied') : (language === 'ar' ? 'نسخ' : 'Copy')}</span>
@@ -3324,8 +3375,8 @@ export function CoachPage() {
 
                 {isLoading && !isTypingReply && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 flex gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-violet-500/75 via-fuchsia-500/60 to-cyan-400/70">
-                      <Bot className="w-4 h-4 text-primary-foreground" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-blue-500/75 via-emerald-500/60 to-cyan-400/70">
+                      <BrandLogo mark className="coach-avatar" />
                     </div>
                     <div className="chat-bubble-ai p-4">
                       <div className="flex items-center gap-2">
@@ -3337,8 +3388,8 @@ export function CoachPage() {
                 )}
                 {isVoiceProcessing && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 flex gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-violet-500/75 via-fuchsia-500/60 to-cyan-400/70">
-                      <Bot className="w-4 h-4 text-primary-foreground" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-blue-500/75 via-emerald-500/60 to-cyan-400/70">
+                      <BrandLogo mark className="coach-avatar" />
                     </div>
                     <div className="chat-bubble-ai p-4">
                       <div className="flex items-center gap-2">
@@ -3354,7 +3405,7 @@ export function CoachPage() {
               </div>
 
               {showRagDebug && (
-                <div className="mx-4 mb-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-4 space-y-3 sm:mx-5 lg:mx-6">
+                <div className="mx-4 mb-4 rounded-[28px] border border-border bg-muted/40 p-4 space-y-3 sm:mx-5 lg:mx-6">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h2 className="text-sm font-semibold text-foreground">RAG Debug</h2>
@@ -3452,7 +3503,7 @@ export function CoachPage() {
               )}
 
               {pendingPlanOptions && pendingPlanOptions.options.length > 0 && (
-                <div className="mx-4 mb-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-4 space-y-3 sm:mx-5 lg:mx-6">
+                <div className="mx-4 mb-4 rounded-[28px] border border-border bg-muted/40 p-4 space-y-3 sm:mx-5 lg:mx-6">
                   <div>
                     <h2 className="text-sm font-semibold text-foreground">
                       {language === 'ar' ? 'اختر الخطة التي تريدها' : 'Choose the plan you want'}
@@ -3509,7 +3560,7 @@ export function CoachPage() {
               <AnimatePresence>
                 {isListening && (
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="flex items-center justify-center gap-3 px-4 py-3">
-                    <div className="flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-destructive shadow-[0_0_30px_rgba(239,68,68,0.18)]">
+                    <div className="flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-4 py-2 text-destructive shadow-sm">
                       <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
                       <span className="text-sm font-medium">
                         {language === 'ar' ? 'جاري الاستماع... اضغط المايك للإرسال' : 'Listening... tap mic again to send'}
@@ -3522,7 +3573,7 @@ export function CoachPage() {
               <AnimatePresence>
                 {isAssistantSpeaking && (
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="flex items-center justify-center gap-3 px-4 py-1">
-                    <div className="flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-cyan-100 shadow-[0_0_34px_rgba(34,211,238,0.16)]">
+                    <div className="flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-cyan-700 shadow-sm">
                       <Volume2 className="w-4 h-4 animate-pulse" />
                       <span className="text-sm font-medium">
                         {language === 'ar' ? 'المدرب يتحدث...' : 'Coach is speaking...'}
@@ -3545,11 +3596,11 @@ export function CoachPage() {
                 )}
               </AnimatePresence>
 
-              <div className="relative z-20 shrink-0 border-t border-white/10 bg-[linear-gradient(180deg,rgba(7,9,18,0),rgba(7,9,18,0.92)_20%,rgba(7,9,18,0.98))] px-4 pb-3 pt-3 sm:px-5 lg:px-6">
-                <div className="glass-card rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(20,23,40,0.92),rgba(10,12,24,0.94))] p-2.5 shadow-[0_20px_60px_rgba(0,0,0,0.32)]" onDragOver={(event) => event.preventDefault()} onDrop={handleAttachmentDrop}>
+              <div className="relative z-20 shrink-0 border-t border-border bg-card px-4 pb-3 pt-3 sm:px-5 lg:px-6">
+                <div className="aura-coach-composer rounded-2xl p-2.5" onDragOver={(event) => event.preventDefault()} onDrop={handleAttachmentDrop}>
                   {(isChatLimitReached || isUploadLimitReached || isPlanLimitReached) && (
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300/20 bg-gradient-to-r from-violet-500/10 to-amber-400/10 px-4 py-3 shadow-[0_0_30px_rgba(245,158,11,.08)]">
-                      <div className="flex items-start gap-2 text-xs text-amber-100"><Lock className="mt-0.5 h-4 w-4 shrink-0"/><div>{isChatLimitReached && <p>Chat limit reached. Upgrade to continue talking with your AI Coach.</p>}{isUploadLimitReached && <p>Upload limit reached. Upgrade to add more files.</p>}{isPlanLimitReached && <p>Plan generation limit reached. Upgrade to create more plans.</p>}</div></div>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300/20 bg-gradient-to-r from-blue-500/10 to-amber-400/10 px-4 py-3 shadow-sm">
+                      <div className="flex items-start gap-2 text-xs text-amber-700"><Lock className="mt-0.5 h-4 w-4 shrink-0"/><div>{isChatLimitReached && <p>Chat limit reached. Upgrade to continue talking with your AI Coach.</p>}{isUploadLimitReached && <p>Upload limit reached. Upgrade to add more files.</p>}{isPlanLimitReached && <p>Plan generation limit reached. Upgrade to create more plans.</p>}</div></div>
                       <Button size="sm" variant="outline" onClick={() => showLimit(isChatLimitReached ? 'chat' : isUploadLimitReached ? 'upload' : 'plan')}>Upgrade</Button>
                     </div>
                   )}
@@ -3612,12 +3663,12 @@ export function CoachPage() {
                   )}
                   <div className="mb-2 flex items-center justify-between px-1 text-xs text-muted-foreground">
                     <span>{language === 'ar' ? 'مرفقات' : 'Attachments'}</span>
-                    <span className="text-cyan-100">
+                    <span className="text-cyan-700">
                       {selectedAttachments.length}/{MAX_CHAT_ATTACHMENTS}
                     </span>
                   </div>
                   <div className="flex items-end gap-2">
-                    <Button title={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} aria-label={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isSubscriptionGateLoading || isBusy || isUploadLimitReached} className={`h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] ${isUploadLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
+                    <Button title={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} aria-label={isUploadLimitReached ? 'Upload limit reached.' : 'Attach a file'} variant="ghost" size="icon" onClick={openAttachmentPicker} disabled={isSubscriptionGateLoading || isBusy || isUploadLimitReached} className={`h-11 w-11 shrink-0 rounded-xl border border-border bg-muted/40 hover:bg-muted/40 ${isUploadLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
                       <Paperclip className="w-4 h-4" />
                     </Button>
                     {isSupported && (
@@ -3627,15 +3678,16 @@ export function CoachPage() {
                         onClick={isListening ? stopListening : startListeningIfPossible}
                         disabled={isSubscriptionGateLoading || isBusy || isAssistantSpeaking || isChatLimitReached}
                         aria-label={isListening ? (language === 'ar' ? 'إيقاف الاستماع' : 'Stop listening') : (language === 'ar' ? 'بدء الرسالة الصوتية' : 'Start voice message')}
-                        className={`h-11 w-11 shrink-0 rounded-xl border ${isListening ? 'animate-pulse border-destructive/30 bg-destructive/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'}`}
+                        className={`h-11 w-11 shrink-0 rounded-xl border ${isListening ? 'animate-pulse border-destructive/30 bg-destructive/10' : 'border-border bg-muted/40 hover:bg-muted/40'}`}
                       >
                         {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                       </Button>
                     )}
                     <Textarea
                       ref={textareaRef}
+                      aria-label={language === 'ar' ? 'اسأل مدربك' : 'Ask your coach'}
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
+                      onChange={(e) => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`; }}
                       onKeyDown={handleKeyDown}
                       placeholder={
                         isChatLimitReached
@@ -3644,32 +3696,32 @@ export function CoachPage() {
                           ? 'اسأل مدربك...'
                           : 'Ask your coach...'
                       }
-                      className="min-h-[52px] max-h-40 resize-y rounded-xl border-white/10 bg-black/20 px-4 py-3 focus-visible:ring-1"
+                      className="min-h-[52px] max-h-40 resize-y rounded-xl border-border bg-muted/50 px-4 py-3 focus-visible:ring-1"
                       disabled={isBusy}
                       readOnly={isChatLimitReached}
                       rows={2}
                     />
-                    <Button title={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} aria-label={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} variant="hero" size="icon" onClick={sendMessage} disabled={isSubscriptionGateLoading || isChatLimitReached || isBusy || (!input.trim() && selectedAttachments.length === 0)} className={`h-11 w-11 shrink-0 rounded-xl shadow-[0_18px_38px_rgba(168,85,247,0.28)] ${isChatLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
+                    {isBusy ? <Button variant="outline" size="icon" onClick={stopGeneration} aria-label={language === 'ar' ? 'إيقاف الرد' : 'Stop response'} className="h-11 w-11 shrink-0"><Square className="h-4 w-4" /></Button> : <Button title={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} aria-label={isChatLimitReached ? 'You reached your chat message limit.' : 'Send message'} variant="hero" size="icon" onClick={sendMessage} disabled={isSubscriptionGateLoading || isChatLimitReached || isBusy || (!input.trim() && selectedAttachments.length === 0)} className={`h-11 w-11 shrink-0 rounded-xl ${isChatLimitReached || isSubscriptionGateLoading ? 'cursor-not-allowed opacity-55' : ''}`}>
                       {isChatLimitReached ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                    </Button>
+                    </Button>}
                   </div>
                 </div>
               </div>
             </section>
 
-            <aside className="hidden min-h-0 overflow-y-auto overscroll-contain xl:flex">
-              <div className="flex h-fit w-full flex-col gap-4 rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,34,0.9),rgba(8,10,22,0.92))] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl">
-                <h2 className="text-base font-semibold text-white">
+            <aside className="hidden">
+              <div className="flex h-fit w-full flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-sm ">
+                <h2 className="text-base font-semibold text-foreground">
                   {isArabic ? 'السياق' : 'Context'}
                 </h2>
 
                 <div className="grid gap-3">
-                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                  <div className="rounded-lg border border-border bg-muted/40 p-3">
                     <div className="mb-3 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
+                      <span className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-700/70">
                         {isArabic ? 'وضع الجلسة' : 'Session mode'}
                       </span>
-                      <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                      <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
                         {isArabic ? 'نشط' : 'Online'}
                       </span>
                     </div>
@@ -3681,13 +3733,13 @@ export function CoachPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100/70">
+                  <div className="rounded-lg border border-border bg-muted/40 p-3">
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-700/70">
                       {isArabic ? 'سياق الملف الشخصي' : 'Profile Context'}
                     </div>
                     <div className="space-y-2">
                       {profileContextEntries.map((item) => (
-                        <div key={item.label} className="flex items-start justify-between gap-3 border-b border-white/6 pb-2 last:border-b-0 last:pb-0">
+                        <div key={item.label} className="flex items-start justify-between gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0">
                           <span className="text-xs text-muted-foreground">{item.label}</span>
                           <span className="max-w-[58%] text-right text-xs font-medium text-foreground">{String(item.value)}</span>
                         </div>
@@ -3695,8 +3747,8 @@ export function CoachPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.08))] p-3">
-                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/70">
+                  <div className="rounded-lg border border-cyan-300/10 bg-card p-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700/70">
                       {isArabic ? 'تلميح' : 'Tip'}
                     </div>
                     <p className="mt-2 text-sm leading-6 text-foreground/90">
@@ -3714,3 +3766,7 @@ export function CoachPage() {
     </div>
   );
 }
+import { Square } from 'lucide-react';
+import { BrandLogo } from '@/components/brand/BrandLogo';
+import { readChatStream } from '@/lib/chatStream';
+import './Coach.css';

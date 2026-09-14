@@ -1,193 +1,74 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface UserProfile {
-  name: string;
-  age: number;
-  gender: 'male' | 'female';
-  weight: number;
-  height: number;
-  goal: 'bulking' | 'cutting' | 'fitness';
-  location: 'home' | 'gym';
-  fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
-  trainingDaysPerWeek: number;
-  equipment: string;
-  injuries: string;
-  activityLevel: 'low' | 'moderate' | 'high';
-  dietaryPreferences: string;
-  chronicConditions: string;
-  allergies: string;
-  avatarUrl?: string;
-  onboardingCompleted: boolean;
-}
-
+import { hasConfiguredSupabase, profileSchema, type UserProfile } from '@/lib/profile';
+export type { UserProfile } from '@/lib/profile';
 interface UserContextType {
-  profile: UserProfile | null;
-  setProfile: (profile: UserProfile) => void;
-  updateProfile: (updates: Partial<UserProfile>) => void;
-  isOnboarded: boolean;
+  profile: UserProfile | null; setProfile: (profile: UserProfile) => void;
+  updateProfile: (updates: Partial<UserProfile>) => void; isOnboarded: boolean;
+  profileLoading: boolean; profileError: string; retryProfile: () => void;
 }
-
-const defaultProfile: UserProfile = {
-  name: '',
-  age: 25,
-  gender: 'male',
-  weight: 70,
-  height: 175,
-  goal: 'fitness',
-  location: 'home',
-  fitnessLevel: 'beginner',
-  trainingDaysPerWeek: 3,
-  equipment: '',
-  injuries: '',
-  activityLevel: 'moderate',
-  dietaryPreferences: '',
-  chronicConditions: '',
-  allergies: '',
-  avatarUrl: '',
-  onboardingCompleted: false,
-};
-
 const UserContext = createContext<UserContextType | undefined>(undefined);
-const LEGACY_PROFILE_STORAGE_KEY = 'fitcoach_profile';
-const getProfileStorageKey = (userId: string) => `fitcoach_profile_${userId}`;
-
-async function loadLatestProfile(userId: string) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(1);
-
-  if (error) {
-    throw error;
-  }
-
-  return data?.[0] ?? null;
-}
-
 export function UserProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  const [profile, setProfileState] = useState<UserProfile | null>(null);
-
+  const { user, loading: authLoading } = useAuth();
+  const [state, setState] = useState<{ userId: string; profile: UserProfile | null }>({ userId: '', profile: null });
+  const [loadedUser, setLoadedUser] = useState<string | null>(null);
+  const [profileError, setError] = useState('');
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
-    localStorage.removeItem(LEGACY_PROFILE_STORAGE_KEY);
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!user) {
-      setProfileState(null);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    const storageKey = getProfileStorageKey(user.id);
-    const saved = localStorage.getItem(storageKey);
-    let savedProfile: UserProfile | null = null;
-
-    if (saved) {
+    if (authLoading) return;
+    let active = true;
+    setError('');
+    const userId = user?.id || '';
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 10000);
+    const load = async () => {
       try {
-        savedProfile = JSON.parse(saved) as UserProfile;
-        if (isMounted) {
-          setProfileState(savedProfile);
+        if (!userId) { setState({ userId, profile: null }); return; }
+        if (!hasConfiguredSupabase) {
+          const parsed = profileSchema.safeParse(JSON.parse(localStorage.getItem(`fitcoach_profile_${userId}`) || 'null'));
+          if (active) setState({ userId, profile: parsed.success ? parsed.data : null });
+          return;
         }
+        const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1).abortSignal(controller.signal);
+        if (error) throw error;
+        const row = data?.[0];
+        const parsed = row ? profileSchema.safeParse({
+          name: row.name, age: row.age, gender: row.gender, weight: row.weight == null ? undefined : Number(row.weight),
+          height: row.height == null ? undefined : Number(row.height), goal: row.goal, location: row.location,
+          fitnessLevel: row.fitness_level, trainingDaysPerWeek: row.training_days_per_week,
+          activityLevel: row.activity_level, equipment: row.equipment || '', injuries: row.injuries || '',
+          dietaryPreferences: row.dietary_preferences || '', chronicConditions: row.chronic_conditions || '',
+          allergies: row.allergies || '', avatarUrl: row.avatar_url || '', onboardingCompleted: Boolean(row.onboarding_completed),
+        }) : null;
+        if (active) setState({ userId, profile: parsed?.success ? parsed.data : null });
       } catch {
-        if (isMounted) {
-          setProfileState(null);
-        }
+        if (active) setError('Could not load your profile. Please try again.');
+      } finally {
+        window.clearTimeout(timer);
+        if (active) setLoadedUser(userId);
       }
-    } else {
-      setProfileState(null);
-    }
-
-    // فقط حاول Supabase إذا كانت مكونة
-    if (!supabase || !supabase.from) {
-      console.warn('Supabase not available, skipping profile fetch');
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    loadLatestProfile(user.id)
-      .then((data) => {
-        if (!isMounted || !data) return;
-
-        setProfileState({
-          ...defaultProfile,
-          name: data.name || '',
-          age: Number(data.age ?? defaultProfile.age),
-          gender: (data.gender as 'male' | 'female') || defaultProfile.gender,
-          weight: Number(data.weight ?? defaultProfile.weight),
-          height: Number(data.height ?? defaultProfile.height),
-          goal: (data.goal as 'bulking' | 'cutting' | 'fitness') || defaultProfile.goal,
-          location: (data.location as 'home' | 'gym') || defaultProfile.location,
-          fitnessLevel: (data.fitness_level as 'beginner' | 'intermediate' | 'advanced') || defaultProfile.fitnessLevel,
-          trainingDaysPerWeek: Number((data as { training_days_per_week?: number }).training_days_per_week ?? defaultProfile.trainingDaysPerWeek),
-          equipment: (data as { equipment?: string }).equipment || '',
-          injuries: (data as { injuries?: string }).injuries || '',
-          activityLevel: (data as { activity_level?: string }).activity_level as 'low' | 'moderate' | 'high' || defaultProfile.activityLevel,
-          dietaryPreferences: (data as { dietary_preferences?: string }).dietary_preferences || '',
-          chronicConditions: (data as { chronic_conditions?: string }).chronic_conditions || '',
-          allergies: (data as { allergies?: string }).allergies || '',
-          avatarUrl: (data as { avatar_url?: string | null }).avatar_url || savedProfile?.avatarUrl || '',
-          onboardingCompleted: Boolean(data.onboarding_completed),
-        });
-      })
-      .catch(() => {
-        // تجاهل الأخطاء من Supabase
-        console.debug('Could not fetch profile from Supabase');
-      });
-
-    return () => {
-      isMounted = false;
     };
-  }, [user?.id]);
-
-  useEffect(() => {
+    void load();
+    return () => { active = false; controller.abort(); window.clearTimeout(timer); };
+  }, [user?.id, authLoading, retry]);
+  const profile = state.userId === user?.id ? state.profile : null;
+  const setProfile = useCallback((value: UserProfile) => {
     if (!user) return;
-
-    const storageKey = getProfileStorageKey(user.id);
-    if (profile) {
-      localStorage.setItem(storageKey, JSON.stringify(profile));
-    } else {
-      localStorage.removeItem(storageKey);
-    }
-  }, [profile, user?.id]);
-
-  const setProfile = (newProfile: UserProfile) => {
-    setProfileState(newProfile);
-  };
-
-  const updateProfile = (updates: Partial<UserProfile>) => {
-    setProfileState((prev) => ({ ...(prev ?? defaultProfile), ...updates }));
-  };
-
-  const isOnboarded = profile?.onboardingCompleted ?? false;
-
-  return (
-    <UserContext.Provider value={{ profile, setProfile, updateProfile, isOnboarded }}>
-      {children}
-    </UserContext.Provider>
-  );
+    const parsed = profileSchema.parse(value);
+    setState({ userId: user.id, profile: parsed });
+    if (!hasConfiguredSupabase) localStorage.setItem(`fitcoach_profile_${user.id}`, JSON.stringify(parsed));
+  }, [user]);
+  const updateProfile = useCallback((updates: Partial<UserProfile>) => {
+    if (profile) setProfile({ ...profile, ...updates });
+  }, [profile, setProfile]);
+  return <UserContext.Provider value={{ profile, setProfile, updateProfile, isOnboarded: profile?.onboardingCompleted === true,
+    profileLoading: authLoading || loadedUser !== (user?.id || ''), profileError,
+    retryProfile: () => { setLoadedUser(null); setRetry(value => value + 1); },
+  }}>{children}</UserContext.Provider>;
 }
-
 export function useUser(): UserContextType {
   const context = useContext(UserContext);
-  if (!context) {
-    // إذا لم يكن هناك context، عيد قيماً افتراضية
-    return {
-      profile: null,
-      setProfile: () => {},
-      updateProfile: () => {},
-      isOnboarded: false,
-    };
-  }
+  if (!context) throw new Error('useUser requires UserProvider');
   return context;
 }
-
-export { defaultProfile };

@@ -1,77 +1,48 @@
 import { lazy, Suspense, useState } from 'react';
-import { MotionConfig, motion, useReducedMotion } from 'framer-motion';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, Dumbbell, Instagram, Linkedin, LockKeyhole, MessageCircle, ScanLine, Youtube } from 'lucide-react';
+import { ArrowRight, Check, MessageCircle, Camera, CalendarDays, Heart, Footprints } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
+import { BrandLogo } from '@/components/brand/BrandLogo';
+import { AppEmoji } from '@/components/brand/AppEmoji';
+import { StorySection } from '@/components/home/StorySection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/hooks/useAuth';
 import { getExercisesByFilters } from '@/data/exercises';
 import { muscleGroups, muscleLabel } from '@/lib/trainingCatalog';
-import './Index.css';
 import './TrainingFlow.css';
-import './HomeEditorial.css';
-
+import './Home.css';
 const Anatomy = lazy(() => import('@/components/workout/AnatomyBody').then(module => ({ default: module.AnatomyBody })));
-const chapters = ['plan','move','repeat'] as const;
-const targets = ['chest','shoulders','biceps','abs','quads'] as const;
 export default function Index() {
-  const { language } = useLanguage();
-  const { profile, isOnboarded } = useUser();
-  const { user } = useAuth();
-  const reduced = useReducedMotion();
-  const ar = language === 'ar';
-  const [target, setTarget] = useState('chest');
-  const [chapter, setChapter] = useState<typeof chapters[number]>('plan');
-  const [demoDay,setDemoDay] = useState(0);
-  const Arrow = ar ? ArrowLeft : ArrowRight;
-  const selected = getExercisesByFilters([target],null,profile?.location ?? null,profile?.gender ?? null);
-  const names = Object.fromEntries(Object.keys(muscleGroups).map(key => ['muscle.'+key,muscleLabel(key,language)]));
-  const start = user ? isOnboarded ? '/schedule' : '/onboarding' : '/auth?force=1';
-  const workoutLink = '/workouts?muscles='+encodeURIComponent(target);
-  const content = {
-    plan:{number:'01',label:ar?'اختر هدفك':'Find your focus',title:ar?'عضلة محددة.\nبداية واضحة.':'A clear target.\nA better start.',description:ar?'اختر العضلة، وشاهد تمارين تناسب مكانك وملفك.':'Choose your muscle. Find movements for your space and your profile.',action:ar?'استكشف التمارين':'Explore workouts',route:workoutLink},
-    move:{number:'02',label:ar?'اضبط حركتك':'Make your move',title:ar?'تدرّب.\nواسمع الملاحظة.':'Make the move.\nGet the cue.',description:ar?'ملاحظات على المفاصل الظاهرة، أثناء الحركات المدعومة. الفيديو لا يُسجَّل.':'Visible-joint feedback during supported movements. Your workout video is not recorded.',action:ar?'افتح الكاميرا':'Open live coach',route:'/live-coach?exerciseId=squats'},
-    repeat:{number:'03',label:ar?'كمّل يومك':'Keep it going',title:ar?'يومك مرتب.\nخطوتك معروفة.':'Know your day.\nOwn your progress.',description:ar?'عضلات اليوم، تمارينك، وإنجازك. كلّها في مكان واحد.':'Today’s muscles, your exercises, and your progress. All in one place.',action:ar?'افتح جدولي':'Open my schedule',route:'/schedule'}
-  };
-  const active=content[chapter];
-  return <MotionConfig reducedMotion="user"><div className="fitcoach-home home-product home-editorial">
-    <a className="home-skip-link" href="#home-main">{ar?'انتقل إلى المحتوى':'Skip to content'}</a>
-    <Navbar variant="home" />
-    <main id="home-main">
-      <section className="editorial-hero" aria-labelledby="hero-title">
-        <div className="editorial-hero-copy">
-          <motion.p initial={{opacity:0}} animate={{opacity:1}} className="editorial-eyebrow"><span />{ar?'تدريب شخصي. بذكاء.':'PERSONAL TRAINING. INTELLIGENTLY.'}</motion.p>
-          <motion.h1 id="hero-title" initial={{opacity:0,y:reduced?0:24}} animate={{opacity:1,y:0}} transition={{duration:.65}}>{ar?<><span>جسمك.</span><span>هدفك.</span><em>على طريقتك.</em></>:<><span>YOUR BODY.</span><span>YOUR GOALS.</span><em>YOUR WAY.</em></>}</motion.h1>
-          <p className="editorial-intro">{ar?'من أول حركة، إلى عادتك القادمة. تدريب يبدأ منك ويرافقك.':'From your first move to your next milestone. Training that starts with you.'}</p>
-          <div className="editorial-actions"><Link className="editorial-primary" to={start}>{ar?'ابدأ رحلتك':'Find your next move'}<Arrow size={20}/></Link><a className="editorial-tour" href="#experience">{ar?'اكتشف التجربة':'See how it works'}<ArrowDown size={16}/></a></div>
-          <div className="editorial-hero-meta"><span>01 — 03</span><p>{ar?'خطط. تحرّك. تقدّم.':'PLAN. MOVE. PROGRESS.'}</p></div>
-        </div>
-        <div className="editorial-body-scene">
-          <span className="editorial-background-word" aria-hidden="true">YOU</span>
-          <div className="editorial-body-caption"><span>BODY / FOCUS</span><span>{ar?'خريطة تفاعلية':'INTERACTIVE ANATOMY'}</span></div>
-          <Suspense fallback={<div className="editorial-body-loading">{ar?'تجهيز خريطة الجسم…':'Preparing your muscle map…'}</div>}>
-            <Anatomy compact highlightGroups genderOverride={profile?.gender} selectedMuscles={[target]} onMuscleToggle={id=>{if(id in muscleGroups)setTarget(id);}} muscleNames={names}/>
-          </Suspense>
-          <div className="editorial-target-card" aria-live="polite"><span>{ar?'نقطة البداية':'YOUR STARTING POINT'}</span><strong>{muscleLabel(target,language)}</strong><Link to={workoutLink}>{selected.length} {ar?'تمارين في المكتبة':'movements to explore'}<ArrowUpRight size={18}/></Link></div>
-          <div className="editorial-targets" aria-label={ar?'اختر عضلة':'Choose a muscle'}>{targets.map(item=><button key={item} onClick={()=>setTarget(item)} aria-pressed={target===item}>{muscleLabel(item,language)}</button>)}</div>
-        </div>
-      </section>
-      <div className="editorial-divider"><span>FITCOACH — {ar?'تجربة واحدة مترابطة':'ONE CONNECTED EXPERIENCE'}</span><a href="#experience">{ar?'اكتشف ما بعد ذلك':'EXPLORE WHAT’S NEXT'}<ArrowDown size={14}/></a></div>
-      <section className="editorial-experience" id="experience" aria-labelledby="experience-title">
-        <header><span className="editorial-eyebrow">{ar?'كل خطوة، لها معنى':'EVERY STEP HAS A PURPOSE'}</span><h2 id="experience-title">{ar?'أقل حيرة.\nحركة أكثر.':'LESS GUESSWORK.\nMORE MOVEMENT.'}</h2></header>
-        <div className="editorial-chapters" role="tablist" aria-label={ar?'مراحل التجربة':'Training journey'}>{chapters.map((id,index)=><button key={id} id={'chapter-'+id} role="tab" aria-selected={chapter===id} aria-controls="chapter-panel" tabIndex={chapter===id?0:-1} onClick={()=>setChapter(id)} onKeyDown={event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const step=(event.key==='ArrowRight'?1:-1)*(ar?-1:1);const next=event.key==='Home'?0:event.key==='End'?2:(index+step+3)%3;setChapter(chapters[next]);document.getElementById('chapter-'+chapters[next])?.focus();}}}><span>0{index+1}</span>{content[id].label}<ArrowUpRight size={17}/></button>)}</div>
-        <div id="chapter-panel" role="tabpanel" aria-labelledby={'chapter-'+chapter} className="editorial-chapter-panel">
-          <div className="editorial-chapter-copy"><span className="editorial-chapter-number">{active.number}</span><h3>{active.title}</h3><p>{active.description}</p><Link to={active.route}>{active.action}<Arrow size={20}/></Link></div>
-          <motion.div key={chapter} className={'editorial-chapter-visual is-'+chapter} initial={{opacity:0,y:reduced?0:12}} animate={{opacity:1,y:0}} transition={{duration:.28}}>
-            {chapter==='plan'&&<><div className="editorial-visual-label"><Dumbbell size={18}/><span>{muscleLabel(target,language)}</span><small>{ar?'من مكتبة التمارين':'FROM THE LIBRARY'}</small></div><div className="editorial-exercise-preview">{selected.slice(0,3).map((item,index)=><Link key={item.id} to={'/workouts?exerciseIds='+item.id}><span>0{index+1}</span><strong>{ar?item.nameAr:item.name}</strong><small>{item.sets} × {item.reps}</small><ArrowUpRight size={18}/></Link>)}</div><p className="editorial-visual-note">{ar?'اختر عضلة في الأعلى لتتغير التمارين هنا.':'Pick a muscle above. The movements here change with it.'}</p></>}
-            {chapter==='move'&&<><div className="editorial-visual-label"><ScanLine size={18}/><span>{ar?'توجيه الحركة':'MOVEMENT COACHING'}</span><small>{ar?'طريقة الاستخدام':'HOW IT WORKS'}</small></div><div className="editorial-camera-frame"><ScanLine size={72} strokeWidth={.8}/><strong>{ar?'مساحتك.\nجلستك.':'YOUR SPACE.\nYOUR SESSION.'}</strong><p>{ar?'ضع الكاميرا جانبًا للسكوات، وأظهر جسمك كاملًا.':'For squats, position the camera to the side with your full body visible.'}</p></div><span className="editorial-private"><LockKeyhole size={13}/>{ar?'الكاميرا لا تعمل في هذا العرض':'Camera is off in this preview'}</span></>}
-            {chapter==='repeat'&&<><div className="editorial-visual-label"><CalendarDays size={18}/><span>{ar?'إيقاع أسبوعك':'YOUR WEEKLY RHYTHM'}</span><small>{ar?'مثال توضيحي':'ILLUSTRATIVE WEEK'}</small></div><div className="editorial-week">{(ar?['س','ح','ن','ث','ر','خ','ج']:['S','S','M','T','W','T','F']).map((day,index)=><button key={index} aria-label={(ar?'اليوم ':'Day ')+(index+1)} aria-pressed={demoDay===index} onClick={()=>setDemoDay(index)}><span>{day}</span><strong>{index+1}</strong>{index%2===0?<Dumbbell size={15}/>:<span>—</span>}</button>)}</div><div className="editorial-day-summary"><span>{demoDay%2===0?<Dumbbell size={30}/>:<Check size={30}/>}</span><div><strong>{demoDay%2===0?(ar?'يوم تدريب':'Training day'):(ar?'مساحة للتعافي':'Room to recover')}</strong><p>{ar?'جدول حسابك يعرض خطتك الفعلية.':'Your account’s schedule shows your actual plan.'}</p></div></div></>}
-          </motion.div>
-        </div>
-      </section>
-      <section className="editorial-finale"><p>{ar?'الخطوة القادمة، لك.':'THE NEXT MOVE IS YOURS.'}</p><h2>{ar?'خلّينا نبدأ.':'LET’S GET\nMOVING.'}</h2><Link to={start} aria-label={ar?'ابدأ التدريب':'Start training'}><Arrow size={38}/></Link><span>{ar?'في البيت أو الجيم. بطريقتك أنت.':'AT HOME. AT THE GYM. ON YOUR TERMS.'}</span></section>
-    </main>
-    <footer className="editorial-footer"><Link to="/"><Dumbbell size={18}/>FITCOACH<span>AI</span></Link><p>{ar?'تدريب يبدأ منك.':'PERSONAL BY DESIGN.'}</p><div className="editorial-social" aria-label="Social links"><a href="https://www.instagram.com/nextauraai/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram /></a><a href="https://www.linkedin.com/company/nextaura-ai" target="_blank" rel="noreferrer" aria-label="LinkedIn"><Linkedin /></a><a href="https://api.whatsapp.com/send/?phone=962799195498&text&type=phone_number&app_absent=0" target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle /></a><a href="https://www.youtube.com/@NextAuraAI-Solutions" target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube /></a></div><small>© 2026 FITCOACH</small></footer>
-  </div></MotionConfig>;
+  const { language } = useLanguage(); const ar = language === 'ar';
+  const { profile, isOnboarded } = useUser(); const { user } = useAuth();
+  const [muscle, setMuscle] = useState('chest'); const [day, setDay] = useState(0);
+  const copy = (en: string, arabic: string) => ar ? arabic : en;
+  const start = user ? isOnboarded ? '/schedule' : '/onboarding' : '/auth';
+  const results = getExercisesByFilters([muscle], null, null, null).slice(0, 3);
+  const names = Object.fromEntries(Object.keys(muscleGroups).map(key => ['muscle.' + key, muscleLabel(key, language)]));
+  return <div className="aura-home"><Navbar variant="home" /><a href="#home-content" className="aura-skip">{copy('Skip to content','انتقل إلى المحتوى')}</a>
+    <main id="home-content">
+      <section className="aura-hero"><div className="aura-hero-copy"><span className="aura-pill"><span />{copy('A healthier life, made personal','حياة صحية تناسبك')}</span><h1>{copy('Your next chapter.','فصلك القادم.')}<br /><em>{copy('A healthier you.','نسخة أصح منك.')}</em></h1><p>{copy('Meet NextAura FIT. Your training, nutrition, and AI coach — connected around the life you want to live.','تعرّف على NextAura FIT. تدريبك وتغذيتك ومدربك الذكي في تجربة تناسب حياتك.')}</p><div className="aura-hero-actions"><Link className="aura-primary" to={start}>{copy('Start your journey','ابدأ رحلتك')}<ArrowRight size={18} className="rtl:rotate-180" /></Link><a href="#your-story">{copy('Explore the experience','اكتشف التجربة')} ↓</a></div><div className="aura-hero-promises"><span><Check size={15}/>{copy('Built around you','مصمّم لك')}</span><span><Check size={15}/>{copy('At home or the gym','في البيت أو النادي')}</span></div></div>
+      <div className="aura-hero-preview"><div className="aura-preview-top"><BrandLogo mark /><div><strong>{copy('Your everyday, upgraded','يومك بصورة أفضل')}</strong><small>AI-Powered Healthy Lifestyle</small></div><span className="aura-status">{copy('Connected','متكامل')}</span></div><div className="aura-preview-focus"><AppEmoji name="leaf"/><span>{copy('ONE PERSONAL SPACE','مساحتك الشخصية')}</span><h2>{copy('Move well.\nFeel better.','تحرّك بثقة.\nاشعر بالفرق.')}</h2><p>{copy('Start with a plan that understands you.','ابدأ بخطة تفهم احتياجاتك.')}</p></div><div className="aura-preview-links"><Link to="/workouts"><AppEmoji name="muscle"/><div><strong>{copy('Your movement','حركتك')}</strong><small>{copy('Explore the exercise library','اكتشف مكتبة التمارين')}</small></div><ArrowRight size={17}/></Link><Link to="/coach"><BrandLogo mark/><div><strong>{copy('Your AI coach','مدربك الذكي')}</strong><small>{copy('A conversation that moves you forward','حوار يساعدك على التقدم')}</small></div><ArrowRight size={17}/></Link></div></div></section>
+      <div className="aura-story-intro" id="your-story"><span className="aura-eyebrow">{copy('THE NEXTAURA WAY','على طريقة NEXTAURA')}</span><h2>{copy('A little more you.\nIn every part of your day.','أقرب إليك.\nفي كل جزء من يومك.')}</h2><p>{copy('One connected experience, from your first goal to your next good habit.','تجربة واحدة متكاملة، من هدفك الأول إلى عادتك الصحية القادمة.')}</p></div>
+      <StorySection number="01" title={copy('It starts with your story.','البداية من قصتك.')} description={copy('Your goals, your experience, your health. Build a personal profile with your own answers so your coaching starts in the right place.','أهدافك وخبرتك وصحتك. ابنِ ملفك بإجاباتك أنت لتبدأ رحلة التدريب المناسبة.')} action={copy('Make it personal','خصص تجربتك')} to={user && isOnboarded ? '/profile' : start}>
+        <div className="aura-profile-preview"><AppEmoji name="person"/><h3>{copy('Made for your life','مصمم لحياتك')}</h3><p>{copy('Profile setup preview','معاينة إعداد الملف')}</p>{['Your goals','Your starting point','Your weekly rhythm'].map((item,i)=><div key={item}><span>0{i+1}</span><strong>{ar?['أهدافك','نقطة البداية','إيقاع أسبوعك'][i]:item}</strong><Check size={16}/></div>)}<small>{copy('No invented measurements. Every answer comes from you.','لا قياسات مفترضة. كل إجابة تأتي منك.')}</small></div>
+      </StorySection>
+      <StorySection number="02" reverse title={copy('Find your focus.\nMake your move.','حدد هدفك.\nوابدأ الحركة.')} description={copy('Tap a muscle and discover real exercises from the library. Find the movements that fit your training space, with sets, reps, and clear instructions.','اختر عضلة واكتشف تمارين المكتبة مع المجموعات والتكرارات والتعليمات الواضحة.')} action={copy('Explore all workouts','استكشف التمارين')} to={'/workouts?muscles='+muscle}>
+        <div className="aura-anatomy-preview"><div><Suspense fallback={<div className="anatomy-loading">{copy('Preparing muscle map…','جارٍ تجهيز خريطة العضلات…')}</div>}><Anatomy compact highlightGroups selectedMuscles={[muscle]} onMuscleToggle={id=>{if(id in muscleGroups)setMuscle(id);}} muscleNames={names} genderOverride={profile?.gender}/></Suspense></div><div><p className="aura-eyebrow">{copy('TRY IT','جرّب بنفسك')}</p><div className="aura-muscle-pills">{['chest','abs','quads','back'].map(id=><button key={id} aria-pressed={id===muscle} onClick={()=>setMuscle(id)}>{muscleLabel(id,language)}</button>)}</div>{results.map(exercise=><Link className="aura-preview-exercise" to={'/workouts?exerciseIds='+exercise.id} key={exercise.id}><strong>{ar?exercise.nameAr:exercise.name}</strong><small>{exercise.sets} × {exercise.reps}</small></Link>)}</div></div>
+      </StorySection>
+      <StorySection number="03" title={copy('A little guidance.\nIn the moment.','توجيه بسيط.\nفي الوقت المناسب.')} description={copy('Live Coach helps you practice supported movements with camera-based form feedback. See clear cues, follow your reps, and keep your camera under your control.','يساعدك المدرب المباشر على أداء الحركات المدعومة بتوجيه واضح وعدّ التكرارات. تشغيل الكاميرا تحت سيطرتك.')} action={copy('Meet Live Coach','اكتشف المدرب المباشر')} to="/live-coach">
+        <div className="aura-camera-preview"><span className="aura-eyebrow">{copy('LIVE COACH PREVIEW','معاينة المدرب المباشر')}</span><div className="aura-camera-stage"><Camera size={52} strokeWidth={1.2}/><h3>{copy('Your space. Your session.','مساحتك. جلستك.')}</h3><p>{copy('Full body in frame. One movement at a time.','أظهر جسمك كاملاً. حركة واحدة كل مرة.')}</p></div><div className="aura-camera-caption"><span><span className="aura-dot"/>{copy('Camera off in preview','الكاميرا مغلقة في المعاينة')}</span><span>{copy('Form · Reps · Progress','الأداء · التكرارات · التقدم')}</span></div></div>
+      </StorySection>
+      <StorySection number="04" reverse title={copy('Good questions.\nA personal conversation.','أسئلتك مهمة.\nوحوارك شخصي.')} description={copy('Talk through your training, nutrition, or next step with your AI coach. Ask in English or Arabic, use your voice, and turn a plan into your weekly schedule.','ناقش تدريبك وتغذيتك وخطوتك القادمة مع مدربك الذكي. اسأل بالعربية أو الإنجليزية واستخدم صوتك.')} action={copy('Ask your coach','اسأل مدربك')} to="/coach">
+        <div className="aura-chat-preview"><header><BrandLogo mark/><strong>{copy('Your NextAura coach','مدرب NextAura')}<small>{copy('Conversation preview','معاينة المحادثة')}</small></strong></header><p className="aura-chat-question">{copy('Where should I start?','من أين أبدأ؟')}</p><div className="aura-chat-answer"><p>{copy('Let’s start with you.','لنبدأ بك أنت.')}</p><p>{copy('Tell me your goal, experience, and how many days you can train. We’ll take it one step at a time.','أخبرني بهدفك وخبرتك وعدد أيام التدريب المناسبة لك. سنتقدم خطوة بخطوة.')}</p></div><Link to="/coach" className="aura-composer-preview">{copy('Ask your coach…','اسأل مدربك…')}<MessageCircle size={19}/></Link></div>
+      </StorySection>
+      <StorySection number="05" title={copy('A week that works\nfor you.','أسبوع يناسبك.')} description={copy('Bring training and recovery into a clear weekly rhythm. Open a day, see your exercises, check off your progress, and keep your coach’s notes close.','نظّم التدريب والتعافي في أسبوع واضح. افتح اليوم وراجع تمارينك وسجّل تقدمك وملاحظات مدربك.')} action={copy('Open your planner','افتح مخططك')} to="/schedule">
+        <div className="aura-week-preview"><header><CalendarDays size={22}/><h3>{copy('Your weekly rhythm','إيقاع أسبوعك')}</h3><small>{copy('Illustration','مثال توضيحي')}</small></header>{[0,1,2].map(i=><button key={i} aria-expanded={day===i} onClick={()=>setDay(i)} className={day===i?'is-open':''}><AppEmoji name={i===1?'leaf':'muscle'}/><div><strong>{ar?['الاثنين','الثلاثاء','الأربعاء'][i]:['Monday','Tuesday','Wednesday'][i]}</strong><span>{i===1?copy('Space to recover','وقت للتعافي'):copy('Time to move','وقت للحركة')}</span>{day===i&&<p>{copy('Your saved plan fills in your actual exercises.','خطتك المحفوظة تعرض تمارينك الفعلية.')}</p>}</div><ArrowRight size={17}/></button>)}</div>
+      </StorySection>
+      <StorySection number="06" reverse title={copy('See the bigger picture.','شاهد الصورة الكاملة.')} description={copy('Keep your profile and connected Fitbit activity together. Bring steps, activity, and synced health metrics into a clearer view of your day.','اجمع ملفك ونشاط Fitbit المتزامن في مكان واحد، لتفهم خطواتك ونشاطك ومؤشرات يومك.')} action={copy('Explore your profile','اكتشف ملفك')} to="/profile"><div className="aura-devices-preview"><AppEmoji name="heart"/><h3>{copy('Your health, connected','صحتك في تجربة متكاملة')}</h3><p>{copy('Fitbit activity sync','مزامنة نشاط Fitbit')}</p><div><Footprints/><span>{copy('Steps & activity','الخطوات والنشاط')}</span><Check/></div><div><Heart/><span>{copy('Synced health metrics','المؤشرات الصحية المتزامنة')}</span><Check/></div><Link to="/profile">{copy('Connect your Fitbit','اربط Fitbit')}<ArrowRight size={17}/></Link></div></StorySection>
+      <section className="aura-finale"><AppEmoji name="sparkle"/><span className="aura-eyebrow">{copy('YOUR NEXT CHAPTER STARTS HERE','فصلك القادم يبدأ هنا')}</span><h2>{copy('A healthier lifestyle.\nOne good step at a time.','نمط حياة أصح.\nخطوة جيدة كل مرة.')}</h2><Link className="aura-primary" to={start}>{copy('Let’s get started','لنبدأ معاً')}<ArrowRight size={18}/></Link></section>
+    </main><footer className="aura-footer"><BrandLogo/><p>AI-Powered Healthy Lifestyle</p><small>© {new Date().getFullYear()} NextAura FIT</small></footer>
+  </div>;
 }

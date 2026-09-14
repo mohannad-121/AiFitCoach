@@ -20,7 +20,7 @@ export function BodySelector({ selectedMuscles, onMuscleToggle, muscleNames }: B
     strokeWidth: isActive(muscle) ? 1.5 : 0.8,
     cursor: 'pointer' as const,
     transition: 'all 0.3s ease',
-    filter: isActive(muscle) ? 'drop-shadow(0 0 8px rgba(217, 108, 219, 0.65))' : 'none',
+    filter: isActive(muscle) ? 'drop-shadow(0 0 8px rgba(40, 139, 235, 0.65))' : 'none',
     opacity: isActive(muscle) ? 1 : 0.75,
   });
 
@@ -72,8 +72,8 @@ export function BodySelector({ selectedMuscles, onMuscleToggle, muscleNames }: B
           <svg viewBox="0 0 220 480" className="w-48 h-[26rem] md:w-60 md:h-[32rem]">
             <defs>
               <linearGradient id="activeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#e78ac8" />
-                <stop offset="100%" stopColor="#9b62f4" />
+                <stop offset="0%" stopColor="#44a3ad" />
+                <stop offset="100%" stopColor="#36a967" />
               </linearGradient>
               <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="hsl(220, 12%, 32%)" />

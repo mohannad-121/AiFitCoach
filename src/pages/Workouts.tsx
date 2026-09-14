@@ -10,6 +10,7 @@ import { useUser } from '@/contexts/UserContext';
 import { exercises as catalog, getExercisesByFilters } from '@/data/exercises';
 import { muscleGroups, muscleLabel, resolveWorkoutSelection } from '@/lib/trainingCatalog';
 import './TrainingFlow.css';
+import './Planner.css';
 
 export function WorkoutsPage() {
   const { language } = useLanguage();
@@ -24,6 +25,7 @@ export function WorkoutsPage() {
   const [genderChoice, setGender] = useState<string | null>(null);
   const [placeChoice, setPlace] = useState<string | null>(null);
   const [goal, setGoal] = useState('all');
+  const [search, setSearch] = useState('');
   const gender = genderChoice ?? profile?.gender ?? 'all';
   const place = placeChoice ?? profile?.location ?? 'all';
   const queryKey = params.toString();
@@ -36,7 +38,8 @@ export function WorkoutsPage() {
     setExpanded(matches.length === 1 ? matches[0].id : null);
   }, [queryKey]);
   const groups = [...new Set(muscles.map(muscle => advancedToGroupMap[muscle] || muscle))];
-  const results = requested.length ? resolveWorkoutSelection(requested, params.get('prescription')) : getExercisesByFilters(groups, goal === 'all' ? null : goal, place === 'all' ? null : place, gender === 'all' ? null : gender);
+  const matchingResults = requested.length ? resolveWorkoutSelection(requested, params.get('prescription')) : getExercisesByFilters(groups, goal === 'all' ? null : goal, place === 'all' ? null : place, gender === 'all' ? null : gender);
+  const results = matchingResults.filter(exercise => `${exercise.name} ${exercise.nameAr}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const names = Object.fromEntries(Object.keys(muscleGroups).map(key => ['muscle.' + key, muscleLabel(key, language)]));
   const toggle = (id: string) => {
     const group = advancedToGroupMap[id] || id;
@@ -47,7 +50,7 @@ export function WorkoutsPage() {
   return <div className="workouts-simple training-simple min-h-screen pb-24">
     <Navbar />
     <main className="mx-auto px-4 pt-24">
-      <header className="training-page-heading"><div><span>FITCOACH / {ar ? 'التمارين' : 'WORKOUTS'}</span><h1>{dayMode ? (ar ? 'تمارين يومك.' : 'Your day. Ready.') : (ar ? 'اختر العضلة. ابدأ تمرينك.' : 'Choose a muscle. Start training.')}</h1><p>{ar ? 'جسمك وتمارينك وتوجيه الكاميرا في خطوة واحدة.' : 'Your muscle map, exercises, and camera coaching in one place.'}</p></div>{dayMode && <Link to="/schedule">{ar ? 'العودة للجدول' : 'Back to schedule'}</Link>}</header>
+      <header className="training-page-heading"><div><span>NEXTAURA FIT / {ar ? 'التمارين' : 'WORKOUTS'}</span><h1>{dayMode ? (ar ? 'تمارين يومك.' : 'Your day. Ready.') : (ar ? 'اختر العضلة. ابدأ تمرينك.' : 'Choose a muscle. Start training.')}</h1><p>{ar ? 'جسمك وتمارينك وتوجيه الكاميرا في خطوة واحدة.' : 'Your muscle map, exercises, and camera coaching in one place.'}</p></div>{dayMode && <Link to="/schedule">{ar ? 'العودة للجدول' : 'Back to schedule'}</Link>}</header>
       {dayMode && <div className="day-workouts-banner"><div><strong>{ar ? 'من جدولك' : 'From your schedule'}</strong><p>{params.get('date')} · {results.length} {ar ? 'تمارين' : 'exercises'}</p></div><button onClick={() => setParams({})}>{ar ? 'تصفّح المكتبة' : 'Browse library'}</button></div>}
       <div className="workouts-browser">
         <aside className="workouts-body-panel">
@@ -55,6 +58,7 @@ export function WorkoutsPage() {
           <div className="workouts-muscle-buttons">{Object.keys(muscleGroups).map(muscle => <button type="button" key={muscle} aria-pressed={groups.includes(muscle)} onClick={() => toggle(muscle)}>{muscleLabel(muscle, language)}</button>)}</div>
         </aside>
         <section className="workouts-results" aria-label={ar ? 'التمارين المناسبة' : 'Matching exercises'}>
+          <label className="workout-search">{ar ? 'ابحث عن تمرين' : 'Find an exercise'}<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder={ar ? 'اسم التمرين…' : 'Exercise name…'} /></label>
           {!dayMode && <div className="workouts-filters">
             <label>{ar ? 'الجنس' : 'Profile'}<select value={gender} onChange={event => setGender(event.target.value)}><option value="all">{ar ? 'الكل' : 'All'}</option><option value="male">{ar ? 'ذكر' : 'Male'}</option><option value="female">{ar ? 'أنثى' : 'Female'}</option></select></label>
             <label>{ar ? 'المكان' : 'Location'}<select value={place} onChange={event => setPlace(event.target.value)}><option value="all">{ar ? 'الكل' : 'All'}</option><option value="home">{ar ? 'البيت' : 'Home'}</option><option value="gym">{ar ? 'الجيم' : 'Gym'}</option></select></label>

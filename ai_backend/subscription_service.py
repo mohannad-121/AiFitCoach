@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -27,12 +28,19 @@ except Exception:  # pragma: no cover
     create_client = None
 
 
+@lru_cache(maxsize=1)
+def _configured_client(url: str, key: str):
+    # Reuse connection pooling across the several usage checks in one chat turn.
+    # Credentials remain server-only; an environment change creates a new client.
+    return create_client(url, key)
+
+
 def _client():
     url = (os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL", "")).strip()
     key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY", "")).strip()
     if not url or not key or create_client is None:
         return None
-    return create_client(url, key)
+    return _configured_client(url, key)
 
 
 async def authenticated_user(authorization: Optional[str] = Header(default=None)) -> dict[str, Any]:
@@ -69,6 +77,7 @@ def subscription_payload(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "plan": row.get("subscription_plan", "free"),
         "status": row.get("subscription_status", "active"),
+        "billingCycle": row.get("billing_cycle", "monthly"),
         "currentPeriodStart": row.get("current_period_start"),
         "currentPeriodEnd": row.get("current_period_end"),
         "isUnlimited": admin,
@@ -129,7 +138,7 @@ def check_usage(user_id: str, kind: str, amount: int = 1) -> dict[str, Any]:
 
 
 def apply_plan(user_id: str, plan: str, status: str, customer_id: Optional[str], subscription_id: Optional[str],
-               period_start: Optional[datetime], period_end: Optional[datetime]) -> None:
+               period_start: Optional[datetime], period_end: Optional[datetime], billing_cycle: str = "monthly") -> None:
     client = _client()
     if client is None:
         raise HTTPException(503, "Subscription service is not configured.")
@@ -142,6 +151,7 @@ def apply_plan(user_id: str, plan: str, status: str, customer_id: Optional[str],
         "subscription_plan": plan,
         "subscription_status": status,
         "payment_provider": "paypal",
+        "billing_cycle": billing_cycle,
         "provider_customer_id": customer_id,
         "provider_subscription_id": subscription_id,
         "current_period_start": new_start,

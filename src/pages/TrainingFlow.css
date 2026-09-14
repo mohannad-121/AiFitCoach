@@ -1,4 +1,6 @@
 /* Shared, restrained training interface. Uses the application's theme tokens. */
+.live-camera-placeholder :is(h3,p,svg) { color:var(--text-primary); }
+.training-simple .training-page-heading h1 { font-size:clamp(26px,3vw,36px); }
 .training-simple { background: hsl(var(--background)) !important; }
 .training-simple > .pointer-events-none { display:none; }
 .training-simple main { max-width:1280px; }
@@ -94,5 +96,5 @@
 .live-exercise-picker>div:first-of-type { display:none; }
 .training-simple.live-coach-shell main>div>.min-w-0>div:first-child { display:none; }
 .workouts-exercise-list article [class*='text-cyan'],.workouts-exercise-list article button[class*='bg-cyan'] { color:hsl(var(--foreground)); background:hsl(var(--secondary)); border-color:hsl(var(--border)); }
-html:not(.dark) .training-simple :is(.day-muscle-tags .is-pending,.workouts-muscle-buttons button[aria-pressed=true],.schedule-exercise-link) { color:#8d2c74; }
+html:not(.dark) .training-simple :is(.day-muscle-tags .is-pending,.workouts-muscle-buttons button[aria-pressed=true],.schedule-exercise-link) { color:#1a416c; }
 html:not(.dark) .live-exercise-picker :is(.text-white,[class*='text-cyan'],[class*='text-emerald']) { color:hsl(var(--foreground)); }

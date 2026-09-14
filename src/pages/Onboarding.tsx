@@ -1,447 +1,84 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, User, Ruler, Target, MapPin, HeartPulse, Dumbbell } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { BrandLogo } from '@/components/brand/BrandLogo';
+import { AppEmoji, type EmojiName } from '@/components/brand/AppEmoji';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useUser, defaultProfile, UserProfile } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/UserContext';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { profileSchema, saveProfileForUser, type OnboardingDraft } from '@/lib/profile';
 
-async function saveProfileForUser(userId: string, finalProfile: UserProfile) {
-  const payload = {
-    user_id: userId,
-    name: finalProfile.name,
-    age: finalProfile.age,
-    gender: finalProfile.gender,
-    weight: finalProfile.weight,
-    height: finalProfile.height,
-    goal: finalProfile.goal,
-    location: finalProfile.location,
-    fitness_level: finalProfile.fitnessLevel,
-    training_days_per_week: finalProfile.trainingDaysPerWeek,
-    equipment: finalProfile.equipment || '',
-    injuries: finalProfile.injuries || '',
-    activity_level: finalProfile.activityLevel,
-    dietary_preferences: finalProfile.dietaryPreferences || '',
-    chronic_conditions: finalProfile.chronicConditions || '',
-    allergies: finalProfile.allergies || '',
-    onboarding_completed: true,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { data: existingRows, error: existingError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(1);
-
-  if (existingError) {
-    throw existingError;
-  }
-
-  const existingId = existingRows?.[0]?.id;
-  if (existingId) {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update(payload)
-      .eq('id', existingId);
-
-    if (updateError) {
-      throw updateError;
-    }
-    return;
-  }
-
-  const { error: insertError } = await supabase.from('profiles').insert(payload);
-  if (insertError) {
-    throw insertError;
-  }
-}
-
-const steps = ['basic', 'body', 'health', 'goals', 'training', 'location'] as const;
-
+const steps: { title: [string, string]; description: [string, string]; icon: EmojiName; fields: (keyof OnboardingDraft)[] }[] = [
+  { title: ['First, a little about you', 'لنتعرف عليك أولاً'], description: ['Your plan starts with your own answers.', 'خطتك تبدأ بإجاباتك أنت.'], icon: 'person', fields: ['name', 'age', 'gender'] },
+  { title: ['Your starting point', 'نقطة البداية'], description: ['Add your current measurements. You can update them later.', 'أدخل قياساتك الحالية. يمكنك تحديثها لاحقاً.'], icon: 'ruler', fields: ['weight', 'height'] },
+  { title: ['What brings you here?', 'ما هدفك؟'], description: ['Choose the goal that matters most to you.', 'اختر الهدف الأهم بالنسبة لك.'], icon: 'sparkle', fields: ['goal'] },
+  { title: ['Find your rhythm', 'اختر إيقاعك'], description: ['A sustainable plan fits your experience and week.', 'الخطة المناسبة تراعي خبرتك ووقتك.'], icon: 'calendar', fields: ['fitnessLevel', 'trainingDaysPerWeek', 'activityLevel'] },
+  { title: ['Make room to move', 'مساحتك للتدريب'], description: ['Tell us where you train and what you have available.', 'أخبرنا أين تتدرب وما المعدات المتاحة.'], icon: 'muscle', fields: ['location', 'equipment'] },
+  { title: ['Your health matters', 'صحتك أولاً'], description: ['Share conditions or injuries your coach should consider. Optional.', 'شارك الحالات أو الإصابات التي يجب مراعاتها. اختياري.'], icon: 'heart', fields: ['chronicConditions', 'injuries'] },
+  { title: ['Fuel your everyday', 'غذاؤك اليومي'], description: ['Any food preferences or allergies? Leave blank if none.', 'هل لديك تفضيلات غذائية أو حساسية؟ اتركها فارغة إن لم توجد.'], icon: 'leaf', fields: ['dietaryPreferences', 'allergies'] },
+];
+const choices = {
+  gender: ['male', 'female'], goal: ['bulking', 'cutting', 'fitness'], fitnessLevel: ['beginner', 'intermediate', 'advanced'],
+  activityLevel: ['low', 'moderate', 'high'], location: ['home', 'gym'],
+} as const;
+const labels: Record<string, [string, string]> = {
+  name: ['Your name', 'اسمك'], age: ['Age', 'العمر'], gender: ['Gender', 'الجنس'], weight: ['Weight', 'الوزن'], height: ['Height', 'الطول'],
+  goal: ['Your goal', 'هدفك'], fitnessLevel: ['Experience', 'الخبرة'], trainingDaysPerWeek: ['Days per week', 'أيام الأسبوع'],
+  activityLevel: ['Daily activity', 'النشاط اليومي'], location: ['Training location', 'مكان التدريب'], equipment: ['Available equipment', 'المعدات المتاحة'],
+  chronicConditions: ['Health conditions', 'الحالات الصحية'], injuries: ['Injuries or pain', 'الإصابات أو الألم'], dietaryPreferences: ['Dietary preferences', 'التفضيلات الغذائية'], allergies: ['Allergies', 'الحساسية'],
+};
+const numeric = { age: [13, 120, 'years', 'سنة'], weight: [25, 350, 'kg', 'كغ'], height: [100, 250, 'cm', 'سم'], trainingDaysPerWeek: [1, 7, 'days', 'أيام'] } as const;
 export function OnboardingPage() {
-  const { t, language, dir } = useLanguage();
-  const { setProfile } = useUser();
+  const { language, setLanguage, t } = useLanguage();
   const { user } = useAuth();
+  const { setProfile } = useUser();
   const navigate = useNavigate();
-  
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<Partial<UserProfile>>({ ...defaultProfile });
-
-  const updateField = <K extends keyof UserProfile>(field: K, value: UserProfile[K]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const [draft, setDraft] = useState<OnboardingDraft>({});
+  const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [error, setError] = useState('');
+  const ar = language === 'ar';
+  const copy = (pair: readonly [string, string]) => pair[ar ? 1 : 0];
+  const current = steps[step];
+  const next = async () => {
+    if (savingRef.current) return;
+    const parsed = profileSchema.safeParse({ ...draft, onboardingCompleted: true });
+    const issue = parsed.success ? undefined : parsed.error.issues.find(issue => current.fields.includes(issue.path[0] as keyof OnboardingDraft));
+    if (issue) { setError(ar ? 'أكمل هذا الاختيار أو أدخل قيمة صحيحة للمتابعة.' : 'Complete this choice or enter a valid value to continue.'); document.getElementById(`onboard-${issue.path[0]}`)?.focus(); return; }
+    setError('');
+    if (step < steps.length - 1) { setStep(value => value + 1); return; }
+    if (!parsed.success || !user) { setError(ar ? 'راجع إجاباتك قبل الحفظ.' : 'Review your answers before saving.'); return; }
+    savingRef.current = true; setSaving(true);
+    try { const saved = await saveProfileForUser(user.id, parsed.data); setProfile(saved); navigate('/workouts', { replace: true }); }
+    catch { setError(ar ? 'تعذر حفظ ملفك. إجاباتك محفوظة هنا، حاول مجدداً.' : 'Your profile could not be saved. Your answers are still here; please try again.'); }
+    finally { savingRef.current = false; setSaving(false); }
   };
-
-  const nextStep = async () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep((prev) => prev + 1);
-    } else {
-      try {
-        const finalProfile = { ...defaultProfile, ...formData, onboardingCompleted: true } as UserProfile;
-        setProfile(finalProfile);
-
-        if (user && supabase && supabase.from) {
-          try {
-            await saveProfileForUser(user.id, finalProfile);
-          } catch (error) {
-            console.warn('Failed to save profile to Supabase:', error);
-          }
-        }
-
-        navigate('/workouts');
-      } catch (error) {
-        console.error('Error completing onboarding:', error);
-      }
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 0) setCurrentStep((prev) => prev - 1);
-  };
-
-  const stepIcons = [User, Ruler, HeartPulse, Target, Dumbbell, MapPin];
-  const Icon = stepIcons[currentStep];
-
-  const commonConditions = language === 'ar'
-    ? ['سكري', 'ضغط الدم', 'قلب', 'ربو', 'مفاصل', 'ظهر']
-    : ['Diabetes', 'Blood Pressure', 'Heart', 'Asthma', 'Joints', 'Back Pain'];
-
-  const commonAllergies = language === 'ar'
-    ? ['الفول السوداني', 'المكسرات', 'الحليب', 'البيض', 'القمح', 'المحار']
-    : ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Wheat', 'Shellfish'];
-  const commonDietaryPreferences = language === 'ar'
-    ? ['نباتي', 'نباتي صارم', 'حلال', 'كيتو', 'خالي من الغلوتين', 'خالي من اللاكتوز']
-    : ['Vegetarian', 'Vegan', 'Halal', 'Keto', 'Gluten Free', 'Lactose Free'];
-
-  const toggleCondition = (condition: string) => {
-    const current = formData.chronicConditions || '';
-    const conditions = current.split(',').map(c => c.trim()).filter(Boolean);
-    if (conditions.includes(condition)) {
-      updateField('chronicConditions', conditions.filter(c => c !== condition).join(', '));
-    } else {
-      updateField('chronicConditions', [...conditions, condition].join(', '));
-    }
-  };
-
-  const hasCondition = (condition: string) => {
-    return (formData.chronicConditions || '').split(',').map(c => c.trim()).includes(condition);
-  };
-
-  const toggleAllergy = (allergy: string) => {
-    const current = formData.allergies || '';
-    const allergies = current.split(',').map(a => a.trim()).filter(Boolean);
-    if (allergies.includes(allergy)) {
-      updateField('allergies', allergies.filter(a => a !== allergy).join(', '));
-    } else {
-      updateField('allergies', [...allergies, allergy].join(', '));
-    }
-  };
-
-  const hasAllergy = (allergy: string) => {
-    return (formData.allergies || '').split(',').map(a => a.trim()).includes(allergy);
-  };
-
-  const toggleDietaryPreference = (pref: string) => {
-    const current = formData.dietaryPreferences || '';
-    const prefs = current.split(',').map(p => p.trim()).filter(Boolean);
-    if (prefs.includes(pref)) {
-      updateField('dietaryPreferences', prefs.filter(p => p !== pref).join(', '));
-    } else {
-      updateField('dietaryPreferences', [...prefs, pref].join(', '));
-    }
-  };
-
-  const hasDietaryPreference = (pref: string) => {
-    return (formData.dietaryPreferences || '').split(',').map(p => p.trim()).includes(pref);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg">
-        <div className="flex gap-2 mb-8">
-          {steps.map((_, index) => (
-            <div key={index} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${index <= currentStep ? 'bg-primary shadow-glow' : 'bg-secondary'}`} />
-          ))}
-        </div>
-
-        <div className="glass-card rounded-2xl p-8">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
-              <Icon className="w-8 h-8 text-primary-foreground" />
-            </div>
-          </div>
-
-          <h2 className="text-2xl font-bold text-center mb-2">
-            {currentStep === 2
-              ? (language === 'ar' ? 'الحالة الصحية' : 'Health Status')
-              : t(`onboarding.step${currentStep >= 3 ? currentStep : currentStep + 1}`)}
-          </h2>
-          <p className="text-muted-foreground text-center mb-8">{t('onboarding.welcome')}</p>
-
-          <AnimatePresence mode="wait">
-            <motion.div key={currentStep} initial={{ opacity: 0, x: dir === 'rtl' ? -20 : 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir === 'rtl' ? 20 : -20 }} transition={{ duration: 0.2 }} className="space-y-6">
-              {currentStep === 0 && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{t('onboarding.name')}</label>
-                    <Input value={formData.name || ''} onChange={(e) => updateField('name', e.target.value)} placeholder={language === 'ar' ? 'محمد' : 'John Doe'} className="bg-secondary border-border" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{t('onboarding.age')}</label>
-                    <Input type="number" value={formData.age || ''} onChange={(e) => updateField('age', parseInt(e.target.value) || 0)} placeholder="25" className="bg-secondary border-border" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-3">{t('onboarding.gender')}</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(['male', 'female'] as const).map((gender) => (
-                        <button key={gender} onClick={() => updateField('gender', gender)}
-                          className={`p-4 rounded-xl border-2 transition-all ${formData.gender === gender ? 'border-primary bg-primary/10' : 'border-border bg-secondary hover:border-primary/50'}`}
-                        >
-                          <span className="font-medium">{t(`onboarding.${gender}`)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-              {currentStep === 1 && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{t('onboarding.weight')}</label>
-                    <Input type="number" value={formData.weight || ''} onChange={(e) => updateField('weight', parseInt(e.target.value) || 0)} placeholder="70" className="bg-secondary border-border" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{t('onboarding.height')}</label>
-                    <Input type="number" value={formData.height || ''} onChange={(e) => updateField('height', parseInt(e.target.value) || 0)} placeholder="175" className="bg-secondary border-border" />
-                  </div>
-                </>
-              )}
-              {currentStep === 2 && (
-                <div className="space-y-8">
-                  <div className="grid gap-8 md:grid-cols-2">
-                    <div className="rounded-xl border border-border bg-background/30 p-5">
-                      <label className="block text-sm font-medium mb-3">
-                        {language === 'ar' ? 'هل تعاني من أمراض مزمنة؟' : 'Do you have any chronic conditions?'}
-                      </label>
-                      <div className="grid grid-cols-2 gap-3 mb-5">
-                        {commonConditions.map((condition) => (
-                          <button
-                            key={condition}
-                            onClick={() => toggleCondition(condition)}
-                            className={`p-3 rounded-xl border-2 text-sm transition-all ${hasCondition(condition) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary hover:border-primary/50'}`}
-                          >
-                            {condition}
-                          </button>
-                        ))}
-                      </div>
-                      <Textarea
-                        value={formData.chronicConditions || ''}
-                        onChange={(e) => updateField('chronicConditions', e.target.value)}
-                        placeholder={language === 'ar' ? 'اكتب أي أمراض أو حالات صحية أخرى...' : 'Type any other conditions...'}
-                        className="bg-secondary border-border"
-                        rows={2}
-                      />
-                      <p className="text-xs text-muted-foreground mt-3">
-                        {language === 'ar' ? 'اتركها فاضية اذا ما عندك أي مشاكل صحية' : 'Leave empty if you have no health issues'}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border bg-background/30 p-5">
-                      <label className="block text-sm font-medium mb-3">
-                        {language === 'ar' ? 'هل لديك حساسيات؟' : 'Do you have any allergies?'}
-                      </label>
-                      <div className="grid grid-cols-2 gap-3 mb-5">
-                        {commonAllergies.map((allergy) => (
-                          <button
-                            key={allergy}
-                            onClick={() => toggleAllergy(allergy)}
-                            className={`p-3 rounded-xl border-2 text-sm transition-all ${hasAllergy(allergy) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-secondary hover:border-primary/50'}`}
-                          >
-                            {allergy}
-                          </button>
-                        ))}
-                      </div>
-                      <Textarea
-                        value={formData.allergies || ''}
-                        onChange={(e) => updateField('allergies', e.target.value)}
-                        placeholder={language === 'ar' ? 'اكتب أي حساسيات أخرى...' : 'Type any other allergies...'}
-                        className="bg-secondary border-border"
-                        rows={2}
-                      />
-                      <p className="text-xs text-muted-foreground mt-3">
-                        {language === 'ar' ? 'اتركها فاضية اذا ما عندك أي حساسيات' : 'Leave empty if you have no allergies'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-border bg-background/30 p-5">
-                    <label className="block text-sm font-medium mb-3">
-                      {language === 'ar' ? 'تفضيلات غذائية' : 'Dietary Preferences'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-3 mb-5">
-                      {commonDietaryPreferences.map((pref) => (
-                        <button
-                          key={pref}
-                          onClick={() => toggleDietaryPreference(pref)}
-                          className={`p-3 rounded-xl border-2 text-xs leading-tight transition-all ${
-                            hasDietaryPreference(pref)
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border bg-secondary hover:border-primary/50'
-                          }`}
-                        >
-                          {pref}
-                        </button>
-                      ))}
-                    </div>
-                    <Textarea
-                      value={formData.dietaryPreferences || ''}
-                      onChange={(e) => updateField('dietaryPreferences', e.target.value)}
-                      placeholder={language === 'ar' ? 'اكتب أي تفضيلات غذائية أخرى...' : 'Add any other dietary preferences...'}
-                      className="bg-secondary border-border"
-                      rows={2}
-                    />
-                    <p className="text-xs text-muted-foreground mt-3">
-                      {language === 'ar' ? 'اتركها فاضية اذا ما عندك تفضيلات غذائية' : 'Leave empty if you have no dietary preferences'}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {currentStep === 3 && (
-                <div>
-                  <label className="block text-sm font-medium mb-3">{t('onboarding.goal')}</label>
-                  <div className="space-y-3">
-                    {(['bulking', 'cutting', 'fitness'] as const).map((goal) => (
-                      <button key={goal} onClick={() => updateField('goal', goal)}
-                        className={`w-full p-4 rounded-xl border-2 text-left transition-all ${formData.goal === goal ? 'border-primary bg-primary/10' : 'border-border bg-secondary hover:border-primary/50'}`}
-                      >
-                        <span className="font-medium">{t(`onboarding.${goal}`)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {currentStep === 4 && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-3">
-                      {language === 'ar' ? 'مستواك الرياضي' : 'Fitness Level'}
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
-                        <button
-                          key={level}
-                          onClick={() => updateField('fitnessLevel', level)}
-                          className={`p-3 rounded-xl border-2 text-sm transition-all ${
-                            formData.fitnessLevel === level
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border bg-secondary hover:border-primary/50'
-                          }`}
-                        >
-                          {t(`onboarding.${level}`)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      {language === 'ar' ? 'كم يوم تتمرن بالأسبوع؟' : 'Training days per week'}
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={7}
-                      value={formData.trainingDaysPerWeek || 3}
-                      onChange={(e) => updateField('trainingDaysPerWeek', parseInt(e.target.value) || 0)}
-                      placeholder="3"
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      {language === 'ar' ? 'المعدات المتوفرة' : 'Available equipment'}
-                    </label>
-                    <Textarea
-                      value={formData.equipment || ''}
-                      onChange={(e) => updateField('equipment', e.target.value)}
-                      placeholder={language === 'ar' ? 'مثال: دمبل، بار، مطاط...' : 'Example: dumbbells, barbell, bands...'}
-                      className="bg-secondary border-border"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      {language === 'ar' ? 'إصابات أو آلام' : 'Injuries or pain'}
-                    </label>
-                    <Textarea
-                      value={formData.injuries || ''}
-                      onChange={(e) => updateField('injuries', e.target.value)}
-                      placeholder={language === 'ar' ? 'اكتب أي إصابة أو ألم...' : 'List any injuries or pain...'}
-                      className="bg-secondary border-border"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-3">
-                      {language === 'ar' ? 'مستوى نشاطك اليومي' : 'Daily activity level'}
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['low', 'moderate', 'high'] as const).map((level) => (
-                        <button
-                          key={level}
-                          onClick={() => updateField('activityLevel', level)}
-                          className={`p-3 rounded-xl border-2 text-sm transition-all ${
-                            formData.activityLevel === level
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border bg-secondary hover:border-primary/50'
-                          }`}
-                        >
-                          {t(`onboarding.activity.${level}`)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {currentStep === 5 && (
-                <div>
-                  <label className="block text-sm font-medium mb-3">{t('onboarding.location')}</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(['home', 'gym'] as const).map((loc) => (
-                      <button key={loc} onClick={() => updateField('location', loc)}
-                        className={`p-6 rounded-xl border-2 transition-all ${formData.location === loc ? 'border-primary bg-primary/10' : 'border-border bg-secondary hover:border-primary/50'}`}
-                      >
-                        <span className="font-medium text-lg">{t(`onboarding.${loc}`)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="flex gap-3 mt-8">
-            {currentStep > 0 && (
-              <Button variant="outline" onClick={prevStep} className="flex-1">
-                {dir === 'rtl' ? <ChevronRight className="w-4 h-4 mr-2" /> : <ChevronLeft className="w-4 h-4 mr-2" />}
-                {t('onboarding.back')}
-              </Button>
-            )}
-            <Button variant="hero" onClick={nextStep} className="flex-1">
-              {currentStep === steps.length - 1 ? t('onboarding.finish') : t('onboarding.next')}
-              {dir === 'rtl' ? <ChevronLeft className="w-4 h-4 ml-2" /> : <ChevronRight className="w-4 h-4 ml-2" />}
-            </Button>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
+  return <main className="onboarding-page">
+    <header><BrandLogo /><Button variant="ghost" onClick={() => setLanguage(ar ? 'en' : 'ar')}>{ar ? 'English' : 'العربية'}</Button></header>
+    <div className="onboarding-layout"><aside><span className="aura-eyebrow">NextAura FIT</span><h1>{ar ? 'خطوات صغيرة. بداية أفضل.' : 'Small steps. A better beginning.'}</h1><p>{ar ? 'لنضع خطة تشبهك وتناسب حياتك.' : 'Let’s make a plan that feels like you, and fits your life.'}</p><ol>{steps.map((item, i) => <li key={item.icon} aria-current={i === step ? 'step' : undefined}><span>{i < step ? <Check size={15} /> : i + 1}</span>{copy(item.title)}</li>)}</ol></aside>
+    <section className="onboarding-panel"><div className="onboarding-progress" role="progressbar" aria-label={ar ? 'تقدم الإعداد' : 'Setup progress'} aria-valuenow={step + 1} aria-valuemin={0} aria-valuemax={steps.length}><span style={{ width: `${(step + 1) / steps.length * 100}%` }} /></div><p className="aura-eyebrow">{ar ? 'الخطوة' : 'Step'} {step + 1} / {steps.length}</p>
+      <AnimatePresence mode="wait"><motion.div key={step} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .18 }}>
+        <AppEmoji name={current.icon} /><h2>{copy(current.title)}</h2><p className="onboarding-description">{copy(current.description)}</p>
+        <form onSubmit={event => { event.preventDefault(); void next(); }} className="onboarding-fields">
+          {current.fields.map(field => {
+            const options = choices[field as keyof typeof choices];
+            const number = numeric[field as keyof typeof numeric];
+            return <div key={field}><label htmlFor={`onboard-${field}`}>{copy(labels[field])}{number && <small>{String(number[ar ? 3 : 2])}</small>}</label>
+              {options ? <div id={`onboard-${field}`} tabIndex={-1} role="group" aria-label={copy(labels[field])} className="onboarding-choices">{options.map(value => <button type="button" key={value} aria-pressed={draft[field] === value} onClick={() => { setDraft(previous => ({ ...previous, [field]: value })); setError(''); }}>{t(field === 'activityLevel' ? `onboarding.activity.${value}` : `onboarding.${value}`)}{draft[field] === value && <Check size={18} />}</button>)}</div>
+                : number ? <Input id={`onboard-${field}`} type="number" inputMode="decimal" min={number[0]} max={number[1]} step={field === 'weight' ? .1 : 1} value={draft[field] ?? ''} onChange={event => setDraft(previous => ({ ...previous, [field]: event.target.value === '' ? undefined : Number(event.target.value) }))} />
+                : field === 'name' ? <Input id={`onboard-${field}`} autoComplete="given-name" value={draft.name ?? ''} onChange={event => setDraft(previous => ({ ...previous, name: event.target.value }))} />
+                : <Textarea id={`onboard-${field}`} value={draft[field] ?? ''} onChange={event => setDraft(previous => ({ ...previous, [field]: event.target.value }))} rows={3} />}
+            </div>;
+          })}
+          {error && <p role="alert" className="text-destructive">{error}</p>}
+          <footer>{step > 0 && <Button type="button" variant="outline" disabled={saving} onClick={() => { setError(''); setStep(value => value - 1); }}><ArrowLeft className="rtl:rotate-180" />{ar ? 'السابق' : 'Back'}</Button>}<Button type="submit" disabled={saving}>{saving ? <Loader2 className="animate-spin" /> : step === steps.length - 1 ? (ar ? 'احفظ وابدأ' : 'Save & get started') : (ar ? 'متابعة' : 'Continue')}<ArrowRight className="rtl:rotate-180" /></Button></footer>
+        </form>
+      </motion.div></AnimatePresence>
+    </section></div>
+  </main>;
 }

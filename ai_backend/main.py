@@ -28,6 +28,7 @@ from domain_router import DomainRouter
 from dataset_registry import DatasetRegistry
 from knowledge_engine import KnowledgeEngine
 from llm_client import LLMClient
+from chat_stream import stream_chat, emit_text
 from logic_engine import evaluate_logic_metrics
 from memory_system import MemorySystem
 from moderation_layer import ModerationLayer
@@ -9363,7 +9364,24 @@ def _general_llm_reply(
     last_history_text = normalize_text(messages[-1]["content"]) if len(messages) > 1 else ""
     if last_history_text != normalize_text(user_message):
         messages.append({"role": "user", "content": user_message})
-    raw_reply = LLM.chat_completion(messages, max_tokens=max_tokens)
+    emitter = emit_text.get()
+    if emitter is None:
+        raw_reply = LLM.chat_completion(messages, max_tokens=max_tokens)
+    else:
+        parts = []
+        pending = ""
+        for chunk in LLM.chat_completion_stream(messages, max_tokens=max_tokens):
+            parts.append(chunk)
+            pending += chunk
+            # Moderate complete sentences, keeping words split across tokens together.
+            if re.search(r"[.!?؟\n]\s*$", pending):
+                filtered, _ = MODERATION.filter_content(pending, language=language)
+                emitter(filtered)
+                pending = ""
+        if pending:
+            filtered, _ = MODERATION.filter_content(pending, language=language)
+            emitter(filtered)
+        raw_reply = "".join(parts)
     return _style_general_coach_reply(raw_reply, language)
 
 
@@ -9755,6 +9773,10 @@ async def chat_lite(
 async def chat(req: ChatRequest, subscription_user: dict[str, Any] = Depends(authenticated_user)) -> ChatResponse:
     # Public callers can never mark usage as already reserved. Only the internal
     # attachment flow may do that after its own atomic preflight checks.
+    if req.user_id and str(req.user_id) != subscription_user["id"]:
+        raise HTTPException(status_code=403, detail="User identity does not match the authenticated session.")
+    if req.stream:
+        return stream_chat(lambda: _chat_impl(req, subscription_user, usage_reserved=False), req.request_id or str(uuid.uuid4()))
     return await _chat_impl(req, subscription_user, usage_reserved=False)
 
 

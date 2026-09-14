@@ -22,6 +22,7 @@ export default defineConfig(() => ({
       overlay: false,
     },
     proxy: {
+      "/api": backendUrl,
       "/adherence": backendUrl,
       "/admin": spaRouteProxy,
       "/chat": backendUrl,
